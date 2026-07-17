@@ -1,0 +1,25 @@
+{
+  "name": "Simulador de Planos Zenir",
+  "short_name": "Planos Zenir",
+  "description": "Simulador profissional de planos e parcelamentos para vendedores Zenir.",
+  "start_url": "/simulador.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#e8f5ff",
+  "theme_color": "#0879e8",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

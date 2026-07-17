@@ -1,0 +1,19 @@
+SIMULADOR DE PLANOS ZENIR - PACOTE PARA HOSPEDAGEM
+
+1. Extraia o arquivo ZIP.
+2. Envie TODOS os arquivos extraídos para a pasta pública do seu site.
+   Exemplos comuns: public_html, www ou htdocs.
+3. O arquivo index.html deve ficar na raiz dessa pasta.
+4. Acesse o domínio normalmente. Ele abrirá o simulador automaticamente.
+
+Arquivos principais:
+- index.html: entrada do site.
+- simulador.html: plataforma completa e regras do simulador.
+- manifest.webmanifest: configuração para instalação como aplicativo.
+- sw.js: suporte de aplicativo e uso após carregamento.
+- icon-192.png e icon-512.png: ícones do aplicativo.
+
+Cada vendedor poderá informar o próprio nome ao acessar a plataforma.
+O nome fica salvo apenas no navegador/aparelho utilizado.
+
+Não renomeie nem separe os arquivos, pois eles trabalham em conjunto.
