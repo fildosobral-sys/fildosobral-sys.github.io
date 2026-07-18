@@ -249,6 +249,135 @@ document.addEventListener('DOMContentLoaded', function () {
 }
 </style>
 
+<!-- ===== FS 18/07: DESKTOP MAIS COMPACTO + PRESTA MISTA ABRE/FECHA ===== -->
+<style id="fs-desktop-altura-pm-final-1807">
+@media (min-width:1100px){
+  html body #mainApp .header{
+    position:relative !important;
+    box-sizing:border-box !important;
+    height:188px !important;
+    min-height:188px !important;
+    padding:0 !important;
+    margin-bottom:6px !important;
+    gap:0 !important;
+    overflow:visible !important;
+  }
+  html body #mainApp .header > div.fs-header-top-row{
+    position:absolute !important;
+    top:48px !important;
+    left:50% !important;
+    right:auto !important;
+    transform:translateX(-50%) !important;
+    display:block !important;
+    width:520px !important;
+    max-width:calc(100% - 190px) !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  html body #mainApp .header > div.fs-header-top-row .header-content{
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  html body #mainApp #headerTitle{
+    font-size:1rem !important;
+    line-height:1 !important;
+  }
+  html body #mainApp .welcome-message{
+    margin-top:3px !important;
+    font-size:.72rem !important;
+    line-height:1.03 !important;
+  }
+  html body #mainApp .header .fs-main-toggle-row{
+    position:absolute !important;
+    left:50% !important;
+    right:auto !important;
+    bottom:10px !important;
+    transform:translateX(-50%) !important;
+    width:520px !important;
+    display:flex !important;
+    gap:10px !important;
+    margin:0 !important;
+  }
+  html body #mainApp .header .fs-main-toggle-row .main-toggle-btn{
+    flex:1 1 0 !important;
+    min-width:0 !important;
+    height:39px !important;
+    min-height:39px !important;
+    padding:6px 12px !important;
+    font-size:.76rem !important;
+    border-radius:10px !important;
+  }
+  html body #mainApp .header > .menu-container{
+    top:47px !important;
+    right:15px !important;
+  }
+  html body #mainApp .header .menu-btn{
+    width:34px !important;
+    height:34px !important;
+    font-size:18px !important;
+  }
+  html body #mainApp .nav-tabs{
+    margin:6px auto 6px !important;
+  }
+  html body #mainApp .nav-tabs .tab-btn{
+    min-height:34px !important;
+    padding:5px 8px !important;
+  }
+
+  html body #mainApp table.fs-pm-table th.fs-presta-mista-col{
+    cursor:pointer !important;
+    user-select:none !important;
+    touch-action:manipulation !important;
+  }
+  html body #mainApp table.fs-pm-table.fs-pm-collapsed td.fs-presta-mista-col{
+    display:table-cell !important;
+    width:52px !important;
+    min-width:52px !important;
+    max-width:52px !important;
+    padding-left:2px !important;
+    padding-right:2px !important;
+    font-size:0 !important;
+    color:transparent !important;
+    text-shadow:none !important;
+    pointer-events:none !important;
+    overflow:hidden !important;
+  }
+  html body #mainApp table.fs-pm-table.fs-pm-collapsed th.fs-presta-mista-col{
+    display:table-cell !important;
+    width:52px !important;
+    min-width:52px !important;
+    max-width:52px !important;
+    padding:3px !important;
+    font-size:0 !important;
+    color:transparent !important;
+    background:linear-gradient(135deg,#f59e0b,#f97316) !important;
+  }
+  html body #mainApp table.fs-pm-table.fs-pm-collapsed th.fs-presta-mista-col::after{
+    content:'+ PM';
+    display:block;
+    color:#fff;
+    font-size:.58rem;
+    font-weight:950;
+    line-height:1;
+    white-space:nowrap;
+  }
+  html body #mainApp table.fs-pm-table.fs-pm-expanded th.fs-presta-mista-col{
+    background:linear-gradient(135deg,#f59e0b,#f97316) !important;
+    color:#fff !important;
+  }
+  html body #mainApp table.fs-pm-table.fs-pm-expanded th.fs-presta-mista-col::after{
+    content:'  −';
+    font-weight:950;
+  }
+  html body #mainApp table.fs-pm-table.fs-pm-expanded td.fs-presta-mista-col{
+    display:table-cell !important;
+  }
+}
+</style>
+
 <!-- ===== FS 18/07: ACOES RAPIDAS + SIMULADOR DE MELHOR BENEFICIO ===== -->
 <style id="fs-simulador-beneficio-style">
 .fs-quick-actions{
@@ -13565,14 +13694,10 @@ document.addEventListener('DOMContentLoaded', function(){
         Array.from(table.tBodies||[]).forEach(function(tbody){
           Array.from(tbody.rows||[]).forEach(function(row){if(row.cells[indice]) row.cells[indice].classList.add('fs-presta-mista-col','col-pm');});
         });
-        if(mobile()){
-          th.setAttribute('role','button');
-          th.setAttribute('tabindex','0');
-          th.setAttribute('aria-label',mostrarPrestaMista?'Esconder coluna Presta Mista':'Mostrar coluna Presta Mista');
-          th.setAttribute('aria-expanded',mostrarPrestaMista?'true':'false');
-        }else{
-          th.removeAttribute('role');th.removeAttribute('tabindex');th.removeAttribute('aria-label');th.removeAttribute('aria-expanded');
-        }
+        th.setAttribute('role','button');
+        th.setAttribute('tabindex','0');
+        th.setAttribute('aria-label',mostrarPrestaMista?'Esconder coluna Presta Mista':'Mostrar coluna Presta Mista');
+        th.setAttribute('aria-expanded',mostrarPrestaMista?'true':'false');
       });
       table.classList.toggle('fs-pm-table',encontrou);
     });
@@ -13586,14 +13711,13 @@ document.addEventListener('DOMContentLoaded', function(){
       table.querySelectorAll('td.fs-presta-mista-col').forEach(function(td){
         if(mostrarPrestaMista) td.removeAttribute('aria-hidden'); else td.setAttribute('aria-hidden','true');
       });
-      if(th&&mobile()){
+      if(th){
         th.setAttribute('aria-label',mostrarPrestaMista?'Esconder coluna Presta Mista':'Mostrar coluna Presta Mista');
         th.setAttribute('aria-expanded',mostrarPrestaMista?'true':'false');
       }
     });
   }
   function alternarPrestaMista(evento){
-    if(!mobile()) return;
     var th=evento.target.closest&&evento.target.closest('th.fs-presta-mista-col');
     if(!th) return;
     if(evento.type==='keydown'&&evento.key!=='Enter'&&evento.key!==' ') return;
@@ -14095,5 +14219,30 @@ html body #mainApp .header .fs-quick-actions{
     font-size:.61rem !important;
     border-radius:10px !important;
   }
+}
+</style>
+
+<!-- Prevalencia final: ajustes exclusivos do desktop. -->
+<style id="fs-desktop-altura-pm-prevalencia-final-1807">
+@media (min-width:1100px){
+  html body #mainApp .header{position:relative !important;box-sizing:border-box !important;height:188px !important;min-height:188px !important;padding:0 !important;margin-bottom:6px !important;gap:0 !important;overflow:visible !important;}
+  html body #mainApp .header > div.fs-header-top-row{position:absolute !important;top:48px !important;left:50% !important;right:auto !important;transform:translateX(-50%) !important;display:block !important;width:520px !important;max-width:calc(100% - 190px) !important;min-height:0 !important;margin:0 !important;padding:0 !important;}
+  html body #mainApp .header > div.fs-header-top-row .header-content{width:100% !important;max-width:none !important;margin:0 !important;padding:0 !important;}
+  html body #mainApp #headerTitle{font-size:1rem !important;line-height:1 !important;}
+  html body #mainApp .welcome-message{margin-top:3px !important;font-size:.72rem !important;line-height:1.03 !important;}
+  html body #mainApp .header .fs-main-toggle-row{position:absolute !important;left:50% !important;right:auto !important;bottom:10px !important;transform:translateX(-50%) !important;width:520px !important;display:flex !important;gap:10px !important;margin:0 !important;}
+  html body #mainApp .header .fs-main-toggle-row .main-toggle-btn{flex:1 1 0 !important;min-width:0 !important;height:39px !important;min-height:39px !important;padding:6px 12px !important;font-size:.76rem !important;border-radius:10px !important;}
+  html body #mainApp .header > .menu-container{top:47px !important;right:15px !important;}
+  html body #mainApp .header .menu-btn{width:34px !important;height:34px !important;font-size:18px !important;}
+  html body #mainApp .nav-tabs{margin:6px auto 6px !important;}
+  html body #mainApp .nav-tabs .tab-btn{min-height:34px !important;padding:5px 8px !important;}
+
+  html body #mainApp table.fs-pm-table th.fs-presta-mista-col{cursor:pointer !important;user-select:none !important;touch-action:manipulation !important;}
+  html body #mainApp table.fs-pm-table.fs-pm-collapsed td.fs-presta-mista-col{display:table-cell !important;width:52px !important;min-width:52px !important;max-width:52px !important;padding-left:2px !important;padding-right:2px !important;font-size:0 !important;color:transparent !important;text-shadow:none !important;pointer-events:none !important;overflow:hidden !important;}
+  html body #mainApp table.fs-pm-table.fs-pm-collapsed th.fs-presta-mista-col{display:table-cell !important;width:52px !important;min-width:52px !important;max-width:52px !important;padding:3px !important;font-size:0 !important;color:transparent !important;background:linear-gradient(135deg,#f59e0b,#f97316) !important;}
+  html body #mainApp table.fs-pm-table.fs-pm-collapsed th.fs-presta-mista-col::after{content:'+ PM';display:block;color:#fff;font-size:.58rem;font-weight:950;line-height:1;white-space:nowrap;}
+  html body #mainApp table.fs-pm-table.fs-pm-expanded th.fs-presta-mista-col{background:linear-gradient(135deg,#f59e0b,#f97316) !important;color:#fff !important;}
+  html body #mainApp table.fs-pm-table.fs-pm-expanded th.fs-presta-mista-col::after{content:'  −';font-weight:950;}
+  html body #mainApp table.fs-pm-table.fs-pm-expanded td.fs-presta-mista-col{display:table-cell !important;}
 }
 </style>

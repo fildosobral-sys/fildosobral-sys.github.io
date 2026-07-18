@@ -7,6 +7,8 @@ VERSAO 18/07/2026
 - Botao Consultar Produto integrado ao portal de vendas Zenir.
 - Simulador de Melhor Beneficio com comparacao de entrada e garantias.
 - Atalhos de produto e beneficio integrados ao cabecalho no desktop e mobile.
+- Cabecalho desktop com menor altura para ampliar a area da tabela.
+- Presta Mista recolhida por padrao e alternavel por clique tambem no desktop.
 
 1. Extraia o arquivo ZIP.
 2. Envie TODOS os arquivos extraídos para a pasta pública do seu site.
