@@ -1,5 +1,12 @@
 SIMULADOR DE PLANOS ZENIR - PACOTE PARA HOSPEDAGEM
 
+VERSAO 18/07/2026
+- Desktop compactado para exibir a simulacao completa em uma tela.
+- Layout mobile preservado.
+- Calculos, taxas e regras financeiras preservados.
+- Botao Consultar Produto integrado ao portal de vendas Zenir.
+- Simulador de Melhor Beneficio com comparacao de entrada e garantias.
+
 1. Extraia o arquivo ZIP.
 2. Envie TODOS os arquivos extraídos para a pasta pública do seu site.
    Exemplos comuns: public_html, www ou htdocs.

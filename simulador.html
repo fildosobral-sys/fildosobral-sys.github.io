@@ -13,14 +13,6 @@ FS BUILD OTIMIZADA
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0879e8">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Planos Zenir">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
-  <link rel="apple-touch-icon" href="/icon-192.png">
   <title>FS - Planos &amp; Parcelamentos Zenir</title>
   <script>
 // ===== ACESSO LIBERADO PELO INDEX FS =====
@@ -66,28 +58,580 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 });
 </script>
-<script id="fs-pwa-site-app">
+
+<!-- ===== FS 18/07: COMPACTACAO EXCLUSIVA DO DESKTOP ===== -->
+<style id="fs-desktop-compacto-1807">
+/* Atua somente em monitores. Tablet e mobile permanecem com o layout atual. */
+@media (min-width:1100px){
+  html body{
+    padding:8px !important;
+  }
+
+  html body #mainApp.dashboard{
+    max-width:1580px !important;
+    padding:12px !important;
+    border-radius:16px !important;
+  }
+
+  html body #mainApp .header{
+    min-height:132px !important;
+    padding:12px 22px 14px !important;
+    margin-bottom:10px !important;
+    gap:5px !important;
+  }
+
+  html body #mainApp .header > div:first-child{
+    max-width:900px !important;
+    margin:0 auto 7px !important;
+    grid-template-columns:56px minmax(0,1fr) 48px !important;
+    gap:10px !important;
+  }
+
+  html body #mainApp .logo-container,
+  html body #mainApp .header .chart-face{
+    width:46px !important;
+    height:46px !important;
+  }
+
+  html body #mainApp #headerTitle{
+    font-size:1.18rem !important;
+    line-height:1 !important;
+  }
+
+  html body #mainApp .welcome-message{
+    margin-top:4px !important;
+    line-height:1.05 !important;
+  }
+
+  html body #mainApp .menu-btn{
+    width:38px !important;
+    height:38px !important;
+    font-size:20px !important;
+  }
+
+  html body #mainApp .header > div:nth-child(2){
+    gap:12px !important;
+  }
+
+  html body #mainApp .main-toggle-btn{
+    min-width:230px !important;
+    height:44px !important;
+    padding:7px 18px !important;
+    font-size:.86rem !important;
+    border-radius:12px !important;
+  }
+
+  html body #mainApp .nav-tabs{
+    max-width:1040px !important;
+    margin:12px auto 9px !important;
+    gap:10px !important;
+  }
+
+  html body #mainApp .nav-tabs .tab-btn{
+    padding:7px 8px !important;
+    min-height:38px !important;
+    font-size:.62rem !important;
+  }
+
+  html body #mainApp .content-area{
+    grid-template-columns:310px minmax(0,1fr) !important;
+    gap:14px !important;
+    min-height:0 !important;
+  }
+
+  html body #mainApp .inputs-section{
+    gap:10px !important;
+  }
+
+  html body #mainApp .inputs-section .card{
+    padding:12px !important;
+    border-radius:14px !important;
+  }
+
+  html body #mainApp .card-title{
+    font-size:.92rem !important;
+    margin-bottom:9px !important;
+  }
+
+  html body #mainApp .fs-cards-valores{
+    gap:9px !important;
+    margin:4px 0 7px !important;
+  }
+
+  html body #mainApp .fs-card-preco{
+    min-height:94px !important;
+    padding:10px !important;
+    border-radius:16px !important;
+  }
+
+  html body #mainApp .fs-card-preco label{
+    font-size:.72rem !important;
+    min-height:25px !important;
+  }
+
+  html body #mainApp .fs-card-preco input{
+    height:43px !important;
+    font-size:.96rem !important;
+    border-radius:14px !important;
+  }
+
+  html body #mainApp .fs-metricas-valores{
+    gap:7px !important;
+    margin-top:7px !important;
+  }
+
+  html body #mainApp .fs-metrica-card{
+    min-height:62px !important;
+    padding:7px 5px !important;
+    border-radius:13px !important;
+  }
+
+  html body #mainApp .row-centralizado{
+    gap:5px !important;
+    margin-bottom:9px !important;
+  }
+
+  html body #mainApp .row-centralizado input{
+    padding:8px 12px !important;
+    min-height:42px !important;
+  }
+
+  html body #mainApp .garantias-fs-grid{
+    gap:7px !important;
+  }
+
+  html body #mainApp .garantia-item-fs input{
+    height:36px !important;
+  }
+
+  html body #mainApp .results-section{
+    min-height:0 !important;
+    padding:12px !important;
+    border-radius:14px !important;
+  }
+
+  html body #mainApp .results-section h3,
+  html body #mainApp .tab-content h3{
+    font-size:.96rem !important;
+    line-height:1.1 !important;
+    padding:8px 11px !important;
+    margin:0 0 8px !important;
+    border-radius:10px !important;
+  }
+
+  html body #mainApp .results-section table,
+  html body #mainApp .tab-content table{
+    margin-top:7px !important;
+    font-size:.88rem !important;
+  }
+
+  html body #mainApp .results-section thead th,
+  html body #mainApp .tab-content thead th{
+    font-size:.68rem !important;
+    padding:7px 7px !important;
+    line-height:1.08 !important;
+  }
+
+  html body #mainApp .results-section tbody td,
+  html body #mainApp .tab-content tbody td{
+    font-size:.88rem !important;
+    padding:6px 7px !important;
+    line-height:1.08 !important;
+    min-height:32px !important;
+  }
+
+  html body .back-to-top{
+    right:14px !important;
+    bottom:10px !important;
+    transform:scale(.88) !important;
+    transform-origin:right bottom !important;
+  }
+}
+</style>
+
+<!-- ===== FS 18/07: ACOES RAPIDAS + SIMULADOR DE MELHOR BENEFICIO ===== -->
+<style id="fs-simulador-beneficio-style">
+.fs-quick-actions{
+  width:100%;
+  max-width:760px;
+  margin:0 auto 10px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.fs-quick-action{
+  min-height:38px;
+  padding:8px 12px;
+  border:0;
+  border-radius:11px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  color:#fff;
+  font-size:.72rem;
+  line-height:1.1;
+  font-weight:900;
+  text-decoration:none;
+  text-align:center;
+  cursor:pointer;
+  box-shadow:0 7px 16px rgba(15,23,42,.16),inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+}
+.fs-quick-action:hover{transform:translateY(-2px);filter:brightness(1.04);box-shadow:0 10px 22px rgba(15,23,42,.22);}
+.fs-quick-action:active{transform:translateY(0);}
+.fs-product-link{background:linear-gradient(135deg,#0284c7,#2563eb);}
+.fs-benefit-open{background:linear-gradient(135deg,#16a34a,#059669);}
+
+.fs-benefit-overlay{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(15,23,42,.72);
+  backdrop-filter:blur(7px);
+}
+.fs-benefit-overlay.open{display:flex;}
+.fs-benefit-dialog{
+  width:min(920px,96vw);
+  max-height:92vh;
+  overflow:hidden;
+  border-radius:22px;
+  background:#f8fbff;
+  border:1px solid rgba(255,255,255,.65);
+  box-shadow:0 28px 75px rgba(0,0,0,.38);
+}
+.fs-benefit-head{
+  padding:15px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:#fff;
+  background:linear-gradient(135deg,#16a34a,#0891b2,#2563eb);
+}
+.fs-benefit-head h2{margin:0;font-size:1.14rem;line-height:1.1;}
+.fs-benefit-head p{margin:4px 0 0;font-size:.76rem;opacity:.94;}
+.fs-benefit-close{
+  flex:0 0 auto;
+  width:38px;
+  height:38px;
+  border:0;
+  border-radius:999px;
+  background:#fff;
+  color:#1e40af;
+  font-size:18px;
+  font-weight:900;
+  cursor:pointer;
+}
+.fs-benefit-body{max-height:calc(92vh - 72px);overflow:auto;padding:16px;}
+.fs-benefit-form{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  padding:12px;
+  border:1px solid #dbeafe;
+  border-radius:16px;
+  background:#fff;
+}
+.fs-benefit-field{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.fs-benefit-field label{font-size:.68rem;font-weight:900;color:#334155;text-transform:uppercase;}
+.fs-benefit-field select,.fs-benefit-field input{
+  width:100%;
+  height:42px;
+  padding:8px 10px;
+  border:2px solid #cbdff5;
+  border-radius:11px;
+  background:#f8fbff;
+  color:#0f172a;
+  font-size:.86rem;
+  font-weight:800;
+}
+.fs-benefit-field select:focus,.fs-benefit-field input:focus{outline:0;border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.13);}
+.fs-benefit-entry{
+  margin-top:10px;
+  padding:9px 12px;
+  border-radius:12px;
+  background:#eff6ff;
+  color:#1e3a8a;
+  font-size:.78rem;
+  font-weight:800;
+  text-align:center;
+}
+.fs-benefit-summary{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:9px;
+}
+.fs-benefit-kpi{padding:10px;border:1px solid #dbeafe;border-radius:14px;background:#fff;text-align:center;}
+.fs-benefit-kpi small{display:block;margin-bottom:5px;color:#64748b;font-size:.64rem;font-weight:900;text-transform:uppercase;}
+.fs-benefit-kpi strong{display:block;color:#0f172a;font-size:.96rem;}
+.fs-benefit-recommendation{
+  margin-top:12px;
+  padding:13px 15px;
+  border-radius:15px;
+  border:2px solid #22c55e;
+  background:linear-gradient(135deg,#ecfdf5,#eff6ff);
+  color:#14532d;
+  font-size:.86rem;
+  font-weight:800;
+  line-height:1.35;
+}
+.fs-benefit-recommendation.warning{border-color:#f59e0b;background:#fffbeb;color:#854d0e;}
+.fs-benefit-options{margin-top:12px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;}
+.fs-benefit-option{position:relative;padding:11px;border-radius:14px;border:2px solid #e2e8f0;background:#fff;text-align:center;}
+.fs-benefit-option.good{border-color:#4ade80;background:#f0fdf4;}
+.fs-benefit-option.near{border-color:#facc15;background:#fefce8;}
+.fs-benefit-option.high{border-color:#fca5a5;background:#fff7f7;}
+.fs-benefit-option.best{box-shadow:0 0 0 3px rgba(34,197,94,.16),0 10px 22px rgba(22,163,74,.14);}
+.fs-benefit-badge{display:inline-block;margin-bottom:6px;padding:3px 7px;border-radius:999px;background:#dcfce7;color:#166534;font-size:.58rem;font-weight:950;text-transform:uppercase;}
+.fs-benefit-option h3{margin:0 0 6px;color:#334155;font-size:.74rem;line-height:1.15;}
+.fs-benefit-option strong{display:block;color:#0f172a;font-size:1rem;}
+.fs-benefit-option span{display:block;margin-top:5px;color:#64748b;font-size:.67rem;font-weight:800;}
+.fs-benefit-empty{padding:18px;border:1px dashed #94a3b8;border-radius:14px;background:#fff;text-align:center;color:#475569;font-size:.82rem;font-weight:750;}
+
+@media (min-width:1100px){
+  html body #mainApp .fs-quick-actions{margin-top:-2px;margin-bottom:8px;}
+}
+@media (max-width:767px){
+  .fs-quick-actions{gap:6px;margin:5px auto 7px;padding:0 7px;}
+  .fs-quick-action{min-height:34px;padding:6px 5px;border-radius:9px;font-size:.57rem;gap:4px;}
+  .fs-benefit-overlay{padding:7px;align-items:flex-end;}
+  .fs-benefit-dialog{width:100%;max-height:94vh;border-radius:18px 18px 0 0;}
+  .fs-benefit-head{padding:11px 12px;}
+  .fs-benefit-head h2{font-size:.92rem;}
+  .fs-benefit-head p{font-size:.63rem;}
+  .fs-benefit-close{width:34px;height:34px;}
+  .fs-benefit-body{max-height:calc(94vh - 62px);padding:10px;}
+  .fs-benefit-form{grid-template-columns:1fr 1fr;gap:8px;padding:9px;}
+  .fs-benefit-field label{font-size:.59rem;}
+  .fs-benefit-field select,.fs-benefit-field input{height:39px;padding:6px 8px;font-size:.76rem;}
+  .fs-benefit-summary{grid-template-columns:1fr 1fr;gap:7px;}
+  .fs-benefit-kpi:last-child{grid-column:1/-1;}
+  .fs-benefit-options{grid-template-columns:1fr 1fr;gap:7px;}
+  .fs-benefit-recommendation{padding:10px 11px;font-size:.75rem;}
+}
+</style>
+
+<script id="fs-simulador-beneficio-script">
 (function(){
   'use strict';
-  if('serviceWorker' in navigator){
-    window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});},{once:true});
+  var state={lastCell:null,table:null};
+
+  function cleanText(value){
+    return (value||'').toString().replace(/\s+/g,' ').trim();
   }
-  var pedidoInstalacao=null;
-  window.addEventListener('beforeinstallprompt',function(evento){
-    evento.preventDefault();
-    pedidoInstalacao=evento;
-    var menu=document.querySelector('#menuDropdown');
-    if(!menu||menu.querySelector('.fs-instalar-app')) return;
-    var item=document.createElement('div');
-    item.className='menu-item fs-instalar-app';
-    item.textContent='📲 Instalar aplicativo';
-    item.addEventListener('click',function(){
-      if(!pedidoInstalacao) return;
-      pedidoInstalacao.prompt();
-      pedidoInstalacao.userChoice.finally(function(){pedidoInstalacao=null;item.remove();});
+  function normalize(value){
+    return cleanText(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  }
+  function numberValue(value){
+    if(typeof value==='number') return isFinite(value)?value:0;
+    var text=(value||'').toString().replace(/R\$\s?/gi,'').replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+    var n=parseFloat(text);
+    return isNaN(n)?0:n;
+  }
+  function money(value){
+    return (Number(value)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+  }
+  function inputValue(id){
+    var el=document.getElementById(id);
+    return el?numberValue(el.value):0;
+  }
+  function modalityFromTable(table){
+    if(!table) return '';
+    var text=normalize((table.closest('.tab-content')||table.parentElement||table).textContent);
+    var headers=normalize(Array.from(table.querySelectorAll('thead th')).map(function(th){return th.textContent}).join(' '));
+    if(headers.indexOf('CARTAO')>-1||text.indexOf('MODALIDADE CARTAO')>-1) return 'cartao';
+    if(headers.indexOf('CARNE')>-1||text.indexOf('MODALIDADE CARNE')>-1) return 'carne';
+    return '';
+  }
+  function isVisible(el){
+    if(!el) return false;
+    var style=getComputedStyle(el);
+    return style.display!=='none'&&style.visibility!=='hidden'&&el.getClientRects().length>0;
+  }
+  function mappedTable(modality){
+    if(state.table&&state.table.isConnected&&(!modality||modalityFromTable(state.table)===modality)) return state.table;
+    var visible=Array.from(document.querySelectorAll('.results-section table')).filter(isVisible).filter(function(t){return modalityFromTable(t)===modality;});
+    if(visible.length) return visible[0];
+    var promo=document.getElementById('btnPromocao');
+    var isPromo=promo&&promo.classList.contains('active');
+    var ids=modality==='cartao'
+      ?(isPromo?['tabelaPromocaoCartao','tabelaPromocaoCartaoExtra']:['tabelaCartaoExclusivo','tabelaGerenteCartao','tabelaGerenteExclusivoCartao'])
+      :(isPromo?['tabelaPromocaoCarne']:['tabelaPadrao','tabelaGerenteCarne','tabelaGerenteExclusivoCarne']);
+    for(var i=0;i<ids.length;i++){
+      var tbody=document.getElementById(ids[i]);
+      if(tbody&&tbody.closest('table')) return tbody.closest('table');
+    }
+    return null;
+  }
+  function headers(table){
+    return table?Array.from(table.querySelectorAll('thead th')).map(function(th,i){return cleanText(th.textContent)||('Plano '+i);}):[];
+  }
+  function rows(table){
+    return table&&table.tBodies&&table.tBodies[0]?Array.from(table.tBodies[0].rows):[];
+  }
+  function selectedInfo(){
+    var cell=state.lastCell&&state.lastCell.isConnected?state.lastCell:document.querySelector('.results-section td.selected-cell');
+    if(!cell||!cell.closest('table')) return null;
+    return {cell:cell,table:cell.closest('table'),row:cell.parentElement.rowIndex-1,col:cell.cellIndex};
+  }
+  function benefitRank(label){
+    var text=normalize(label),matches=text.match(/(?:12|24|36)/g),months=matches?Math.max.apply(null,matches.map(Number)):0;
+    return months;
+  }
+  function planLabel(label,modality){
+    var text=cleanText(label).replace(/^\(\+\)\s*/,'+').replace(/^\+\s*/,'+');
+    if(!text||normalize(text)==='PRAZO') return modality==='cartao'?'Cartao normal':'Carne normal';
+    return text;
+  }
+
+  function ensureUI(){
+    var main=document.getElementById('mainApp');
+    if(!main) return;
+    if(!document.getElementById('fsQuickActions')){
+      var actions=document.createElement('div');
+      actions.id='fsQuickActions';
+      actions.className='fs-quick-actions';
+      actions.innerHTML='<a class="fs-quick-action fs-product-link" href="https://vendas.grupozenir.com.br/home" target="_blank" rel="noopener noreferrer" aria-label="Abrir consulta de produtos em nova aba">🔎 CONSULTAR PRODUTO</a><button class="fs-quick-action fs-benefit-open" type="button" id="fsOpenBenefit">✨ SIMULAR MELHOR BENEFÍCIO</button>';
+      var promoNav=document.getElementById('nav-tabs-promocao');
+      var content=main.querySelector('.content-area');
+      if(promoNav&&promoNav.parentElement) promoNav.insertAdjacentElement('afterend',actions);
+      else if(content&&content.parentElement) content.parentElement.insertBefore(actions,content);
+    }
+    if(!document.getElementById('fsBenefitOverlay')){
+      var overlay=document.createElement('div');
+      overlay.id='fsBenefitOverlay';
+      overlay.className='fs-benefit-overlay';
+      overlay.setAttribute('role','dialog');
+      overlay.setAttribute('aria-modal','true');
+      overlay.setAttribute('aria-labelledby','fsBenefitTitle');
+      overlay.innerHTML='<div class="fs-benefit-dialog"><div class="fs-benefit-head"><div><h2 id="fsBenefitTitle">✨ Simulador de Melhor Benefício</h2><p>Use a entrada para identificar oportunidades de ampliar a garantia.</p></div><button class="fs-benefit-close" type="button" aria-label="Fechar">×</button></div><div class="fs-benefit-body"><div class="fs-benefit-form"><div class="fs-benefit-field"><label for="fsBenefitModality">Modalidade</label><select id="fsBenefitModality"><option value="carne">Carnê</option><option value="cartao">Cartão</option></select></div><div class="fs-benefit-field"><label for="fsBenefitTerm">Prazo</label><select id="fsBenefitTerm"></select></div><div class="fs-benefit-field"><label for="fsBenefitCurrent">Plano atual</label><select id="fsBenefitCurrent"></select></div><div class="fs-benefit-field"><label for="fsBenefitReference">Parcela antes da entrada</label><input id="fsBenefitReference" type="text" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00"></div></div><div class="fs-benefit-entry" id="fsBenefitEntry"></div><div id="fsBenefitResult"></div></div></div>';
+      document.body.appendChild(overlay);
+    }
+  }
+
+  function setSelectOptions(select,items,value){
+    select.innerHTML='';
+    items.forEach(function(item){
+      var option=document.createElement('option');
+      option.value=String(item.value);
+      option.textContent=item.label;
+      select.appendChild(option);
     });
-    menu.insertBefore(item,menu.lastElementChild||null);
-  });
+    if(value!==undefined&&value!==null) select.value=String(value);
+  }
+  function refreshPlans(preferredRow,preferredCol){
+    var modality=document.getElementById('fsBenefitModality').value;
+    var table=mappedTable(modality);
+    state.table=table;
+    var tableRows=rows(table),tableHeaders=headers(table);
+    var term=document.getElementById('fsBenefitTerm'),current=document.getElementById('fsBenefitCurrent');
+    setSelectOptions(term,tableRows.map(function(row,i){return {value:i,label:cleanText(row.cells[0]&&row.cells[0].textContent)||((i+1)+'x')};}),Math.max(0,preferredRow||0));
+    var options=[];
+    for(var c=1;c<tableHeaders.length;c++) options.push({value:c,label:planLabel(tableHeaders[c],modality)});
+    setSelectOptions(current,options,preferredCol&&preferredCol>0?preferredCol:(options[0]?options[0].value:1));
+    fillReference();
+    render();
+  }
+  function fillReference(){
+    var table=state.table,rowIndex=Number(document.getElementById('fsBenefitTerm').value)||0,colIndex=Number(document.getElementById('fsBenefitCurrent').value)||1;
+    var row=rows(table)[rowIndex],value=row&&row.cells[colIndex]?numberValue(row.cells[colIndex].textContent):0;
+    var reference=document.getElementById('fsBenefitReference');
+    if(reference&&!numberValue(reference.value)) reference.value=value?money(value):'';
+  }
+  function render(){
+    var result=document.getElementById('fsBenefitResult');
+    if(!result) return;
+    var modality=document.getElementById('fsBenefitModality').value;
+    var table=state.table||mappedTable(modality),tableRows=rows(table),tableHeaders=headers(table);
+    var rowIndex=Number(document.getElementById('fsBenefitTerm').value)||0;
+    var currentCol=Number(document.getElementById('fsBenefitCurrent').value)||1;
+    var reference=numberValue(document.getElementById('fsBenefitReference').value);
+    var row=tableRows[rowIndex],entry=inputValue('entrada');
+    var entryBox=document.getElementById('fsBenefitEntry');
+    entryBox.textContent=entry>0?'Entrada informada na negociação: '+money(entry):'Informe uma entrada no painel principal para avaliar melhor a oportunidade.';
+    if(!table||!row||tableHeaders.length<2){
+      result.innerHTML='<div class="fs-benefit-empty">Calcule uma modalidade e selecione uma parcela na tabela antes de abrir o simulador.</div>';
+      return;
+    }
+    var options=[];
+    for(var c=1;c<tableHeaders.length;c++){
+      var value=row.cells[c]?numberValue(row.cells[c].textContent):0;
+      if(value>0) options.push({col:c,label:planLabel(tableHeaders[c],modality),value:value,rank:benefitRank(tableHeaders[c])});
+    }
+    var current=options.find(function(item){return item.col===currentCol})||options[0];
+    if(!current){result.innerHTML='<div class="fs-benefit-empty">Não existem valores calculados para o prazo escolhido.</div>';return;}
+    if(!reference) reference=current.value;
+    var reduction=reference-current.value,currentRank=current.rank;
+    var upgrades=options.filter(function(item){return item.rank>currentRank&&item.value<=reference;}).sort(function(a,b){return b.rank-a.rank||b.value-a.value;});
+    var best=upgrades[0]||null;
+    var summary='<div class="fs-benefit-summary"><div class="fs-benefit-kpi"><small>Parcela de referência</small><strong>'+money(reference)+'</strong></div><div class="fs-benefit-kpi"><small>'+current.label+' com entrada</small><strong>'+money(current.value)+'</strong></div><div class="fs-benefit-kpi"><small>Redução da parcela</small><strong>'+(reduction>=0?money(reduction):('+'+money(Math.abs(reduction))))+'</strong></div></div>';
+    var recommendation;
+    if(best){
+      var saving=reference-best.value;
+      recommendation='<div class="fs-benefit-recommendation">✅ <strong>Oportunidade encontrada:</strong> oferecer <strong>'+best.label+'</strong> por '+money(best.value)+' no mesmo prazo. A parcela fica '+(saving>0?money(saving)+' abaixo':'no mesmo valor')+' da referência.</div>';
+    }else{
+      recommendation='<div class="fs-benefit-recommendation warning">ℹ️ Nenhuma garantia superior ficou igual ou abaixo da parcela de referência. Veja as diferenças abaixo para apresentar as opções com segurança.</div>';
+    }
+    var cards='<div class="fs-benefit-options">';
+    options.forEach(function(item){
+      var diff=item.value-reference,ratio=reference?diff/reference:0;
+      var status=diff<=0?'good':(ratio<=.03?'near':'high');
+      var note=diff===0?'Mesmo valor':(diff<0?money(Math.abs(diff))+' abaixo':money(diff)+' acima');
+      cards+='<div class="fs-benefit-option '+status+(best&&best.col===item.col?' best':'')+'">'+(best&&best.col===item.col?'<span class="fs-benefit-badge">Melhor oportunidade</span>':'')+'<h3>'+item.label+'</h3><strong>'+money(item.value)+'</strong><span>'+note+'</span></div>';
+    });
+    cards+='</div>';
+    result.innerHTML=summary+recommendation+cards;
+  }
+  function open(){
+    ensureUI();
+    var info=selectedInfo(),modality=info?modalityFromTable(info.table):'';
+    if(!modality){
+      var card=document.getElementById('btnPromocao');
+      var active=Array.from(document.querySelectorAll('.results-section table')).find(isVisible);
+      modality=modalityFromTable(active)||(card&&card.classList.contains('active')?'carne':'carne');
+    }
+    document.getElementById('fsBenefitModality').value=modality||'carne';
+    state.table=info?info.table:null;
+    var reference=document.getElementById('fsBenefitReference');
+    reference.value=info&&info.cell?cleanText(info.cell.textContent):'';
+    refreshPlans(info?info.row:0,info?info.col:1);
+    var overlay=document.getElementById('fsBenefitOverlay');
+    overlay.classList.add('open');
+    document.body.style.overflow='hidden';
+  }
+  function close(){
+    var overlay=document.getElementById('fsBenefitOverlay');
+    if(overlay) overlay.classList.remove('open');
+    document.body.style.overflow='';
+  }
+  function bind(){
+    ensureUI();
+    var openButton=document.getElementById('fsOpenBenefit'),overlay=document.getElementById('fsBenefitOverlay');
+    if(openButton&&!openButton.__fsBound){openButton.__fsBound=true;openButton.addEventListener('click',open);}
+    if(overlay&&!overlay.__fsBound){
+      overlay.__fsBound=true;
+      overlay.querySelector('.fs-benefit-close').addEventListener('click',close);
+      overlay.addEventListener('click',function(event){if(event.target===overlay) close();});
+      document.getElementById('fsBenefitModality').addEventListener('change',function(){state.table=null;document.getElementById('fsBenefitReference').value='';refreshPlans(0,1);});
+      document.getElementById('fsBenefitTerm').addEventListener('change',function(){document.getElementById('fsBenefitReference').value='';fillReference();render();});
+      document.getElementById('fsBenefitCurrent').addEventListener('change',function(){document.getElementById('fsBenefitReference').value='';fillReference();render();});
+      document.getElementById('fsBenefitReference').addEventListener('input',render);
+    }
+  }
+  document.addEventListener('click',function(event){
+    var cell=event.target.closest&&event.target.closest('.results-section tbody td:not(:first-child)');
+    if(cell){state.lastCell=cell;state.table=cell.closest('table');}
+    if(event.target.closest&&event.target.closest('#btnTabelaPreco,#btnPromocao,#nav-tabs-tabela .tab-btn,#nav-tabs-promocao .tab-btn,#btnLimparValores')){state.lastCell=null;state.table=null;}
+  },true);
+  document.addEventListener('keydown',function(event){if(event.key==='Escape') close();});
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind,{once:true}); else bind();
+  window.fsAbrirSimuladorBeneficio=open;
 })();
 </script>
 <style id="fs-ajustes-visuais-selecao-header-2026">
@@ -13386,7 +13930,44 @@ html body .row-centralizado.fs-hide-old-price{
     larguraReferencia=novaLargura;
     fixarNoTopo();
   }
-  window.addEventListener('resize',ajustarSomenteSeMudarLargura,{passive:true});
+window.addEventListener('resize',ajustarSomenteSeMudarLargura,{passive:true});
   window.addEventListener('orientationchange',function(){setTimeout(ajustarSomenteSeMudarLargura,200);},{passive:true});
 })();
 </script>
+
+<!-- Aplicado por ultimo para prevalecer sobre os estilos historicos do desktop. -->
+<style id="fs-desktop-compacto-final-1807">
+@media (min-width:1100px){
+  html body{padding:8px !important;}
+  html body #mainApp.dashboard{max-width:1580px !important;padding:12px !important;border-radius:16px !important;}
+  html body #mainApp .header{min-height:132px !important;padding:12px 22px 14px !important;margin-bottom:10px !important;gap:5px !important;}
+  html body #mainApp .header>div:first-child{max-width:900px !important;margin:0 auto 7px !important;grid-template-columns:56px minmax(0,1fr) 48px !important;gap:10px !important;}
+  html body #mainApp #headerTitle{font-size:1.18rem !important;line-height:1 !important;}
+  html body #mainApp .welcome-message{margin-top:4px !important;line-height:1.05 !important;}
+  html body #mainApp .menu-btn{width:38px !important;height:38px !important;font-size:20px !important;}
+  html body #mainApp .header>div:nth-child(2){gap:12px !important;}
+  html body #mainApp .main-toggle-btn{min-width:230px !important;height:44px !important;padding:7px 18px !important;font-size:.86rem !important;border-radius:12px !important;}
+  html body #mainApp .nav-tabs{max-width:1040px !important;margin:12px auto 9px !important;gap:10px !important;}
+  html body #mainApp .nav-tabs .tab-btn{padding:7px 8px !important;min-height:38px !important;font-size:.62rem !important;}
+  html body #mainApp .content-area{grid-template-columns:310px minmax(0,1fr) !important;gap:14px !important;min-height:0 !important;}
+  html body #mainApp .inputs-section{gap:10px !important;}
+  html body #mainApp .inputs-section .card{padding:12px !important;border-radius:14px !important;}
+  html body #mainApp .card-title{font-size:.92rem !important;margin-bottom:9px !important;}
+  html body #mainApp .fs-cards-valores{gap:9px !important;margin:4px 0 7px !important;}
+  html body #mainApp .fs-card-preco{min-height:94px !important;padding:10px !important;border-radius:16px !important;}
+  html body #mainApp .fs-card-preco label{font-size:.72rem !important;min-height:25px !important;}
+  html body #mainApp .fs-card-preco input{height:43px !important;font-size:.96rem !important;border-radius:14px !important;}
+  html body #mainApp .fs-metricas-valores{gap:7px !important;margin-top:7px !important;}
+  html body #mainApp .fs-metrica-card{min-height:62px !important;padding:7px 5px !important;border-radius:13px !important;}
+  html body #mainApp .row-centralizado{gap:5px !important;margin-bottom:9px !important;}
+  html body #mainApp .row-centralizado input{padding:8px 12px !important;min-height:42px !important;}
+  html body #mainApp .garantias-fs-grid{gap:7px !important;}
+  html body #mainApp .garantia-item-fs input{height:36px !important;}
+  html body #mainApp .results-section{min-height:0 !important;padding:12px !important;border-radius:14px !important;}
+  html body #mainApp .results-section h3,html body #mainApp .tab-content h3{font-size:.96rem !important;line-height:1.1 !important;padding:8px 11px !important;margin:0 0 8px !important;border-radius:10px !important;}
+  html body #mainApp .results-section table,html body #mainApp .tab-content table{margin-top:7px !important;font-size:.88rem !important;}
+  html body #mainApp .results-section thead th,html body #mainApp .tab-content thead th{font-size:.68rem !important;padding:7px !important;line-height:1.08 !important;}
+  html body #mainApp .results-section tbody td,html body #mainApp .tab-content tbody td{font-size:.88rem !important;padding:6px 7px !important;line-height:1.08 !important;min-height:32px !important;}
+  html body .back-to-top{right:14px !important;bottom:10px !important;transform:scale(.88) !important;transform-origin:right bottom !important;}
+}
+</style>
