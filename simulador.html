@@ -498,11 +498,20 @@ document.addEventListener('DOMContentLoaded', function () {
       actions.id='fsQuickActions';
       actions.className='fs-quick-actions';
       actions.innerHTML='<a class="fs-quick-action fs-product-link" href="https://vendas.grupozenir.com.br/home" target="_blank" rel="noopener noreferrer" aria-label="Abrir consulta de produtos em nova aba">🔎 CONSULTAR PRODUTO</a><button class="fs-quick-action fs-benefit-open" type="button" id="fsOpenBenefit">✨ SIMULAR MELHOR BENEFÍCIO</button>';
+      var header=main.querySelector('.header');
       var promoNav=document.getElementById('nav-tabs-promocao');
       var content=main.querySelector('.content-area');
-      if(promoNav&&promoNav.parentElement) promoNav.insertAdjacentElement('afterend',actions);
+      if(header) header.appendChild(actions);
+      else if(promoNav&&promoNav.parentElement) promoNav.insertAdjacentElement('afterend',actions);
       else if(content&&content.parentElement) content.parentElement.insertBefore(actions,content);
     }
+    var readyActions=document.getElementById('fsQuickActions');
+    var readyHeader=main.querySelector('.header');
+    if(readyActions&&readyHeader&&readyActions.parentElement!==readyHeader) readyHeader.appendChild(readyActions);
+    var readyMenu=main.querySelector('.menu-container');
+    if(readyMenu&&readyHeader&&readyMenu.parentElement!==readyHeader) readyHeader.appendChild(readyMenu);
+    var mainToggle=document.getElementById('btnTabelaPreco');
+    if(mainToggle&&mainToggle.parentElement) mainToggle.parentElement.classList.add('fs-main-toggle-row');
     if(!document.getElementById('fsBenefitOverlay')){
       var overlay=document.createElement('div');
       overlay.id='fsBenefitOverlay';
@@ -13916,7 +13925,7 @@ html body .row-centralizado.fs-hide-old-price{
       conteudo.classList.add('fs-header-content-fixo');
     }else{
       conteudo.classList.remove('fs-header-content-fixo');
-      if(conteudo.parentElement===header) linhaOriginal.insertBefore(conteudo,menu||null);
+      if(conteudo.parentElement===header) linhaOriginal.insertBefore(conteudo,menu&&menu.parentElement===linhaOriginal?menu:null);
     }
   }
 
@@ -13969,5 +13978,122 @@ window.addEventListener('resize',ajustarSomenteSeMudarLargura,{passive:true});
   html body #mainApp .results-section thead th,html body #mainApp .tab-content thead th{font-size:.68rem !important;padding:7px !important;line-height:1.08 !important;}
   html body #mainApp .results-section tbody td,html body #mainApp .tab-content tbody td{font-size:.88rem !important;padding:6px 7px !important;line-height:1.08 !important;min-height:32px !important;}
   html body .back-to-top{right:14px !important;bottom:10px !important;transform:scale(.88) !important;transform-origin:right bottom !important;}
+}
+</style>
+
+<!-- ===== FS 18/07: ATALHOS INTEGRADOS AO CABECALHO ===== -->
+<style id="fs-atalhos-no-cabecalho-final-1807">
+html body #mainApp .header .fs-quick-actions{
+  position:absolute !important;
+  z-index:18 !important;
+  margin:0 !important;
+  pointer-events:auto !important;
+}
+
+@media (min-width:768px){
+  html body #mainApp .header .fs-quick-actions{
+    top:12px !important;
+    right:16px !important;
+    left:auto !important;
+    width:min(430px,42%) !important;
+    max-width:430px !important;
+    gap:8px !important;
+  }
+  html body #mainApp .header .fs-quick-action{
+    min-height:32px !important;
+    padding:6px 9px !important;
+    border-radius:9px !important;
+    font-size:.62rem !important;
+    box-shadow:0 5px 13px rgba(15,23,42,.18),inset 0 1px 0 rgba(255,255,255,.24) !important;
+  }
+}
+
+@media (max-width:767px){
+  html body #mainApp .header .fs-quick-actions{
+    top:5px !important;
+    left:7px !important;
+    right:7px !important;
+    width:auto !important;
+    max-width:none !important;
+    padding:0 !important;
+    gap:5px !important;
+  }
+  html body #mainApp .header .fs-quick-action{
+    min-height:26px !important;
+    padding:3px 5px !important;
+    border-radius:7px !important;
+    font-size:.49rem !important;
+    letter-spacing:0 !important;
+    gap:3px !important;
+    box-shadow:0 3px 8px rgba(15,23,42,.16),inset 0 1px 0 rgba(255,255,255,.22) !important;
+  }
+  html body #mainApp .header > .header-content.fs-header-content-fixo{
+    top:36px !important;
+  }
+}
+</style>
+
+<style id="fs-mobile-cabecalho-acoes-final-1807">
+@media (min-width:768px){
+  html body #mainApp #headerTitle{
+    white-space:nowrap !important;
+  }
+  html body #mainApp .header > .menu-container{
+    position:absolute !important;
+    top:52px !important;
+    right:18px !important;
+    left:auto !important;
+    z-index:22 !important;
+  }
+}
+@media (max-width:767px){
+  html body #mainApp .header{
+    min-height:118px !important;
+    height:118px !important;
+    padding:5px 7px !important;
+    margin-bottom:7px !important;
+    overflow:visible !important;
+  }
+  html body #mainApp .header > div.fs-header-top-row{
+    position:static !important;
+    width:auto !important;
+    min-height:0 !important;
+    margin:0 !important;
+  }
+  html body #mainApp .header > .header-content.fs-header-content-fixo{
+    top:36px !important;
+    left:10px !important;
+    width:calc(100% - 62px) !important;
+    max-width:calc(100% - 62px) !important;
+  }
+  html body #mainApp .header .menu-container{
+    position:absolute !important;
+    top:36px !important;
+    right:7px !important;
+    left:auto !important;
+    z-index:22 !important;
+  }
+  html body #mainApp .header .menu-btn{
+    width:30px !important;
+    height:30px !important;
+    font-size:17px !important;
+  }
+  html body #mainApp .header .fs-main-toggle-row{
+    position:absolute !important;
+    left:7px !important;
+    right:7px !important;
+    bottom:5px !important;
+    width:auto !important;
+    display:flex !important;
+    gap:6px !important;
+    z-index:12 !important;
+  }
+  html body #mainApp .header .fs-main-toggle-row .main-toggle-btn{
+    height:35px !important;
+    min-height:35px !important;
+    padding:5px 4px !important;
+    font-size:.61rem !important;
+    border-radius:10px !important;
+  }
 }
 </style>

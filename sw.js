@@ -1,4 +1,4 @@
-const CACHE_NAME = "planos-zenir-v2-beneficios";
+const CACHE_NAME = "planos-zenir-v3-atalhos-cabecalho";
 const APP_FILES = [
   "/simulador.html",
   "/manifest.webmanifest",
