@@ -13071,7 +13071,10 @@ document.addEventListener('DOMContentLoaded', function(){
       var active = prazo === prazoSelecionado ? ' ativo' : '';
       var fator=(fatoresResumo[modalidade]&&fatoresResumo[modalidade][prazo])||0;
       var atual=cellValue(br,indiceColuna);
-      var produtoSemServico=precoTabela*fator;
+      // A comparação sem serviço deve reproduzir a coluna principal já renderizada,
+      // inclusive com a entrada aplicada pelas regras originais da tabela.
+      var produtoSemServico=cellValue(br,1);
+      if(!produtoSemServico) produtoSemServico=precoTabela*fator;
       var normal=parcelaSemBeneficiosAtuais(tbody.id,rotulo,modalidade,prazo,precoTabela);
       var beneficio=normal-atual;
       var totalBeneficio=beneficio*prazo;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "planos-zenir-v9-comparativo-comercial";
+const CACHE_NAME = "planos-zenir-v10-produto-sem-servico-com-entrada";
 const APP_FILES = [
   "/",
   "/index.html",

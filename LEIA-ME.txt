@@ -19,8 +19,9 @@ VERSAO 20/07/2026
   produto com o servico escolhido, condicao final com entrada/desconto e economia.
 - O fator continua sendo usado internamente nos calculos, mas nao aparece ao vendedor.
 - O resumo avisa quando a condicao final fica abaixo ate da parcela sem servico.
+- O card Produto sem servico repete a parcela principal da tabela apos a entrada.
 - Comparacao compativel com Carne, Cartao, Garantias, Presta Mista e Gerente Exclusivo.
-- Novo cache v9 para distribuir o comparativo comercial aos aparelhos instalados.
+- Novo cache v10 para distribuir o comparativo corrigido aos aparelhos instalados.
 
 1. Extraia o arquivo ZIP.
 2. Envie TODOS os arquivos extraídos para a pasta pública do seu site.
