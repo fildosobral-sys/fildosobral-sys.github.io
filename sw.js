@@ -1,4 +1,4 @@
-const CACHE_NAME = "planos-zenir-v6-pwa-ios-estavel";
+const CACHE_NAME = "planos-zenir-v7-scroll-selecao-mobile";
 const APP_FILES = [
   "/",
   "/index.html",

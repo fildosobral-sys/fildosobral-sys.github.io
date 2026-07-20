@@ -1,6 +1,6 @@
 SIMULADOR DE PLANOS ZENIR - PACOTE PARA HOSPEDAGEM
 
-VERSAO 18/07/2026
+VERSAO 20/07/2026
 - Desktop compactado para exibir a simulacao completa em uma tela.
 - Layout mobile preservado.
 - Calculos, taxas e regras financeiras preservados.
@@ -13,6 +13,9 @@ VERSAO 18/07/2026
 - Instalacao como aplicativo no Android, iPhone, iPad e computador.
 - Modo standalone, suporte offline e atualizacao automatica do cache.
 - Estabilidade aprimorada para diferentes tamanhos de tela, zoom e configuracoes de fonte.
+- Rolagem vertical mobile liberada inclusive ao arrastar sobre as tabelas.
+- Destaque de parcelas unificado no celular, sem faixas ou selecoes antigas acumuladas.
+- Novo cache v7 para atualizar automaticamente os aparelhos que ja instalaram o app.
 
 1. Extraia o arquivo ZIP.
 2. Envie TODOS os arquivos extraídos para a pasta pública do seu site.
