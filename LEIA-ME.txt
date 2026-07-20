@@ -9,6 +9,10 @@ VERSAO 18/07/2026
 - Atalhos de produto e beneficio integrados ao cabecalho no desktop e mobile.
 - Cabecalho desktop com menor altura para ampliar a area da tabela.
 - Presta Mista recolhida por padrao e alternavel por clique tambem no desktop.
+- Gerente Exclusivo corrigido: desconto no produto, fator do prazo e garantia sem reaplicar Presta Mista.
+- Instalacao como aplicativo no Android, iPhone, iPad e computador.
+- Modo standalone, suporte offline e atualizacao automatica do cache.
+- Estabilidade aprimorada para diferentes tamanhos de tela, zoom e configuracoes de fonte.
 
 1. Extraia o arquivo ZIP.
 2. Envie TODOS os arquivos extraídos para a pasta pública do seu site.
@@ -25,5 +29,14 @@ Arquivos principais:
 
 Cada vendedor poderá informar o próprio nome ao acessar a plataforma.
 O nome fica salvo apenas no navegador/aparelho utilizado.
+
+INSTALAR NO IPHONE OU IPAD:
+1. Abra o site no navegador.
+2. No menu da plataforma, toque em "Instalar aplicativo".
+3. Toque em Compartilhar e depois em "Adicionar a Tela de Inicio".
+
+INSTALAR NO ANDROID OU COMPUTADOR:
+1. Abra o menu da plataforma e selecione "Instalar aplicativo".
+2. Confirme a instalacao apresentada pelo navegador.
 
 Não renomeie nem separe os arquivos, pois eles trabalham em conjunto.

@@ -12,7 +12,17 @@ FS BUILD OTIMIZADA
 -->
 
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0879e8">
+  <meta name="color-scheme" content="light">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Planos Zenir">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <title>FS - Planos &amp; Parcelamentos Zenir</title>
   <script>
 // ===== ACESSO LIBERADO PELO INDEX FS =====
@@ -248,6 +258,225 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 }
 </style>
+
+<!-- ===== FS PWA / iOS / ESTABILIDADE RESPONSIVA 20/07/2026 ===== -->
+<style id="fs-pwa-ios-estabilidade-final-2007">
+:root{
+  font-size:16px !important;
+  color-scheme:light;
+  --fs-safe-top:env(safe-area-inset-top,0px);
+  --fs-safe-right:env(safe-area-inset-right,0px);
+  --fs-safe-bottom:env(safe-area-inset-bottom,0px);
+  --fs-safe-left:env(safe-area-inset-left,0px);
+}
+html{
+  width:100% !important;
+  max-width:100% !important;
+  overflow-x:hidden !important;
+  -webkit-text-size-adjust:100% !important;
+  text-size-adjust:100% !important;
+  -webkit-tap-highlight-color:transparent;
+}
+body{
+  width:100% !important;
+  max-width:100vw !important;
+  min-width:320px;
+  overflow-x:hidden !important;
+  overscroll-behavior-x:none;
+  overscroll-behavior-y:contain;
+}
+*,*::before,*::after{box-sizing:border-box;}
+button,a,[role="button"],input,select,textarea{touch-action:manipulation;}
+input,select,textarea,button{font-family:inherit;min-width:0;}
+img,svg,canvas,video{max-width:100%;}
+#mainApp,.dashboard,.content-area,.inputs-section,.results-section,.tab-content{min-width:0;max-width:100%;}
+
+@media(max-width:767px){
+  html body{
+    padding-left:max(1px,var(--fs-safe-left)) !important;
+    padding-right:max(1px,var(--fs-safe-right)) !important;
+    padding-bottom:max(1px,var(--fs-safe-bottom)) !important;
+  }
+  html body #mainApp{width:100% !important;max-width:100% !important;min-width:0 !important;}
+  html body input,
+  html body select,
+  html body textarea{font-size:16px !important;}
+  html body .results-section,
+  html body .tab-content{width:100% !important;max-width:100% !important;overflow:hidden !important;}
+  html body .results-section .table-wrapper,
+  html body .results-section .table-container,
+  html body .results-section .table-responsive,
+  html body .results-section .fs-table-scroll,
+  html body .tab-content .table-wrapper,
+  html body .tab-content .table-container,
+  html body .tab-content .table-responsive{
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+  html body #menuDropdown{
+    max-height:calc(100dvh - 76px - var(--fs-safe-top) - var(--fs-safe-bottom)) !important;
+    overflow-y:auto !important;
+    overscroll-behavior:contain;
+  }
+  html body .fs-back-home,
+  html body .back-to-top{bottom:max(6px,var(--fs-safe-bottom)) !important;}
+}
+
+@media(display-mode:standalone){
+  html body{padding-top:var(--fs-safe-top) !important;}
+  html body.fs-pwa-standalone #mainApp{min-height:calc(100dvh - var(--fs-safe-top) - var(--fs-safe-bottom));}
+}
+
+.fs-install-overlay{
+  position:fixed;
+  inset:0;
+  z-index:100010;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:max(14px,var(--fs-safe-top)) max(14px,var(--fs-safe-right)) max(14px,var(--fs-safe-bottom)) max(14px,var(--fs-safe-left));
+  background:rgba(15,23,42,.70);
+  -webkit-backdrop-filter:blur(7px);
+  backdrop-filter:blur(7px);
+}
+.fs-install-overlay.open{display:flex;}
+.fs-install-card{
+  width:min(420px,94vw);
+  max-height:calc(100dvh - 28px - var(--fs-safe-top) - var(--fs-safe-bottom));
+  overflow:auto;
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:20px;
+  padding:18px;
+  background:linear-gradient(180deg,#fff,#f4f9ff);
+  box-shadow:0 24px 70px rgba(15,23,42,.34);
+  color:#172033;
+}
+.fs-install-card h2{margin:0 38px 5px 0;font-size:1.08rem;line-height:1.15;color:#0757bf;}
+.fs-install-card p{margin:0 0 13px;font-size:.83rem;line-height:1.35;color:#475569;}
+.fs-install-close{
+  float:right;
+  width:34px;
+  height:34px;
+  margin:-5px -5px 0 8px;
+  border:0;
+  border-radius:999px;
+  background:#e7efff;
+  color:#0b4fb5;
+  font-size:1.1rem;
+  font-weight:900;
+  cursor:pointer;
+}
+.fs-install-steps{display:grid;gap:9px;margin:12px 0 4px;}
+.fs-install-step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px solid #cfe2ff;border-radius:12px;background:#fff;}
+.fs-install-step strong{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#0879e8,#10b981);color:#fff;font-size:.78rem;}
+.fs-install-step span{font-size:.79rem;line-height:1.28;color:#334155;}
+.fs-install-ok{margin-top:12px;width:100%;min-height:42px;border:0;border-radius:12px;background:linear-gradient(135deg,#0879e8,#2563eb);color:#fff;font-size:.84rem;font-weight:900;cursor:pointer;}
+#fsInstallAppItem.fs-app-installed{opacity:.78;cursor:default;}
+</style>
+
+<script id="fs-pwa-ios-install-final-2007">
+(function(){
+  'use strict';
+  var eventoInstalacao=null;
+
+  function estaInstalado(){
+    return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||window.navigator.standalone===true);
+  }
+  function ehIOS(){
+    return /iphone|ipad|ipod/i.test(navigator.userAgent||'') || (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  }
+  function itemInstalar(){return document.getElementById('fsInstallAppItem');}
+  function atualizarItem(){
+    var item=itemInstalar();
+    if(!item) return;
+    if(estaInstalado()){
+      item.textContent='✅ Aplicativo instalado';
+      item.classList.add('fs-app-installed');
+      item.setAttribute('aria-label','Aplicativo já instalado neste aparelho');
+    }else{
+      item.textContent='📲 Instalar aplicativo';
+      item.classList.remove('fs-app-installed');
+      item.setAttribute('aria-label','Instalar aplicativo neste aparelho');
+    }
+    if(!item.dataset.fsTeclado){
+      item.dataset.fsTeclado='1';
+      item.addEventListener('keydown',function(e){
+        if(e.key==='Enter'||e.key===' '){e.preventDefault();window.fsSolicitarInstalacao();}
+      });
+    }
+  }
+  function garantirModal(){
+    var overlay=document.getElementById('fsInstallOverlay');
+    if(overlay) return overlay;
+    overlay=document.createElement('div');
+    overlay.id='fsInstallOverlay';
+    overlay.className='fs-install-overlay';
+    overlay.setAttribute('role','dialog');
+    overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-labelledby','fsInstallTitulo');
+    overlay.innerHTML='<section class="fs-install-card"><button class="fs-install-close" type="button" aria-label="Fechar">×</button><h2 id="fsInstallTitulo">Instalar Planos Zenir</h2><div id="fsInstallConteudo"></div><button class="fs-install-ok" type="button">Entendi</button></section>';
+    document.body.appendChild(overlay);
+    function fechar(){overlay.classList.remove('open');document.body.style.overflow='';}
+    overlay.querySelector('.fs-install-close').addEventListener('click',fechar);
+    overlay.querySelector('.fs-install-ok').addEventListener('click',fechar);
+    overlay.addEventListener('click',function(e){if(e.target===overlay) fechar();});
+    overlay.addEventListener('keydown',function(e){if(e.key==='Escape') fechar();});
+    return overlay;
+  }
+  function abrirOrientacao(tipo){
+    var overlay=garantirModal();
+    var conteudo=overlay.querySelector('#fsInstallConteudo');
+    if(tipo==='instalado'){
+      conteudo.innerHTML='<p>O Simulador de Planos Zenir já está aberto no modo aplicativo neste aparelho.</p>';
+    }else if(tipo==='ios'){
+      conteudo.innerHTML='<p>No iPhone ou iPad, a instalação é concluída pelo menu de compartilhamento do navegador:</p><div class="fs-install-steps"><div class="fs-install-step"><strong>1</strong><span>Toque no botão <b>Compartilhar</b> (quadrado com seta para cima).</span></div><div class="fs-install-step"><strong>2</strong><span>Escolha <b>Adicionar à Tela de Início</b>.</span></div><div class="fs-install-step"><strong>3</strong><span>Confirme em <b>Adicionar</b>. Depois, abra pelo novo ícone.</span></div></div>';
+    }else{
+      conteudo.innerHTML='<p>Abra o menu do navegador e escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>. A instalação exige que o site esteja aberto por HTTPS.</p>';
+    }
+    overlay.classList.add('open');
+    document.body.style.overflow='hidden';
+    setTimeout(function(){var b=overlay.querySelector('.fs-install-close');if(b)b.focus();},0);
+  }
+
+  window.fsSolicitarInstalacao=async function(){
+    if(estaInstalado()){abrirOrientacao('instalado');return;}
+    if(eventoInstalacao){
+      try{
+        eventoInstalacao.prompt();
+        await eventoInstalacao.userChoice;
+      }catch(e){console.warn('[FS PWA] Instalação não concluída:',e);}
+      eventoInstalacao=null;
+      atualizarItem();
+      return;
+    }
+    abrirOrientacao(ehIOS()?'ios':'outro');
+  };
+
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    eventoInstalacao=e;
+    atualizarItem();
+  });
+  window.addEventListener('appinstalled',function(){eventoInstalacao=null;atualizarItem();});
+
+  function iniciar(){
+    document.documentElement.classList.toggle('fs-pwa-standalone',estaInstalado());
+    document.body.classList.toggle('fs-pwa-standalone',estaInstalado());
+    document.body.classList.toggle('fs-offline',!navigator.onLine);
+    atualizarItem();
+    if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
+      window.addEventListener('load',function(){
+        navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(function(registro){registro.update();}).catch(function(e){console.warn('[FS PWA] Serviço offline indisponível:',e);});
+      },{once:true});
+    }
+  }
+  window.addEventListener('online',function(){document.body.classList.remove('fs-offline');});
+  window.addEventListener('offline',function(){document.body.classList.add('fs-offline');});
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',iniciar,{once:true}); else iniciar();
+})();
+</script>
 
 <!-- ===== FS 18/07: DESKTOP MAIS COMPACTO + PRESTA MISTA ABRE/FECHA ===== -->
 <style id="fs-desktop-altura-pm-final-1807">
@@ -5318,6 +5547,9 @@ input::placeholder {
        <div class="menu-item" onclick="ativarStandby(); toggleMenu();">
         🌙 Modo Standby
        </div>
+       <div id="fsInstallAppItem" class="menu-item" role="button" tabindex="0" onclick="fsSolicitarInstalacao(); try{toggleMenu();}catch(e){}">
+        📲 Instalar aplicativo
+       </div>
        <div class="menu-item" onclick="exportarDados(); toggleMenu();">
         📊 Exportar Dados
        </div>
@@ -6680,14 +6912,18 @@ input::placeholder {
                 const carneBaseGerente = valorBaseBeneficios * fatorCarne;
                 const prestaMista = percentGerente > 0 ? calcularPrestaMistaLimitada(carneBaseGerente, prazo) : 0;
                 const garantiaParcela = (percentGerente > 0 && g12 > 0) ? (prazo <= 3 ? (g12 / prazo) : (g12 * fatorCarne)) : 0;
-                const prestaMistaMais36 = (percentGerente > 0 && g12 > 0) ? calcularPrestaMistaLimitada(carneBaseGerente + garantiaParcela, prazo) : 0;
+                // G.E. é independente da Presta Mista: desconto no preço à vista do
+                // produto, fator do prazo e garantia. Não reaplicar acréscimo de PM.
+                const carneComBeneficioGerente = (percentGerente > 0 && g12 > 0)
+                    ? (carneBaseGerente + garantiaParcela)
+                    : 0;
 
                 const row = tbody.insertRow();
                 row.innerHTML = `
                     <td>${prazo}x</td>
                     <td>${formatarParaMoeda(carneNormal)}</td>
                     <td>${percentGerente > 0 ? formatarParaMoeda(prestaMista) : ''}</td>
-                    <td>${(percentGerente > 0 && g12 > 0) ? formatarParaMoeda(prestaMistaMais36) : ''}</td>
+                    <td>${(percentGerente > 0 && g12 > 0) ? formatarParaMoeda(carneComBeneficioGerente) : ''}</td>
                 `;
 
                 const cells = row.querySelectorAll('td');
@@ -6697,7 +6933,7 @@ input::placeholder {
                     cells[2].addEventListener('click', (e) => { e.preventDefault(); selecionarValor(cells[2], formatarParaMoeda(prestaMista), `${prazo}x Gerente Exclusivo Carnê Presta Mista`); });
                 }
                 if (percentGerente > 0 && g12 > 0) {
-                    cells[3].addEventListener('click', (e) => { e.preventDefault(); selecionarValor(cells[3], formatarParaMoeda(prestaMistaMais36), `${prazo}x Gerente Exclusivo Carnê Presta Mista +12`); });
+                    cells[3].addEventListener('click', (e) => { e.preventDefault(); selecionarValor(cells[3], formatarParaMoeda(carneComBeneficioGerente), `${prazo}x Gerente Exclusivo Carnê +12`); });
                 }
             });
         }
@@ -14245,4 +14481,21 @@ html body #mainApp .header .fs-quick-actions{
   html body #mainApp table.fs-pm-table.fs-pm-expanded th.fs-presta-mista-col::after{content:'  −';font-weight:950;}
   html body #mainApp table.fs-pm-table.fs-pm-expanded td.fs-presta-mista-col{display:table-cell !important;}
 }
+</style>
+
+<!-- Prevalencia final da estabilidade mobile/iOS sobre os estilos historicos. -->
+<style id="fs-pwa-ios-estabilidade-prevalencia-final-2007">
+:root{font-size:16px !important;}
+html{width:100% !important;max-width:100% !important;overflow-x:hidden !important;-webkit-text-size-adjust:100% !important;text-size-adjust:100% !important;}
+html body{width:100% !important;max-width:100vw !important;min-width:320px;overflow-x:hidden !important;}
+html body button,html body a,html body [role="button"],html body input,html body select,html body textarea{touch-action:manipulation;}
+html body #mainApp,html body .dashboard,html body .content-area,html body .inputs-section,html body .results-section,html body .tab-content{min-width:0 !important;max-width:100% !important;}
+@media(max-width:767px){
+  html body{padding-left:max(1px,var(--fs-safe-left)) !important;padding-right:max(1px,var(--fs-safe-right)) !important;padding-bottom:max(1px,var(--fs-safe-bottom)) !important;}
+  html body #mainApp{width:100% !important;max-width:100% !important;min-width:0 !important;}
+  html body input,html body select,html body textarea{font-size:16px !important;}
+  html body #menuDropdown{max-height:calc(100dvh - 76px - var(--fs-safe-top) - var(--fs-safe-bottom)) !important;overflow-y:auto !important;overscroll-behavior:contain;}
+  html body .fs-back-home,html body .back-to-top{bottom:max(6px,var(--fs-safe-bottom)) !important;}
+}
+@media(display-mode:standalone){html body{padding-top:var(--fs-safe-top) !important;}}
 </style>
