@@ -15,7 +15,10 @@ VERSAO 20/07/2026
 - Estabilidade aprimorada para diferentes tamanhos de tela, zoom e configuracoes de fonte.
 - Rolagem vertical mobile liberada inclusive ao arrastar sobre as tabelas.
 - Destaque de parcelas unificado no celular, sem faixas ou selecoes antigas acumuladas.
-- Novo cache v7 para atualizar automaticamente os aparelhos que ja instalaram o app.
+- Comparativo por duplo toque atualizado: fator, parcela sem entrada/desconto,
+  parcela atual e beneficio do cliente para a funcao escolhida, de 1x a 12x.
+- Comparacao compativel com Carne, Cartao, Garantias, Presta Mista e Gerente Exclusivo.
+- Novo cache v8 para distribuir o comparativo atualizado aos aparelhos instalados.
 
 1. Extraia o arquivo ZIP.
 2. Envie TODOS os arquivos extraídos para a pasta pública do seu site.

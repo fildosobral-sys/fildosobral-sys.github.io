@@ -12991,62 +12991,104 @@ document.addEventListener('DOMContentLoaded', function(){
     return '<div class="fs-resumo-opcao '+(cls||'')+'"><small>'+label+'</small><strong>'+money(valor*prazo)+'</strong><em>'+money(valor)+' / mês</em></div>';
   }
 
+  var fatoresResumo={
+    carne:{1:1.0690,2:0.5523,3:0.3804,4:0.2946,5:0.2432,6:0.2091,7:0.1849,8:0.1668,9:0.1528,10:0.1417,11:0.1327,12:0.1252},
+    cartao:{1:1.0292,2:0.5220,3:0.3530,4:0.2685,5:0.2179,6:0.1841,7:0.1600,8:0.1420,9:0.1280,10:0.1168,11:0.1076,12:0.1000}
+  };
+  function textoNormalizado(texto){
+    return (texto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+  }
+  function modalidadeResumo(tbody){
+    var texto=textoNormalizado((tbody&&tbody.id)||'')+' '+textoNormalizado(tbody&&tbody.closest('table')?tbody.closest('table').textContent:'');
+    return texto.indexOf('CARTAO')>=0?'cartao':'carne';
+  }
+  function rotuloColuna(tbody,indice){
+    var table=tbody&&tbody.closest?tbody.closest('table'):null;
+    var linhas=table&&table.tHead?table.tHead.rows:[];
+    var ultima=linhas&&linhas.length?linhas[linhas.length-1]:null;
+    return cleanLabel(ultima&&ultima.cells[indice]?ultima.cells[indice].textContent:'Plano selecionado');
+  }
+  function garantiaDoPlano(rotulo){
+    var t=textoNormalizado(rotulo);
+    if(t.indexOf('36')>=0) return num(getVal('garantia36'));
+    if(t.indexOf('24')>=0) return num(getVal('garantia24'));
+    if(t.indexOf('12')>=0||t.indexOf('G.E')>=0||t.indexOf('GARANT')>=0) return num(getVal('garantia12'));
+    return 0;
+  }
+  function limiteExtra(){
+    var ativo=document.querySelector('[data-extra-prazo].active');
+    return ativo?Number(ativo.getAttribute('data-extra-prazo'))||5:5;
+  }
+  function prestaMistaBase(base,prazo){
+    if(typeof calcularPrestaMistaLimitada==='function') return calcularPrestaMistaLimitada(base,prazo);
+    return base+Math.min(base*.06,300/prazo);
+  }
+  function parcelaSemBeneficiosAtuais(tbodyId,rotulo,modalidade,prazo,precoTabela){
+    var fator=(fatoresResumo[modalidade]&&fatoresResumo[modalidade][prazo])||0;
+    var label=textoNormalizado(rotulo),id=textoNormalizado(tbodyId);
+    var temPm=label.indexOf('PM')>=0||label.indexOf('PRESTA MISTA')>=0;
+    var garantia=garantiaDoPlano(rotulo);
+    var temGarantia=garantia>0&&(label.indexOf('12')>=0||label.indexOf('24')>=0||label.indexOf('36')>=0||label.indexOf('G.E')>=0||label.indexOf('GARANT')>=0||label.indexOf('BENEFICIO')>=0);
+    var produto=precoTabela*fator;
+    if(temGarantia||temPm){
+      if(id.indexOf('PROMOCAOCARNE')>=0){
+        produto=precoTabela*fator;
+      }else if(id.indexOf('PROMOCAOCARTAO')>=0&&id.indexOf('EXTRA')<0){
+        produto=prazo<=3?precoTabela/prazo:precoTabela*fator;
+      }else if(id.indexOf('GERENTEEXCLUSIVO')>=0){
+        produto=precoTabela*fator;
+      }else if(id.indexOf('EXTRA')>=0){
+        produto=prazo<=limiteExtra()?precoTabela/prazo:precoTabela*fator;
+      }else{
+        produto=prazo<=5?precoTabela/prazo:precoTabela*fator;
+      }
+    }
+    var garantiaParcela=temGarantia?(prazo<=3?garantia/prazo:garantia*fator):0;
+    var parcela=produto+garantiaParcela;
+    if(temPm) parcela=prestaMistaBase(parcela,prazo);
+    return parcela;
+  }
+
   function montarResumo(td){
     var tbody = td && td.closest ? td.closest('tbody') : null; if(!tbody) return;
     var tr = td.closest('tr'); if(!tr) return;
+    var indiceColuna=Array.prototype.indexOf.call(tr.cells,td); if(indiceColuna<1) indiceColuna=1;
     var prazoSelecionado = prazoNum(tr.cells && tr.cells[0] ? tr.cells[0].textContent : '1x');
-    var ctx = contexto(tbody.id);
-    var normalBody = bodyById(ctx.normal), promoBody = bodyById(ctx.promo), extraBody = ctx.extra ? bodyById(ctx.extra) : null;
-    var base = promoBody || normalBody || tbody;
     var precoTabela = num(getVal('fsPrecoTabela') || getVal('precoProduto'));
     var precoPromo = num(getVal('fsPrecoPromocional'));
     var entrada = num(getVal('entrada'));
+    var modalidade=modalidadeResumo(tbody);
+    var rotulo=rotuloColuna(tbody,indiceColuna);
     var sub = document.getElementById('fsSummarySub');
     var rowsHtml = '';
-    var maxRows = Math.min(12, Math.max(base ? base.rows.length : 0, normalBody ? normalBody.rows.length : 0, promoBody ? promoBody.rows.length : 0, extraBody ? extraBody.rows.length : 0));
+    var maxRows = Math.min(12,tbody.rows?tbody.rows.length:0);
+    var maiorBeneficio=0;
 
     for(var i=0;i<maxRows;i++){
-      var rn = normalBody && normalBody.rows[i];
-      var rp = promoBody && promoBody.rows[i];
-      var re = extraBody && extraBody.rows[i];
-      var br = rp || rn || re || (tbody.rows ? tbody.rows[i] : null); if(!br) continue;
+      var br=tbody.rows[i]; if(!br) continue;
       var prazoTxt = cleanLabel(br.cells[0] ? br.cells[0].textContent : ((i+1)+'x'));
       var prazo = prazoNum(prazoTxt);
       var active = prazo === prazoSelecionado ? ' ativo' : '';
-
-      var normal = cellValue(rn,1);
-      var promo = cellValue(rp,1);
-      var presta = /carne/i.test(ctx.tipo) ? cellValue(rp || rn,2) : 0;
-      var ge1 = 0, ge2 = 0, ge3 = 0;
-      var h1 = '+12m', h2 = '+24m', h3 = '+36m';
-      var tableForHeaders = (rp && rp.parentElement) ? rp.parentElement : (tbody && tbody.parentElement ? tbody.parentElement : null);
-      if(tableForHeaders){
-        var ths = tableForHeaders.querySelectorAll('thead th');
-        if(ths[3]) h1=cleanLabel(ths[3].textContent); if(ths[4]) h2=cleanLabel(ths[4].textContent); if(ths[5]) h3=cleanLabel(ths[5].textContent);
-      }
-      if(/cartao/i.test(ctx.tipo)){
-        ge1 = cellValue(rp,2) || cellValue(re,2);
-        ge2 = cellValue(rp,3) || cellValue(re,3);
-        ge3 = cellValue(rp,4) || cellValue(re,4);
-      }else{
-        ge1 = cellValue(rp,3);
-        ge2 = cellValue(rp,4);
-        ge3 = cellValue(rp,5);
-      }
-      rowsHtml += '<div class="fs-resumo-plano'+active+'"><div class="fs-resumo-plano-top"><strong>'+prazoTxt+'</strong><span>'+(active?'Parcela selecionada':'Comparativo do valor final')+'</span></div><div class="fs-resumo-opcoes-grid">' +
-        optionBox('Preço normal', normal, prazo, 'normal') +
-        optionBox('Preço promoção', promo, prazo, 'promo') +
-        optionBox('Presta mista', presta, prazo, 'mista') +
-        optionBox(h1, ge1, prazo, 'ge') +
-        optionBox(h2, ge2, prazo, 'ge') +
-        optionBox(h3, ge3, prazo, 'ge') +
+      var fator=(fatoresResumo[modalidade]&&fatoresResumo[modalidade][prazo])||0;
+      var atual=cellValue(br,indiceColuna);
+      var normal=parcelaSemBeneficiosAtuais(tbody.id,rotulo,modalidade,prazo,precoTabela);
+      var beneficio=normal-atual;
+      var totalBeneficio=beneficio*prazo;
+      maiorBeneficio=Math.max(maiorBeneficio,totalBeneficio);
+      var classeBeneficio=beneficio>=0?'positivo':'negativo';
+      var textoBeneficio=beneficio>=0?money(beneficio)+' menor':money(Math.abs(beneficio))+' a mais';
+      rowsHtml += '<div class="fs-resumo-plano fs-comparacao-cliente'+active+'"><div class="fs-resumo-plano-top"><strong>'+prazoTxt+'</strong><span>'+(active?'Parcela escolhida • '+rotulo:rotulo)+'</span></div><div class="fs-resumo-opcoes-grid fs-comparacao-grid">'+
+        '<div class="fs-resumo-opcao fator"><small>Fator '+(modalidade==='cartao'?'Cartão':'Carnê')+'</small><strong>'+fator.toFixed(4).replace('.',',')+'</strong><em>Prazo '+prazoTxt+'</em></div>'+
+        '<div class="fs-resumo-opcao normal"><small>Sem entrada / desconto</small><strong>'+money(normal)+'</strong><em>Total '+money(normal*prazo)+'</em></div>'+
+        '<div class="fs-resumo-opcao atual"><small>Condição atual</small><strong>'+money(atual)+'</strong><em>Total '+money(atual*prazo)+'</em></div>'+
+        '<div class="fs-resumo-opcao beneficio '+classeBeneficio+'"><small>Benefício do cliente</small><strong>'+textoBeneficio+'</strong><em>No total '+money(Math.abs(totalBeneficio))+'</em></div>'+
         '</div></div>';
     }
 
     var m=ensureSummary(), b=document.getElementById('fsSummaryBody');
-    sub=document.getElementById('fsSummarySub'); if(sub) sub.textContent = ctx.titulo + ' • valores finais por prazo';
+    sub=document.getElementById('fsSummarySub'); if(sub) sub.textContent = rotulo+' • '+(modalidade==='cartao'?'Cartão':'Carnê')+' • comparação com e sem benefícios atuais';
     var desconto = (precoTabela>0 && precoPromo>0) ? Math.max(0, precoTabela-precoPromo) : 0;
-    var html = '<div class="fs-summary-kpis-pro fs-kpis-vfinal"><div class="kpi"><small>Preço tabela</small><strong>'+money(precoTabela)+'</strong></div><div class="kpi"><small>Promocional</small><strong>'+money(precoPromo)+'</strong></div><div class="kpi"><small>Entrada</small><strong>'+money(entrada)+'</strong></div><div class="kpi"><small>Economia à vista</small><strong>'+money(desconto)+'</strong></div></div>' +
+    var html = '<div class="fs-summary-kpis-pro fs-kpis-vfinal"><div class="kpi"><small>Plano analisado</small><strong>'+rotulo+'</strong></div><div class="kpi"><small>Preço normal</small><strong>'+money(precoTabela)+'</strong></div><div class="kpi"><small>Desconto informado</small><strong>'+money(desconto)+'</strong></div><div class="kpi"><small>Entrada informada</small><strong>'+money(entrada)+'</strong></div><div class="kpi"><small>Maior benefício total</small><strong>'+money(maiorBeneficio)+'</strong></div></div>' +
       '<div class="fs-summary-list fs-summary-list-vfinal">' + rowsHtml + '</div>';
     if(b) b.innerHTML=html;
     m.classList.add('open');
@@ -14603,5 +14645,34 @@ html body #mainApp,html body .dashboard,html body .content-area,html body .input
   html body .results-section table.fs-row-focus-active tbody tr.fs-row-focus td.selected-cell{background:linear-gradient(135deg,#078a55 0%,#087f8c 100%) !important;color:#fff !important;border:2px solid #056b55 !important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.24) !important;transform:none !important;animation:none !important;}
   html body .results-section table.fs-row-focus-active tbody tr:not(.fs-row-focus){opacity:.72 !important;filter:saturate(.78) !important;}
   html body .results-section tbody tr.prepreselected-row:not(.fs-row-focus) td,html body .results-section tbody tr.preselected-row:not(.fs-row-focus) td{transform:none !important;animation:none !important;box-shadow:none !important;}
+}
+</style>
+
+<!-- Comparativo final aberto por duplo toque: fator, condicao normal e beneficio. -->
+<style id="fs-comparativo-cliente-final-2107">
+.fs-summary-card.fs-summary-vfinal{width:min(980px,96vw) !important;}
+.fs-kpis-vfinal{grid-template-columns:repeat(5,minmax(0,1fr)) !important;}
+.fs-kpis-vfinal .kpi:first-child strong{font-size:.72rem !important;line-height:1.15 !important;white-space:normal !important;}
+.fs-resumo-opcoes-grid.fs-comparacao-grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:10px !important;}
+.fs-comparacao-grid .fs-resumo-opcao.fator{border-top-color:#2563eb !important;background:linear-gradient(180deg,#eff6ff,#fff) !important;}
+.fs-comparacao-grid .fs-resumo-opcao.atual{border-top-color:#0ea5e9 !important;background:linear-gradient(180deg,#ecfeff,#fff) !important;}
+.fs-comparacao-grid .fs-resumo-opcao.beneficio.positivo{border-top-color:#16a34a !important;background:linear-gradient(180deg,#ecfdf5,#fff) !important;}
+.fs-comparacao-grid .fs-resumo-opcao.beneficio.positivo strong{color:#15803d !important;}
+.fs-comparacao-grid .fs-resumo-opcao.beneficio.negativo{border-top-color:#f59e0b !important;background:linear-gradient(180deg,#fffbeb,#fff) !important;}
+.fs-comparacao-grid .fs-resumo-opcao.beneficio.negativo strong{color:#b45309 !important;}
+.fs-comparacao-grid .fs-resumo-opcao strong{font-size:.86rem !important;}
+.fs-comparacao-grid .fs-resumo-opcao em{font-size:.62rem !important;}
+@media(max-width:700px){
+  .fs-summary-card.fs-summary-vfinal{width:100% !important;max-height:92dvh !important;}
+  .fs-kpis-vfinal{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  .fs-kpis-vfinal .kpi:last-child{grid-column:1/-1 !important;}
+  .fs-resumo-opcoes-grid.fs-comparacao-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:7px !important;padding:8px !important;}
+  .fs-comparacao-cliente .fs-resumo-plano-top{padding:9px 10px !important;}
+  .fs-comparacao-cliente .fs-resumo-plano-top strong{font-size:1rem !important;}
+  .fs-comparacao-cliente .fs-resumo-plano-top span{font-size:.62rem !important;}
+  .fs-comparacao-grid .fs-resumo-opcao{padding:8px 4px !important;border-radius:13px !important;}
+  .fs-comparacao-grid .fs-resumo-opcao small{font-size:.46rem !important;}
+  .fs-comparacao-grid .fs-resumo-opcao strong{font-size:.68rem !important;}
+  .fs-comparacao-grid .fs-resumo-opcao em{font-size:.51rem !important;}
 }
 </style>
