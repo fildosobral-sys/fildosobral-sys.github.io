@@ -13071,22 +13071,27 @@ document.addEventListener('DOMContentLoaded', function(){
       var active = prazo === prazoSelecionado ? ' ativo' : '';
       var fator=(fatoresResumo[modalidade]&&fatoresResumo[modalidade][prazo])||0;
       var atual=cellValue(br,indiceColuna);
+      var produtoSemServico=precoTabela*fator;
       var normal=parcelaSemBeneficiosAtuais(tbody.id,rotulo,modalidade,prazo,precoTabela);
       var beneficio=normal-atual;
       var totalBeneficio=beneficio*prazo;
       maiorBeneficio=Math.max(maiorBeneficio,totalBeneficio);
       var classeBeneficio=beneficio>=0?'positivo':'negativo';
       var textoBeneficio=beneficio>=0?money(beneficio)+' menor':money(Math.abs(beneficio))+' a mais';
+      var diferencaProduto=produtoSemServico-atual;
+      var detalheEconomia=diferencaProduto>=0
+        ? money(diferencaProduto)+' abaixo até do produto sem serviço'
+        : 'No total '+money(Math.abs(totalBeneficio));
       rowsHtml += '<div class="fs-resumo-plano fs-comparacao-cliente'+active+'"><div class="fs-resumo-plano-top"><strong>'+prazoTxt+'</strong><span>'+(active?'Parcela escolhida • '+rotulo:rotulo)+'</span></div><div class="fs-resumo-opcoes-grid fs-comparacao-grid">'+
-        '<div class="fs-resumo-opcao fator"><small>Fator '+(modalidade==='cartao'?'Cartão':'Carnê')+'</small><strong>'+fator.toFixed(4).replace('.',',')+'</strong><em>Prazo '+prazoTxt+'</em></div>'+
-        '<div class="fs-resumo-opcao normal"><small>Sem entrada / desconto</small><strong>'+money(normal)+'</strong><em>Total '+money(normal*prazo)+'</em></div>'+
-        '<div class="fs-resumo-opcao atual"><small>Condição atual</small><strong>'+money(atual)+'</strong><em>Total '+money(atual*prazo)+'</em></div>'+
-        '<div class="fs-resumo-opcao beneficio '+classeBeneficio+'"><small>Benefício do cliente</small><strong>'+textoBeneficio+'</strong><em>No total '+money(Math.abs(totalBeneficio))+'</em></div>'+
+        '<div class="fs-resumo-opcao produto"><small>Produto sem serviço</small><strong>'+money(produtoSemServico)+'</strong><em>Total '+money(produtoSemServico*prazo)+'</em></div>'+
+        '<div class="fs-resumo-opcao servico"><small>Com o serviço escolhido</small><strong>'+money(normal)+'</strong><em>'+rotulo+' • total '+money(normal*prazo)+'</em></div>'+
+        '<div class="fs-resumo-opcao atual"><small>Condição final</small><strong>'+money(atual)+'</strong><em>Com entrada e descontos • total '+money(atual*prazo)+'</em></div>'+
+        '<div class="fs-resumo-opcao beneficio '+classeBeneficio+'"><small>Economia do cliente</small><strong>'+textoBeneficio+'</strong><em>'+detalheEconomia+'</em></div>'+
         '</div></div>';
     }
 
     var m=ensureSummary(), b=document.getElementById('fsSummaryBody');
-    sub=document.getElementById('fsSummarySub'); if(sub) sub.textContent = rotulo+' • '+(modalidade==='cartao'?'Cartão':'Carnê')+' • comparação com e sem benefícios atuais';
+    sub=document.getElementById('fsSummarySub'); if(sub) sub.textContent = rotulo+' • '+(modalidade==='cartao'?'Cartão':'Carnê')+' • produto, serviço, condição final e economia';
     var desconto = (precoTabela>0 && precoPromo>0) ? Math.max(0, precoTabela-precoPromo) : 0;
     var html = '<div class="fs-summary-kpis-pro fs-kpis-vfinal"><div class="kpi"><small>Plano analisado</small><strong>'+rotulo+'</strong></div><div class="kpi"><small>Preço normal</small><strong>'+money(precoTabela)+'</strong></div><div class="kpi"><small>Desconto informado</small><strong>'+money(desconto)+'</strong></div><div class="kpi"><small>Entrada informada</small><strong>'+money(entrada)+'</strong></div><div class="kpi"><small>Maior benefício total</small><strong>'+money(maiorBeneficio)+'</strong></div></div>' +
       '<div class="fs-summary-list fs-summary-list-vfinal">' + rowsHtml + '</div>';
@@ -14648,13 +14653,14 @@ html body #mainApp,html body .dashboard,html body .content-area,html body .input
 }
 </style>
 
-<!-- Comparativo final aberto por duplo toque: fator, condicao normal e beneficio. -->
+<!-- Comparativo comercial aberto por duplo toque: produto, servico, condicao final e economia. -->
 <style id="fs-comparativo-cliente-final-2107">
 .fs-summary-card.fs-summary-vfinal{width:min(980px,96vw) !important;}
 .fs-kpis-vfinal{grid-template-columns:repeat(5,minmax(0,1fr)) !important;}
 .fs-kpis-vfinal .kpi:first-child strong{font-size:.72rem !important;line-height:1.15 !important;white-space:normal !important;}
 .fs-resumo-opcoes-grid.fs-comparacao-grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:10px !important;}
-.fs-comparacao-grid .fs-resumo-opcao.fator{border-top-color:#2563eb !important;background:linear-gradient(180deg,#eff6ff,#fff) !important;}
+.fs-comparacao-grid .fs-resumo-opcao.produto{border-top-color:#64748b !important;background:linear-gradient(180deg,#f8fafc,#fff) !important;}
+.fs-comparacao-grid .fs-resumo-opcao.servico{border-top-color:#f59e0b !important;background:linear-gradient(180deg,#fffbeb,#fff) !important;}
 .fs-comparacao-grid .fs-resumo-opcao.atual{border-top-color:#0ea5e9 !important;background:linear-gradient(180deg,#ecfeff,#fff) !important;}
 .fs-comparacao-grid .fs-resumo-opcao.beneficio.positivo{border-top-color:#16a34a !important;background:linear-gradient(180deg,#ecfdf5,#fff) !important;}
 .fs-comparacao-grid .fs-resumo-opcao.beneficio.positivo strong{color:#15803d !important;}
