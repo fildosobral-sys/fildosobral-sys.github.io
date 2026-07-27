@@ -1,0 +1,31 @@
+CENTRAL DE VENDAS FS SOLUCOES - VERSAO DE TESTE
+
+Abra index.html para acessar a central.
+
+MODULOS
+1. Cotacoes / Vendas: vendas-mobile.html
+2. Planos e Parcelamentos: simulador.html
+3. Orcamentos: orcamentos.html
+
+AJUSTES DESTA VERSAO
+- O index preserva o visual mobile enviado.
+- Crediario foi substituido pelo card Orcamentos.
+- Dashboard, Formularios, Escala Operacional e Expansao Futura foram desativados
+  junto com a secao Acompanhamento e Indicadores.
+- Navegacao por categorias, menu de opcoes e area de orcamentos foram mantidos.
+- Cotacoes / Vendas e Orcamentos herdam a identificacao salva no index.
+- O aplicativo instalado inicia pela central.
+- O cache inclui os tres modulos.
+- O banner superior foi compactado para aproveitar melhor a tela.
+- O card Planos e Parcelamentos recebeu uma imagem neutra de pagamentos.
+- A tarja principal passou a identificar a Central Inteligente de Vendas.
+- O menu ganhou a opção Sobre a Plataforma com a finalidade da ferramenta.
+- O rodape recebeu a assinatura discreta Designed & Developed by Fildo Sobral.
+- O carrossel deixou de aplicar zoom e deslocamento e passou a preservar os banners completos.
+- A ordem dos cards agora e Cotacoes/Vendas, Parcelamentos e Planos, Orcamentos.
+- Parcelamentos e Planos recebeu imagem propria de negociacao no varejo de moveis e eletro.
+- A vendedora da imagem de Parcelamentos e Planos usa uniforme azul e vermelho no padrao Zenir.
+
+IMPORTANTE
+Esta e uma versao estrutural para conferencia. As regras comerciais e os calculos
+originais dos tres sistemas nao foram alterados.
