@@ -4379,7 +4379,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
                 type="button"
                 onclick="event.stopPropagation(); abrirZenirProduto('${p.id}')"
                 class="h-12 px-3 py-2 rounded-lg border border-blue-500 text-blue-600 bg-white hover:bg-blue-50 flex items-center justify-center"
-                title="Abrir produto no site da Zenir">
+                title="Consultar produto no app de Vendas Zenir">
                 🔍
               </button>
               <button
@@ -4785,14 +4785,9 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
           navigator.clipboard.writeText(termo).catch(() => {});
         }
         
-        const baseUrl = 'https://www.zenirmoveis.com.br';
-        const url = termo
-          ? baseUrl + '/busca?ft=' + encodeURIComponent(termo)
-          : baseUrl;
-        
-        window.open(url, '_blank');
+        window.open('https://vendas.grupozenir.com.br/home', '_blank', 'noopener,noreferrer');
       } catch (e) {
-        console.error('Erro ao abrir site da Zenir:', e);
+        console.error('Erro ao abrir o app de Vendas Zenir:', e);
       }
     }
 

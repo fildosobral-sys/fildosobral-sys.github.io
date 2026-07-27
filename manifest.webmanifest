@@ -3,7 +3,7 @@
   "short_name": "FS Vendas",
   "description": "Central de cotações, planos, parcelamentos e orçamentos.",
   "id": "/",
-  "start_url": "/index.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],

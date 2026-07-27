@@ -1777,7 +1777,7 @@
         <label class="input-label" for="codigoProduto">📦 Código do Produto:</label>
         <div id="codigoProdutoRow" style="display:flex; gap:12px; align-items:center; width:100%;">
           <input type="text" id="codigoProduto" class="input-field" placeholder="Ex: 11962 - DESCRIÇÃO DO PRODUTO..." required style="flex:1;">
-          <button type="button" id="btnPesquisarZenir" class="btn btn-secondary" style="width:56px; padding: 0.75rem 0;" title="Pesquisar na Zenir">🔎</button>
+          <button type="button" id="btnPesquisarZenir" class="btn btn-secondary" style="width:56px; padding: 0.75rem 0;" title="Consultar produto no app de Vendas Zenir">🔎</button>
           <button type="button" id="btnColarZenir" class="btn btn-primary" style="white-space:nowrap;" title="Colar código/descrição da Zenir">📋 Colar da ZENIR</button>
         </div>
         <p id="zenirDica" style="display:none;"><span style="display:none;">Dica: digite um código/descrição, clique na lupa, copie o texto da página e depois clique em Colar da ZENIR.</span></p>
@@ -3545,11 +3545,9 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 if (termo && navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(termo).catch(() => {});
                 }
-                const baseUrl = 'https://www.zenirmoveis.com.br';
-                const url = termo ? (baseUrl + '/busca?ft=' + encodeURIComponent(termo)) : baseUrl;
-                window.open(url, '_blank', 'noopener,noreferrer');
+                window.open('https://vendas.grupozenir.com.br/home', '_blank', 'noopener,noreferrer');
             } catch (e) {
-                console.error('Erro ao abrir site da Zenir:', e);
+                console.error('Erro ao abrir o app de Vendas Zenir:', e);
             }
         }
 
