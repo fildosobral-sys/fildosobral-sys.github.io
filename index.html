@@ -9159,7 +9159,7 @@ img{
 <button class="fs-options-close" id="fsOptionsClose" type="button">✕</button>
 </div>
 <button class="fs-options-profile" id="fsOptionsProfile" type="button">
-<div class="fs-options-avatar">F</div>
+<div class="fs-options-avatar" id="fsOptionsAvatar" aria-label="Adicionar foto de perfil">F<span class="fs-avatar-camera">📷</span></div>
 <div class="fs-options-profile-text">
 <small id="fsOptionsRole">DESENVOLVEDOR_MASTER</small>
 <strong id="fsOptionsUser">FRANCIFILDO PEREIRA SOBRAL</strong>
@@ -9181,7 +9181,7 @@ img{
 <script>
 (function(){
   const API_FS = "https://script.google.com/macros/s/AKfycbzQTAJGkaqzLEZs6xiEBMUp7rnLSxQiZxUQzNPiciAWxdj3ZUL6ObW4iAUfkmutueVasw/exec";
-  const PLATFORM_LINK = window.location.href;
+  const PLATFORM_LINK = window.location.origin + window.location.pathname;
   const DEV_MASTER_NAME = 'FRANCIFILDO PEREIRA SOBRAL';
   const DEV_MASTER_CARGO = 'DESENVOLVEDOR_MASTER';
   const DEV_MASTER_WHATS = '88988222564';
@@ -9226,7 +9226,11 @@ img{
   function onlyDigits(v){ return String(v || '').replace(/\D/g,''); }
   function pad(n){ return String(n).padStart(2,'0'); }
   function dateToBR(v){ const parts=v.split('-'); return parts[2]+'/'+parts[1]+'/'+parts[0]; }
-  function filialValida(v){ return /^FILIAL\s+\d+$/i.test(upper(v)); }
+  function normalizarFilial(v){
+    const numero = onlyDigits(v);
+    return numero ? 'FILIAL ' + numero : upper(v).replace(/\s+/g, ' ');
+  }
+  function filialValida(v){ return /^FILIAL\s+\d+$/i.test(normalizarFilial(v)); }
 
   function getCurrentAccessData(){
     return {
@@ -9441,7 +9445,7 @@ img{
   }
 
   async function salvarUsuario(){
-    const filial = upper(filialEl.value);
+    const filial = normalizarFilial(filialEl.value);
     const nome = upper(nomeEl.value);
     const cargo = upper(cargoEl.value);
     const whatsapp = onlyDigits(whatsEl.value);
@@ -9475,8 +9479,19 @@ img{
       }else{
         json = await apiPost({ acao:'cadastrarUsuario', filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp, criado_por:'FS SOLUCOES' });
       }
-      const msg = 'OLÁ '+nome+'!\n\nVOCÊ RECEBEU ACESSO À PLATAFORMA FS SOLUÇÕES.\n\nFILIAL: '+filial+'\nCARGO: '+cargo+'\n\nACESSE A PLATAFORMA:\n\n'+PLATFORM_LINK;
-      window.open('https://wa.me/55'+whatsapp+'?text='+encodeURIComponent(msg), '_blank', 'noopener');
+      if(json && json.ok === false){
+        alert(json.mensagem || 'NÃO FOI POSSÍVEL GERAR O ACESSO.');
+        return;
+      }
+      const convite = new URL(PLATFORM_LINK);
+      convite.searchParams.set('acesso', '1');
+      convite.searchParams.set('filial', filial);
+      convite.searchParams.set('nome', nome);
+      convite.searchParams.set('cargo', cargo);
+      convite.searchParams.set('whatsapp', whatsapp);
+      const msg = 'OLÁ '+nome+'!\n\nVOCÊ RECEBEU ACESSO À CENTRAL INTELIGENTE DE VENDAS.\n\nFILIAL: '+filial+'\nCARGO: '+cargo+'\n\nABRA O LINK, CONFIRA SEUS DADOS E TOQUE EM ENTRAR:\n\n'+convite.toString();
+      const numeroDestino = whatsapp.startsWith('55') ? whatsapp : '55'+whatsapp;
+      window.open('https://wa.me/'+numeroDestino+'?text='+encodeURIComponent(msg), '_blank', 'noopener');
       alert(json.mensagem || 'OPERAÇÃO REALIZADA COM SUCESSO');
       limparFormulario();
       await carregarUsuarios();
@@ -12880,6 +12895,168 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
+</script>
+<style id="fs-perfil-identificado-v11">
+#fsOptionsAvatar{position:relative;overflow:visible;cursor:pointer;background-size:cover;background-position:center}
+#fsOptionsAvatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+#fsOptionsAvatar .fs-avatar-camera{position:absolute;right:-4px;bottom:-3px;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #2f2f96;font-size:13px;box-shadow:0 3px 9px rgba(15,23,42,.22)}
+</style>
+<script id="fs-acesso-identificado-v11">
+(function(){
+  function texto(v){ return String(v == null ? '' : v).trim(); }
+  function maiusculo(v){ return texto(v).toUpperCase(); }
+  function digitos(v){ return texto(v).replace(/\D+/g, ''); }
+  function filial(v){
+    var numero = digitos(v);
+    return numero ? 'FILIAL ' + numero : maiusculo(v).replace(/\s+/g, ' ');
+  }
+
+  var query = new URLSearchParams(window.location.search);
+  var convite = query.get('acesso') === '1' ? {
+    filial: filial(query.get('filial')),
+    nome: maiusculo(query.get('nome')),
+    cargo: maiusculo(query.get('cargo')),
+    whatsapp: digitos(query.get('whatsapp'))
+  } : null;
+
+  if(convite && convite.filial && convite.nome && convite.cargo){
+    window.__fsConvitePendente = convite;
+    ['fs_filial','fs_nome','fs_cargo','fs_whatsapp','fs_access_persisted'].forEach(function(chave){
+      localStorage.removeItem(chave);
+    });
+    sessionStorage.removeItem('fs_access_done');
+  }
+
+  function inicialDoNome(nome){
+    var limpo = maiusculo(nome).replace(/[^A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/g, '');
+    return limpo.charAt(0) || 'U';
+  }
+
+  function atualizarPerfil(){
+    var nome = maiusculo(localStorage.getItem('fs_nome')) || 'USUÁRIO';
+    var cargo = maiusculo(localStorage.getItem('fs_cargo')) || 'COLABORADOR';
+    var avatar = document.getElementById('fsOptionsAvatar');
+    var nomeEl = document.getElementById('fsOptionsUser');
+    var cargoEl = document.getElementById('fsOptionsRole');
+    if(nomeEl) nomeEl.textContent = nome;
+    if(cargoEl) cargoEl.textContent = cargo;
+    if(!avatar) return;
+    var foto = localStorage.getItem('fs_profile_photo') || '';
+    avatar.innerHTML = '';
+    if(foto){
+      var img = document.createElement('img');
+      img.src = foto;
+      img.alt = 'Foto de ' + nome;
+      avatar.appendChild(img);
+    }else{
+      avatar.appendChild(document.createTextNode(inicialDoNome(nome)));
+    }
+    var camera = document.createElement('span');
+    camera.className = 'fs-avatar-camera';
+    camera.textContent = '📷';
+    avatar.appendChild(camera);
+    avatar.setAttribute('aria-label', 'Adicionar ou alterar foto de ' + nome);
+  }
+
+  function preencherConvite(){
+    if(!window.__fsConvitePendente) return;
+    var mapa = {
+      fsAccessFilial: window.__fsConvitePendente.filial,
+      fsAccessNome: window.__fsConvitePendente.nome,
+      fsAccessCargo: window.__fsConvitePendente.cargo,
+      fsAccessWhats: window.__fsConvitePendente.whatsapp
+    };
+    Object.keys(mapa).forEach(function(id){
+      var campo = document.getElementById(id);
+      if(!campo) return;
+      campo.value = mapa[id];
+      campo.readOnly = true;
+      campo.setAttribute('aria-readonly', 'true');
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var avatar = document.getElementById('fsOptionsAvatar');
+    var seletor = document.createElement('input');
+    seletor.type = 'file';
+    seletor.accept = 'image/*';
+    seletor.id = 'fsProfilePhotoInput';
+    seletor.hidden = true;
+    document.body.appendChild(seletor);
+
+    if(avatar){
+      avatar.addEventListener('click', function(event){
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        seletor.click();
+      }, true);
+    }
+
+    seletor.addEventListener('change', function(){
+      var arquivo = seletor.files && seletor.files[0];
+      if(!arquivo || !arquivo.type.startsWith('image/')) return;
+      var leitor = new FileReader();
+      leitor.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var canvas = document.createElement('canvas');
+          canvas.width = 320;
+          canvas.height = 320;
+          var ctx = canvas.getContext('2d');
+          var lado = Math.min(img.width, img.height);
+          var sx = (img.width - lado) / 2;
+          var sy = (img.height - lado) / 2;
+          ctx.drawImage(img, sx, sy, lado, lado, 0, 0, 320, 320);
+          localStorage.setItem('fs_profile_photo', canvas.toDataURL('image/jpeg', .84));
+          atualizarPerfil();
+        };
+        img.src = leitor.result;
+      };
+      leitor.readAsDataURL(arquivo);
+      seletor.value = '';
+    });
+
+    var filialCampo = document.getElementById('fsAccessFilial');
+    if(filialCampo){
+      filialCampo.addEventListener('blur', function(){ filialCampo.value = filial(filialCampo.value); });
+    }
+
+    var entrar = document.getElementById('fsAccessOk');
+    if(entrar){
+      entrar.addEventListener('click', function(){
+        var f = document.getElementById('fsAccessFilial');
+        if(f) f.value = filial(f.value);
+        setTimeout(function(){
+          var nome = maiusculo(localStorage.getItem('fs_nome'));
+          if(nome){
+            localStorage.setItem('nomeVendedor', nome);
+            localStorage.setItem('nomeVendedorLogado', nome);
+            localStorage.setItem('vendedor_nome', nome);
+          }
+          atualizarPerfil();
+          if(window.__fsConvitePendente){
+            window.__fsConvitePendente = null;
+            history.replaceState({}, document.title, window.location.pathname);
+          }
+        }, 80);
+      }, true);
+    }
+
+    atualizarPerfil();
+    if(window.__fsConvitePendente){
+      var tentativas = 0;
+      var timer = setInterval(function(){
+        preencherConvite();
+        tentativas += 1;
+        if(document.getElementById('fsAccessModal')?.classList.contains('open') || tentativas > 20){
+          clearInterval(timer);
+        }
+      }, 60);
+    }
+
+    new MutationObserver(atualizarPerfil).observe(document.getElementById('menuUserName') || document.body, {childList:true,subtree:true,characterData:true});
+  });
+})();
 </script>
 </body>
 </html>

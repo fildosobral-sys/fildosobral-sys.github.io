@@ -4681,13 +4681,7 @@ document.addEventListener('click', function(event){
   if(!voltar) return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  try{
-    if(sessionStorage.getItem('fs_module_from_index') === '1' && history.length > 1){
-      sessionStorage.removeItem('fs_module_from_index');
-      history.back();
-      return;
-    }
-  }catch(e){}
+  try{ sessionStorage.removeItem('fs_module_from_index'); }catch(e){}
   window.location.replace('./index.html');
 }, true);
 </script>

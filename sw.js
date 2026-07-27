@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v10-uniformes-zenir";
+const CACHE_NAME = "fs-central-v11-acesso-perfil-retorno";
 const APP_FILES = [
   "/",
   "/index.html",
