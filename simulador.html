@@ -14692,6 +14692,39 @@ html body #mainApp,html body .dashboard,html body .content-area,html body .input
   .fs-comparacao-grid .fs-resumo-opcao{padding:8px 4px !important;border-radius:13px !important;}
   .fs-comparacao-grid .fs-resumo-opcao small{font-size:.46rem !important;}
   .fs-comparacao-grid .fs-resumo-opcao strong{font-size:.68rem !important;}
-  .fs-comparacao-grid .fs-resumo-opcao em{font-size:.51rem !important;}
+.fs-comparacao-grid .fs-resumo-opcao em{font-size:.51rem !important;}
 }
 </style>
+<style id="fs-padrao-voltar-sem-boas-vindas-v12">
+#btnVoltarInicio,.fs-back-home{
+  position:fixed !important;left:auto !important;right:max(14px,env(safe-area-inset-right)) !important;
+  bottom:max(14px,env(safe-area-inset-bottom)) !important;width:auto !important;min-width:154px !important;
+  height:48px !important;padding:0 18px !important;border:0 !important;border-radius:999px !important;
+  display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;
+  background:#111827 !important;color:#fff !important;font:700 14px/1 Arial,sans-serif !important;
+  text-decoration:none !important;box-shadow:0 10px 24px rgba(15,23,42,.28) !important;z-index:2147483000 !important;
+}
+#welcomeMessage .fs-welcome-user,.welcome-message .fs-welcome-user{display:none !important}
+#welcomeMessage .fs-welcome-motivation,.welcome-message .fs-welcome-motivation{display:block !important}
+</style>
+<script id="fs-sem-boas-vindas-repetidas-v12">
+(function(){
+  var toastOriginal = window.showToast;
+  if(typeof toastOriginal === 'function'){
+    window.showToast = function(mensagem, tipo){
+      if(/bem-vind/i.test(String(mensagem || ''))) return;
+      return toastOriginal.apply(this, arguments);
+    };
+  }
+  function ocultarSaudacao(){
+    document.querySelectorAll('#welcomeMessage .fs-welcome-user,.welcome-message .fs-welcome-user').forEach(function(el){
+      el.style.setProperty('display','none','important');
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    ocultarSaudacao();
+    var alvo = document.getElementById('welcomeMessage');
+    if(alvo) new MutationObserver(ocultarSaudacao).observe(alvo,{childList:true,subtree:true});
+  });
+})();
+</script>

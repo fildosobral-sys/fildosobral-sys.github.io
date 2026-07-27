@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v11-acesso-perfil-retorno";
+const CACHE_NAME = "fs-central-v12-navegacao-unificada";
 const APP_FILES = [
   "/",
   "/index.html",
