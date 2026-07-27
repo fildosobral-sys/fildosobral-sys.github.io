@@ -1,8 +1,11 @@
-const CACHE_NAME = "planos-zenir-v10-produto-sem-servico-com-entrada";
+const CACHE_NAME = "fs-central-v6-uniforme-zenir";
 const APP_FILES = [
   "/",
   "/index.html",
   "/simulador.html",
+  "/vendas-mobile.html",
+  "/orcamentos.html",
+  "/parcelamentos-planos.webp",
   "/manifest.webmanifest",
   "/favicon.svg",
   "/icon-192.png",
@@ -47,8 +50,8 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(async () =>
           (await caches.match(event.request)) ||
-          (await caches.match("/simulador.html")) ||
-          (await caches.match("/index.html"))
+          (await caches.match("/index.html")) ||
+          (await caches.match("/simulador.html"))
         )
     );
     return;
