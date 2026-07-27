@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v23-casinha-confirmacao";
+const CACHE_NAME = "fs-central-v24-casinha-unificada";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -8,13 +8,13 @@ const APP_FILES = [
   "/parcelamentos-planos.webp",
   "/cotacoes-vendas.webp",
   "/orcamentos-card.webp",
-  "/manifest.webmanifest?v=23",
+  "/manifest.webmanifest?v=24",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=23",
-  "/draft-protection.js?v=23",
-  "/home-transition.js?v=23"
+  "/pwa-update.js?v=24",
+  "/draft-protection.js?v=24",
+  "/home-transition.js?v=24"
 ];
 
 self.addEventListener("install", (event) => {

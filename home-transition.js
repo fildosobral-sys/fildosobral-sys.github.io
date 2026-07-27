@@ -3,6 +3,42 @@
   var navigating = false;
   var armed = false;
   var armTimer = 0;
+
+  function setHomeVisual(active) {
+    var home = document.querySelector("#btnVoltarInicio,.fs-back-home");
+    if (!home) return;
+    var values = {
+      position: "fixed",
+      left: "auto",
+      right: "max(14px, env(safe-area-inset-right))",
+      bottom: "max(14px, env(safe-area-inset-bottom))",
+      width: "56px",
+      "min-width": "56px",
+      "max-width": "56px",
+      height: "56px",
+      "min-height": "56px",
+      "max-height": "56px",
+      padding: "0",
+      border: "0",
+      "border-radius": "50%",
+      display: "flex",
+      "align-items": "center",
+      "justify-content": "center",
+      color: "#fff",
+      "font-size": "26px",
+      "line-height": "1",
+      "text-decoration": "none",
+      "z-index": "2147483000",
+      transition: "opacity .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease",
+      opacity: active ? "1" : ".30",
+      background: active ? "#111827" : "rgba(17,24,39,.48)",
+      transform: active ? "scale(1.06)" : "scale(1)",
+      "box-shadow": active ? "0 10px 24px rgba(15,23,42,.34)" : "0 6px 16px rgba(15,23,42,.12)"
+    };
+    Object.keys(values).forEach(function (prop) {
+      home.style.setProperty(prop, values[prop], "important");
+    });
+  }
   function ensureOverlay() {
     var overlay = document.getElementById("fsHomeTransition");
     if (overlay) return overlay;
@@ -24,6 +60,7 @@
         home.setAttribute("aria-label", "Toque novamente para voltar ao início");
         home.setAttribute("title", "Toque novamente para voltar ao início");
       }
+      setHomeVisual(true);
       window.clearTimeout(armTimer);
       armTimer = window.setTimeout(function () {
         armed = false;
@@ -32,6 +69,7 @@
           home.setAttribute("aria-label", "Ativar retorno ao início");
           home.setAttribute("title", "Ativar retorno ao início");
         }
+        setHomeVisual(false);
       }, 2800);
       return false;
     }
@@ -50,6 +88,12 @@
     event.stopImmediatePropagation();
     window.fsVoltarCentral();
   }, true);
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { setHomeVisual(false); }, { once: true });
+  } else {
+    setHomeVisual(false);
+  }
   var style = document.createElement("style");
   style.textContent =
     "html body #btnVoltarInicio:not(.fs-home-armed),html body a.fs-back-home:not(.fs-home-armed){" +
