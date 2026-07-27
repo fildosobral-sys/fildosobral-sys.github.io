@@ -17122,7 +17122,8 @@ document.addEventListener('click', function(event){
   event.preventDefault();
   event.stopImmediatePropagation();
   try{ sessionStorage.removeItem('fs_module_from_index'); }catch(e){}
-  window.location.replace('./index.html');
+  if(window.fsVoltarCentral){ window.fsVoltarCentral(); }
+  else{ window.location.replace('./index.html'); }
 }, true);
 </script>
 <style id="fs-padrao-voltar-sem-boas-vindas-v12">
@@ -17172,9 +17173,10 @@ document.addEventListener('click', function(event){
   });
 })();
 </script>
-<style id="fs-casinha-unificada-v18">
+<style id="fs-casinha-unificada-v20">
 html body #btnVoltarInicio,
-html body .fs-back-home[aria-label][title]{
+html body:not(.fs-mobile-result-visible) a.fs-back-home.fs-back-home,
+html body a.fs-back-home.fs-back-home[aria-label]{
   position:fixed !important;
   left:auto !important;
   right:max(14px,env(safe-area-inset-right)) !important;
@@ -17200,6 +17202,7 @@ html body .fs-back-home[aria-label][title]{
   z-index:2147483000 !important;
 }
 </style>
-<script src="./draft-protection.js?v=18"></script>
+<script src="./draft-protection.js?v=20"></script>
+<script src="./home-transition.js?v=20"></script>
 </body>
 </html>

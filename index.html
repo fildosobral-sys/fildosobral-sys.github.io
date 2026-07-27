@@ -12,7 +12,7 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=18" rel="manifest"/>
+<link href="/manifest.webmanifest?v=20" rel="manifest"/>
 <link href="/icon-192.png" rel="apple-touch-icon"/>
 <link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
 <script id="fs-auth-guard-boot">
@@ -13124,38 +13124,78 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<style id="fs-cards-sem-moldura-v18">
+<style id="fs-cards-sem-moldura-v20">
 /* Regra final: as imagens ocupam toda a largura útil e escondem as molduras laterais. */
-html body.fs-exact-home .fs-home-section .grid > .card{
+html body .fs-exact-home .fs-home-section .grid > .card{
   padding:0 !important;
   overflow:hidden !important;
 }
-html body.fs-exact-home .fs-home-section .grid > .card > img{
+html body .fs-exact-home .fs-home-section .grid > .card > img{
   display:block !important;
-  width:104% !important;
+  width:100% !important;
   max-width:none !important;
   height:clamp(245px,52vw,340px) !important;
-  margin:0 -2% !important;
+  margin:0 !important;
   object-fit:cover !important;
   object-position:center center !important;
   border:0 !important;
   border-radius:0 !important;
   box-shadow:none !important;
+  transform:scale(1.055) !important;
+  transform-origin:center center !important;
 }
-html body.fs-exact-home .fs-home-section .grid > .card > .card-body{
+html body .fs-exact-home .fs-home-section .grid > .card > .card-body{
+  position:relative !important;
+  z-index:2 !important;
   width:100% !important;
   margin:0 !important;
 }
 @media(max-width:640px){
-  html body.fs-exact-home .fs-home-section .grid > .card > img{
-    width:106% !important;
-    height:53vw !important;
-    min-height:230px !important;
+  html body .fs-exact-home .fs-home-section .grid > .card > img{
+    width:100% !important;
+    height:56vw !important;
+    min-height:240px !important;
     max-height:315px !important;
-    margin:0 -3% !important;
+    margin:0 !important;
+    transform:scale(1.065) !important;
   }
 }
+html body .fs-author-signature{
+  margin:2px auto 0 !important;
+  padding:2px 8px !important;
+  line-height:1.2 !important;
+}
+html body .fs-categorias-wrap{
+  margin-bottom:4px !important;
+  padding-bottom:0 !important;
+}
 </style>
-<script src="./pwa-update.js?v=18"></script>
+<script id="fs-sobre-sem-travamento-v19">
+(function(){
+  function liberarTela(){
+    ['fsAboutModal','fsAboutBackdrop','fsOptionsSheet','fsOptionsBackdrop'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.classList.remove('open');
+    });
+    document.body.classList.remove('fs-hp-open','modal-open','lock-scroll');
+    document.documentElement.classList.remove('modal-open','lock-scroll');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('overflow-y');
+    document.body.style.removeProperty('position');
+    document.body.style.removeProperty('top');
+    document.documentElement.style.removeProperty('overflow');
+    document.documentElement.style.removeProperty('overflow-y');
+  }
+  window.fecharSobreSistema=liberarTela;
+  document.addEventListener('DOMContentLoaded',function(){
+    var fechar=document.querySelector('.fs-about-close');
+    var fundo=document.getElementById('fsAboutBackdrop');
+    if(fechar) fechar.addEventListener('click',function(e){e.preventDefault();liberarTela();},true);
+    if(fundo) fundo.addEventListener('click',function(e){e.preventDefault();liberarTela();},true);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape') liberarTela();});
+  });
+})();
+</script>
+<script src="./pwa-update.js?v=20"></script>
 </body>
 </html>
