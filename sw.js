@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v22-sobre-desbloqueado";
+const CACHE_NAME = "fs-central-v23-casinha-confirmacao";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -8,13 +8,13 @@ const APP_FILES = [
   "/parcelamentos-planos.webp",
   "/cotacoes-vendas.webp",
   "/orcamentos-card.webp",
-  "/manifest.webmanifest?v=22",
+  "/manifest.webmanifest?v=23",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=22",
-  "/draft-protection.js?v=22",
-  "/home-transition.js?v=22"
+  "/pwa-update.js?v=23",
+  "/draft-protection.js?v=23",
+  "/home-transition.js?v=23"
 ];
 
 self.addEventListener("install", (event) => {

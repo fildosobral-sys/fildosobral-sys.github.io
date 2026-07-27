@@ -12,7 +12,7 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=22" rel="manifest"/>
+<link href="/manifest.webmanifest?v=23" rel="manifest"/>
 <link rel="preload" as="image" href="./cotacoes-vendas.webp"/>
 <link rel="preload" as="image" href="./parcelamentos-planos.webp"/>
 <link rel="preload" as="image" href="./orcamentos-card.webp"/>
@@ -13159,7 +13159,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<style id="fs-cards-sem-moldura-v21">
+<style id="fs-cards-sem-moldura-v23">
 /* Regra final: as imagens ocupam toda a largura útil e escondem as molduras laterais. */
 html body .fs-exact-home .fs-home-section .grid > .card{
   padding:0 !important;
@@ -13176,8 +13176,9 @@ html body .fs-exact-home .fs-home-section .grid > .card > img{
   border:0 !important;
   border-radius:0 !important;
   box-shadow:none !important;
-  transform:scale(1.10) !important;
+  transform:translateY(-18px) scale(1.12) !important;
   transform-origin:center top !important;
+  margin-bottom:-18px !important;
 }
 html body .fs-exact-home .fs-home-section .grid > .card > .card-body{
   position:relative !important;
@@ -13192,7 +13193,8 @@ html body .fs-exact-home .fs-home-section .grid > .card > .card-body{
     min-height:240px !important;
     max-height:315px !important;
     margin:0 !important;
-    transform:scale(1.115) !important;
+    transform:translateY(-20px) scale(1.135) !important;
+    margin-bottom:-20px !important;
   }
 }
 html body .fs-author-signature{
@@ -13284,6 +13286,6 @@ html body .fs-categorias-wrap{
   setTimeout(liberar,2200);
 })();
 </script>
-<script src="./pwa-update.js?v=22"></script>
+<script src="./pwa-update.js?v=23"></script>
 </body>
 </html>

@@ -1,6 +1,8 @@
 (function () {
   "use strict";
   var navigating = false;
+  var armed = false;
+  var armTimer = 0;
   function ensureOverlay() {
     var overlay = document.getElementById("fsHomeTransition");
     if (overlay) return overlay;
@@ -14,7 +16,27 @@
   }
   window.fsVoltarCentral = function () {
     if (navigating) return false;
+    var home = document.querySelector("#btnVoltarInicio,.fs-back-home");
+    if (!armed) {
+      armed = true;
+      if (home) {
+        home.classList.add("fs-home-armed");
+        home.setAttribute("aria-label", "Toque novamente para voltar ao início");
+        home.setAttribute("title", "Toque novamente para voltar ao início");
+      }
+      window.clearTimeout(armTimer);
+      armTimer = window.setTimeout(function () {
+        armed = false;
+        if (home) {
+          home.classList.remove("fs-home-armed");
+          home.setAttribute("aria-label", "Ativar retorno ao início");
+          home.setAttribute("title", "Ativar retorno ao início");
+        }
+      }, 2800);
+      return false;
+    }
     navigating = true;
+    window.clearTimeout(armTimer);
     var overlay = ensureOverlay();
     try { sessionStorage.setItem("fs_returning_home", "1"); } catch (e) {}
     requestAnimationFrame(function () { overlay.classList.add("is-visible"); });
@@ -30,6 +52,12 @@
   }, true);
   var style = document.createElement("style");
   style.textContent =
+    "html body #btnVoltarInicio:not(.fs-home-armed),html body a.fs-back-home:not(.fs-home-armed){" +
+      "opacity:.30!important;background:rgba(17,24,39,.48)!important;" +
+      "box-shadow:0 6px 16px rgba(15,23,42,.12)!important;transition:opacity .18s ease,background .18s ease,transform .18s ease!important}" +
+    "html body #btnVoltarInicio.fs-home-armed,html body a.fs-back-home.fs-home-armed{" +
+      "opacity:1!important;background:#111827!important;transform:scale(1.06)!important;" +
+      "box-shadow:0 10px 24px rgba(15,23,42,.34)!important}" +
     "#fsHomeTransition{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(145deg,#111b69,#3133a2);opacity:0;visibility:hidden;transition:opacity .16s ease,visibility .16s ease}" +
     "#fsHomeTransition.is-visible{opacity:1;visibility:visible}" +
     ".fs-home-transition-card{display:flex;flex-direction:column;align-items:center;min-width:210px;padding:26px 28px 24px;border:1px solid rgba(255,255,255,.2);border-radius:24px;background:rgba(255,255,255,.11);color:#fff;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.26);backdrop-filter:blur(10px)}" +
