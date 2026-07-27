@@ -12,7 +12,7 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=24" rel="manifest"/>
+<link href="/manifest.webmanifest?v=25" rel="manifest"/>
 <link rel="preload" as="image" href="./cotacoes-vendas.webp"/>
 <link rel="preload" as="image" href="./parcelamentos-planos.webp"/>
 <link rel="preload" as="image" href="./orcamentos-card.webp"/>
@@ -8789,7 +8789,6 @@ img{
 </header>
 <section class="hero">
 <div class="carousel" id="carousel">
-<a class="carousel-link" href="https://www.zenirmoveis.com.br/457?map=productClusterIds" rel="noopener noreferrer" target="_blank"><img alt="Tudo Pra Você Zenir" decoding="async" fetchpriority="high" loading="eager" src="https://tfcvih.vtexassets.com/assets/vtex.file-manager-graphql/images/d740ee86-fc48-44cd-a7db-3923dd294133___b7f55b0daf1e885ea42d44a7bc1f516a.png"/></a>
 <a class="carousel-link" href="https://www.zenirmoveis.com.br/265?map=productClusterIds" rel="noopener noreferrer" target="_blank"><img alt="Eletrodomésticos" decoding="async" fetchpriority="high" loading="eager" src="https://tfcvih.vtexassets.com/assets/vtex.file-manager-graphql/images/df1500b3-839e-413e-96df-b63b2142844f___8340d1ee63e994135a29b39f35674f7b.png"/></a>
 <a class="carousel-link" href="https://www.zenirmoveis.com.br/327?map=productClusterIds" rel="noopener noreferrer" target="_blank"><img alt="Móveis" decoding="async" fetchpriority="auto" loading="eager" src="https://tfcvih.vtexassets.com/assets/vtex.file-manager-graphql/images/7e5d7698-1407-4138-ae2a-ec3ed6580d0e___f9de51907ceddfd37ee74f1480ffef5a.png"/></a>
 <a class="carousel-link" href="https://www.zenirmoveis.com.br/280?map=productClusterIds" rel="noopener noreferrer" target="_blank"><img alt="Zeflex" decoding="async" fetchpriority="auto" loading="eager" src="https://tfcvih.vtexassets.com/assets/vtex.file-manager-graphql/images/fe7699f6-b407-40ab-8899-57e73f07b12a___0343b12f46937a691d147429bababbc8.png"/></a>
@@ -13185,6 +13184,29 @@ html body .fs-exact-home .fs-home-section .grid > .card > .card-body{
   z-index:2 !important;
   width:100% !important;
   margin:0 !important;
+  min-height:96px !important;
+  padding:14px 16px 16px !important;
+  overflow:hidden !important;
+  background:linear-gradient(180deg,#ffffff 0%,#eef8ff 100%) !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card > .card-body::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 31% 0 0 !important;
+  display:block !important;
+  border-radius:0 0 72px 0 !important;
+  background:linear-gradient(150deg,rgba(255,255,255,.42),rgba(186,230,253,.9)) !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card > .card-body::after{
+  display:none !important;
+  content:none !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card > .card-body > .card-title{
+  position:relative !important;
+  z-index:2 !important;
+  color:#6675b6 !important;
+  opacity:1 !important;
+  font-weight:800 !important;
 }
 @media(max-width:640px){
   html body .fs-exact-home .fs-home-section .grid > .card > img{
@@ -13286,6 +13308,6 @@ html body .fs-categorias-wrap{
   setTimeout(liberar,2200);
 })();
 </script>
-<script src="./pwa-update.js?v=24"></script>
+<script src="./pwa-update.js?v=25"></script>
 </body>
 </html>
