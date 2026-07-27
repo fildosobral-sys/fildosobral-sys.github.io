@@ -12,7 +12,7 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=16" rel="manifest"/>
+<link href="/manifest.webmanifest?v=17" rel="manifest"/>
 <link href="/icon-192.png" rel="apple-touch-icon"/>
 <link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
 <script id="fs-auth-guard-boot">
@@ -12699,8 +12699,8 @@ document.addEventListener('click', function(e){
 <style id="fs-ajuste-compacto-v2">
 /* Cabeçalho mais compacto, preservando as proporções dos banners. */
 .fs-author-signature{
-  margin:22px auto 94px !important;
-  padding:8px 16px !important;
+  margin:6px auto 78px !important;
+  padding:2px 12px !important;
   text-align:center !important;
   color:#94a3b8 !important;
   font-size:10px !important;
@@ -12777,6 +12777,48 @@ document.addEventListener('click', function(e){
   content:none !important;
   animation:none !important;
   background:none !important;
+}
+
+/* Acabamento uniforme dos três cards: imagem cheia e faixa azul no título. */
+.fs-home-section .card{
+  padding:0 !important;
+  overflow:hidden !important;
+}
+.fs-home-section .card > img{
+  display:block !important;
+  width:calc(100% + 2px) !important;
+  max-width:none !important;
+  height:clamp(210px,44vw,310px) !important;
+  margin:-1px -1px 0 !important;
+  object-fit:cover !important;
+  object-position:center !important;
+  border:0 !important;
+  border-radius:0 !important;
+}
+.fs-home-section .card-body{
+  position:relative !important;
+  min-height:96px !important;
+  overflow:hidden !important;
+  background:linear-gradient(180deg,#fff 0%,#eef8ff 100%) !important;
+}
+.fs-home-section .card-body::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 31% 0 0 !important;
+  display:block !important;
+  border-radius:0 0 72px 0 !important;
+  background:linear-gradient(150deg,rgba(255,255,255,.42),rgba(186,230,253,.9)) !important;
+}
+.fs-home-section .card-title{
+  position:relative !important;
+  z-index:1 !important;
+}
+@media(max-width:640px){
+  .fs-home-section .card > img{
+    height:44vw !important;
+    min-height:190px !important;
+    max-height:280px !important;
+  }
 }
 .fs-planos-brand{
   position:absolute !important;
@@ -13082,6 +13124,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=16"></script>
+<script src="./pwa-update.js?v=17"></script>
 </body>
 </html>

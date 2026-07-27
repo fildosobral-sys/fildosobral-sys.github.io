@@ -4015,6 +4015,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
 
       // Persistência simples do formulário para não perder dados ao alternar entre modos/visões
       if (typeof registrarPersistenciaFormularioLocal === 'function') {
+        carregarEstadoFormularioLocal();
         registrarPersistenciaFormularioLocal();
       }
     }
@@ -4093,6 +4094,10 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
     }
 
     function novaProposta() {
+      try {
+        localStorage.removeItem(FORM_STATE_KEY);
+        if (typeof window.fsClearProtectedDraft === 'function') window.fsClearProtectedDraft();
+      } catch(e) {}
       currentProposalId = null;
       currentProposalData = null;
       try{ window.currentProposalData = null; }catch(e){}
@@ -5762,6 +5767,10 @@ async function salvarProposta() {
           opcoes_parcelamento_cartao: getVal('inputOpcoesParcelamentoCartao'),
           simulacao_perdas_ganhos: getVal('inputSimulacao'),
           oportunidades_melhoria: getVal('inputOportunidades')
+          ,filial_manual: getVal('inputFilialManual')
+          ,valor_plano_exclusivo: getVal('inputValorPlanoExclusivo')
+          ,parcelas_plano_exclusivo: getVal('inputParcelasPlanoExclusivo')
+          ,produtos: Array.isArray(produtos) ? produtos : []
         };
 
         localStorage.setItem(FORM_STATE_KEY, JSON.stringify(state));
@@ -5795,6 +5804,15 @@ async function salvarProposta() {
         setValue('inputOpcoesParcelamentoCartao', state.opcoes_parcelamento_cartao);
         setValue('inputSimulacao', state.simulacao_perdas_ganhos);
         setValue('inputOportunidades', state.oportunidades_melhoria);
+        setValue('inputFilialManual', state.filial_manual);
+        setValue('inputValorPlanoExclusivo', state.valor_plano_exclusivo);
+        setValue('inputParcelasPlanoExclusivo', state.parcelas_plano_exclusivo);
+        if (Array.isArray(state.produtos) && state.produtos.length) {
+          produtos = state.produtos;
+          if (typeof renderProdutos === 'function') renderProdutos();
+          if (typeof atualizarCamposParcelamento === 'function') atualizarCamposParcelamento();
+          if (typeof atualizarResumoGeralProposta === 'function') atualizarResumoGeralProposta();
+        }
       } catch (e) {
         console.warn('Erro ao carregar estado local do formulário', e);
       }
@@ -5813,6 +5831,9 @@ async function salvarProposta() {
         'inputOpcoesParcelamentoCartao',
         'inputSimulacao',
         'inputOportunidades'
+        ,'inputFilialManual'
+        ,'inputValorPlanoExclusivo'
+        ,'inputParcelasPlanoExclusivo'
       ];
       const handler = () => salvarEstadoFormularioLocal();
 
@@ -5825,6 +5846,14 @@ async function salvarProposta() {
       });
 
       window.addEventListener('beforeunload', salvarEstadoFormularioLocal);
+      document.addEventListener('input', function(event) {
+        const editor = document.getElementById('editorView');
+        if (editor && editor.contains(event.target)) handler();
+      }, true);
+      document.addEventListener('change', function(event) {
+        const editor = document.getElementById('editorView');
+        if (editor && editor.contains(event.target)) handler();
+      }, true);
     }
 
 // ========== VISUALIZAR PROPOSTA ==========
@@ -9951,10 +9980,7 @@ const html = `
 </script>
   
 
-  <button id="btnVoltarInicio" class="fixed right-3 bottom-3 z-40 px-4 py-2 rounded-full bg-gray-900 text-white text-xs md:text-sm shadow-lg flex items-center gap-2">
-    <span>←</span>
-    <span>Voltar à central</span>
-  </button>
+  <button id="btnVoltarInicio" aria-label="Voltar ao início" title="Voltar ao início" class="fixed right-3 bottom-3 z-40 rounded-full bg-gray-900 text-white shadow-lg">🏠</button>
 
 
   
@@ -17102,10 +17128,10 @@ document.addEventListener('click', function(event){
 <style id="fs-padrao-voltar-sem-boas-vindas-v12">
 #btnVoltarInicio,.fs-back-home{
   position:fixed !important;left:auto !important;right:max(14px,env(safe-area-inset-right)) !important;
-  bottom:max(14px,env(safe-area-inset-bottom)) !important;width:auto !important;min-width:154px !important;
-  height:48px !important;padding:0 18px !important;border:0 !important;border-radius:999px !important;
-  display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;
-  background:#111827 !important;color:#fff !important;font:700 14px/1 Arial,sans-serif !important;
+  bottom:max(14px,env(safe-area-inset-bottom)) !important;width:50px !important;min-width:50px !important;
+  height:50px !important;padding:0 !important;border:0 !important;border-radius:50% !important;
+  display:inline-flex !important;align-items:center !important;justify-content:center !important;
+  background:#111827 !important;color:#fff !important;font:700 23px/1 Arial,sans-serif !important;
   text-decoration:none !important;box-shadow:0 10px 24px rgba(15,23,42,.28) !important;z-index:2147483000 !important;
 }
 #btnMenuBaixarHtmlAtual{display:none !important}
@@ -17146,5 +17172,6 @@ document.addEventListener('click', function(event){
   });
 })();
 </script>
+<script src="./draft-protection.js?v=17"></script>
 </body>
 </html>

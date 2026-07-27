@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v16-instalacao-pwa";
+const CACHE_NAME = "fs-central-v17-rascunho-seguro";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -8,11 +8,12 @@ const APP_FILES = [
   "/parcelamentos-planos.webp",
   "/cotacoes-vendas.webp",
   "/orcamentos-card.webp",
-  "/manifest.webmanifest?v=16",
+  "/manifest.webmanifest?v=17",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=16"
+  "/pwa-update.js?v=17",
+  "/draft-protection.js?v=17"
 ];
 
 self.addEventListener("install", (event) => {

@@ -3949,7 +3949,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
  </script>
 
 <!-- Botão flutuante para voltar ao início -->
-<a href="./index.html" class="fs-back-home">← Voltar à central</a>
+<a href="./index.html" class="fs-back-home" aria-label="Voltar ao início" title="Voltar ao início">🏠</a>
 
 <style>
   .fs-back-home {
@@ -4685,10 +4685,10 @@ document.addEventListener('click', function(event){
 <style id="fs-padrao-voltar-sem-boas-vindas-v12">
 #btnVoltarInicio,.fs-back-home{
   position:fixed !important;left:auto !important;right:max(14px,env(safe-area-inset-right)) !important;
-  bottom:max(14px,env(safe-area-inset-bottom)) !important;width:auto !important;min-width:154px !important;
-  height:48px !important;padding:0 18px !important;border:0 !important;border-radius:999px !important;
-  display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;
-  background:#111827 !important;color:#fff !important;font:700 14px/1 Arial,sans-serif !important;
+  bottom:max(14px,env(safe-area-inset-bottom)) !important;width:50px !important;min-width:50px !important;
+  height:50px !important;padding:0 !important;border:0 !important;border-radius:50% !important;
+  display:inline-flex !important;align-items:center !important;justify-content:center !important;
+  background:#111827 !important;color:#fff !important;font:700 23px/1 Arial,sans-serif !important;
   text-decoration:none !important;box-shadow:0 10px 24px rgba(15,23,42,.28) !important;z-index:2147483000 !important;
 }
 #btnShareAccess{display:none !important}
@@ -4713,5 +4713,6 @@ document.addEventListener('click', function(event){
   });
 })();
 </script>
+<script src="./draft-protection.js?v=17"></script>
 </body>
 </html>
