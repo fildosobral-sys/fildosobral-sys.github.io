@@ -25,6 +25,9 @@ AJUSTES DESTA VERSAO
 - A ordem dos cards agora e Cotacoes/Vendas, Parcelamentos e Planos, Orcamentos.
 - Parcelamentos e Planos recebeu imagem propria de negociacao no varejo de moveis e eletro.
 - A vendedora da imagem de Parcelamentos e Planos usa uniforme azul e vermelho no padrao Zenir.
+- As imagens dos tres cards principais agora ficam dentro do pacote.
+- Foi removida a sobreposicao branca do card Parcelamentos e Planos.
+- Os botoes Voltar dos tres modulos retornam diretamente para ./index.html.
 
 IMPORTANTE
 Esta e uma versao estrutural para conferencia. As regras comerciais e os calculos

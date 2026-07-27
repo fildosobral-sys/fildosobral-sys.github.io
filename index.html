@@ -12755,6 +12755,13 @@ document.addEventListener('click', function(e){
 .fs-planos-card{
   position:relative !important;
 }
+.fs-planos-card::before,
+.fs-planos-card::after{
+  display:none !important;
+  content:none !important;
+  animation:none !important;
+  background:none !important;
+}
 .fs-planos-brand{
   position:absolute !important;
   top:14px !important;
@@ -12802,8 +12809,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (vendas) {
       const title = vendas.querySelector('.card-title');
+      const image = vendas.querySelector('img');
       const link = vendas.querySelector('.card-action');
       if (title) title.textContent = 'Cotações / Vendas';
+      if (image) {
+        image.alt = 'Cotações e Vendas';
+        image.src = 'cotacoes-vendas.webp';
+        image.onerror = null;
+      }
       if (link) {
         link.href = 'vendas-mobile.html';
         link.setAttribute('aria-label', 'Abrir Cotações e Vendas');
@@ -12817,7 +12830,8 @@ document.addEventListener('DOMContentLoaded', function () {
       if (title) title.textContent = 'Orçamentos';
       if (image) {
         image.alt = 'Orçamentos';
-        image.src = 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1200&q=80';
+        image.src = 'orcamentos-card.webp';
+        image.onerror = null;
       }
       if (link) {
         link.href = 'orcamentos.html';
@@ -12839,18 +12853,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       planos.classList.add('fs-planos-card');
-      if (!planos.querySelector('.fs-planos-brand')) {
-        const logoOriginal = document.querySelector('.logo-row img');
-        if (logoOriginal) {
-          const badge = document.createElement('div');
-          badge.className = 'fs-planos-brand';
-          const logo = logoOriginal.cloneNode(true);
-          logo.removeAttribute('fetchpriority');
-          logo.loading = 'lazy';
-          badge.appendChild(logo);
-          planos.appendChild(badge);
-        }
-      }
+      const badgeAnterior = planos.querySelector('.fs-planos-brand');
+      if (badgeAnterior) badgeAnterior.remove();
 
       const grid = negociacoes.querySelector('.grid');
       if (grid && orcamentos) grid.insertBefore(planos, orcamentos);

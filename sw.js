@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v6-uniforme-zenir";
+const CACHE_NAME = "fs-central-v8-retorno-index";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -6,6 +6,8 @@ const APP_FILES = [
   "/vendas-mobile.html",
   "/orcamentos.html",
   "/parcelamentos-planos.webp",
+  "/cotacoes-vendas.webp",
+  "/orcamentos-card.webp",
   "/manifest.webmanifest",
   "/favicon.svg",
   "/icon-192.png",
