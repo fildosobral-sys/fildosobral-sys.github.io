@@ -681,7 +681,7 @@ html.lock-scroll{
 .fs-access-modal h3{margin:0 0 12px;font-size:22px}
 .fs-access-modal p{margin:0 0 12px;color:#6b7280}
 .fs-access-modal label{display:block;font-size:13px;font-weight:700;margin:10px 0 6px}
-.fs-access-modal input{width:100%;padding:12px 14px;border:1px solid #d1d5db;border-radius:14px;font-size:16px;text-transform:uppercase}
+.fs-access-modal input,.fs-access-modal select{width:100%;padding:12px 14px;border:1px solid #d1d5db;border-radius:14px;font-size:16px;text-transform:uppercase;background:#fff}
 .fs-access-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
 .fs-access-actions button{border:none;border-radius:14px;padding:11px 14px;font-weight:700;cursor:pointer}
 .fs-access-cancel{background:#eef2ff;color:#374151}
@@ -8914,6 +8914,12 @@ img{
 <input class="panel-input" id="nome" placeholder="NOME COMPLETO"/>
 <input class="panel-input" id="cargo" placeholder="FUNÇÃO / CARGO"/>
 <input class="panel-input" id="whats" placeholder="WHATSAPP"/>
+<select class="panel-input" id="genero" aria-label="Perfil visual">
+<option value="AUTOMATICO">AUTOMÁTICO PELO NOME</option>
+<option value="FEMININO">FEMININO</option>
+<option value="MASCULINO">MASCULINO</option>
+<option value="NEUTRO">NEUTRO</option>
+</select>
 </div>
 <div class="actions">
 <button class="btn-primary" id="btnSalvarUser" type="button">GERAR COMPARTILHAMENTO</button>
@@ -9208,6 +9214,7 @@ img{
   const nomeEl = document.getElementById('nome');
   const cargoEl = document.getElementById('cargo');
   const whatsEl = document.getElementById('whats');
+  const generoEl = document.getElementById('genero');
   const btnSalvarUser = document.getElementById('btnSalvarUser');
   const btnCancelarEdicao = document.getElementById('btnCancelarEdicao');
   const updateTitle = document.getElementById('updateTitle');
@@ -9314,6 +9321,7 @@ img{
     localStorage.removeItem('fs_nome');
     localStorage.removeItem('fs_cargo');
     localStorage.removeItem('fs_whatsapp');
+    localStorage.removeItem('fs_genero');
     syncAccessBadge();
     renderUsuarios();
     alert('ACESSO LOCAL REMOVIDO.');
@@ -9395,7 +9403,7 @@ img{
   }
 
   function limparFormulario(){
-    filialEl.value=''; nomeEl.value=''; cargoEl.value=''; whatsEl.value='';
+    filialEl.value=''; nomeEl.value=''; cargoEl.value=''; whatsEl.value=''; if(generoEl) generoEl.value='AUTOMATICO';
     editId = null;
     btnSalvarUser.textContent = 'GERAR COMPARTILHAMENTO';
   }
@@ -9407,6 +9415,7 @@ img{
     nomeEl.value = upper(u.nome);
     cargoEl.value = upper(u.cargo);
     whatsEl.value = u.whatsapp || '';
+    if(generoEl) generoEl.value = upper(u.genero || 'AUTOMATICO');
     editId = id;
     btnSalvarUser.textContent = 'SALVAR EDIÇÃO';
     openShare();
@@ -9449,8 +9458,9 @@ img{
     const nome = upper(nomeEl.value);
     const cargo = upper(cargoEl.value);
     const whatsapp = onlyDigits(whatsEl.value);
+    const genero = upper(generoEl && generoEl.value) || 'AUTOMATICO';
 
-    if(!filial || !nome || !cargo || !whatsapp){
+    if(!filial || !nome || !cargo || !whatsapp || !genero){
       alert('PREENCHA OS CAMPOS.');
       return;
     }
@@ -9475,9 +9485,9 @@ img{
     try{
       let json;
       if(editId){
-        json = await apiPost({ acao:'editarUsuario', id: editId, filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp });
+        json = await apiPost({ acao:'editarUsuario', id: editId, filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp, genero: genero });
       }else{
-        json = await apiPost({ acao:'cadastrarUsuario', filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp, criado_por:'FS SOLUCOES' });
+        json = await apiPost({ acao:'cadastrarUsuario', filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp, genero: genero, criado_por:'FS SOLUCOES' });
       }
       if(json && json.ok === false){
         alert(json.mensagem || 'NÃO FOI POSSÍVEL GERAR O ACESSO.');
@@ -9489,6 +9499,7 @@ img{
       convite.searchParams.set('nome', nome);
       convite.searchParams.set('cargo', cargo);
       convite.searchParams.set('whatsapp', whatsapp);
+      convite.searchParams.set('genero', genero);
       const msg = 'OLÁ '+nome+'!\n\nVOCÊ RECEBEU ACESSO À CENTRAL INTELIGENTE DE VENDAS.\n\nFILIAL: '+filial+'\nCARGO: '+cargo+'\n\nABRA O LINK, CONFIRA SEUS DADOS E TOQUE EM ENTRAR:\n\n'+convite.toString();
       const numeroDestino = whatsapp.startsWith('55') ? whatsapp : '55'+whatsapp;
       window.open('https://wa.me/'+numeroDestino+'?text='+encodeURIComponent(msg), '_blank', 'noopener');
@@ -9852,6 +9863,13 @@ function showGuide(){ try{ var p=document.getElementById('hpGuidePanel'); if(p) 
 <input autocomplete="off" id="fsAccessCargo" placeholder="VENDEDOR(A)"/>
 <label for="fsAccessWhats">WhatsApp</label>
 <input autocomplete="off" id="fsAccessWhats" inputmode="numeric" placeholder="88999999999"/>
+<label for="fsAccessGenero">Perfil visual</label>
+<select id="fsAccessGenero">
+<option value="AUTOMATICO">Automático pelo nome</option>
+<option value="FEMININO">Feminino</option>
+<option value="MASCULINO">Masculino</option>
+<option value="NEUTRO">Neutro</option>
+</select>
 <div class="fs-access-actions">
 <button class="fs-access-cancel" id="fsAccessCancel" type="button">Cancelar</button>
 <button class="fs-access-ok" id="fsAccessOk" type="button">Entrar</button>
@@ -9951,14 +9969,19 @@ window.addEventListener('DOMContentLoaded', function(){
   function upperLive(v){ return String(v||'').toUpperCase(); }
   function upperSave(v){ return String(v||'').toUpperCase().trim(); }
   function onlyDigits(v){ return String(v||'').replace(/\D/g,''); }
-  function filialOk(v){ return /^FILIAL\s+\d+$/i.test(upperSave(v)); }
+  function normalizarFilial(v){
+    var numero = onlyDigits(v);
+    return numero ? 'FILIAL ' + numero : upperSave(v).replace(/\s+/g, ' ');
+  }
+  function filialOk(v){ return /^FILIAL\s+\d+$/i.test(normalizarFilial(v)); }
 
   function getUser(){
     return {
       filial: upperSave(localStorage.getItem('fs_filial') || ''),
       nome: upperSave(localStorage.getItem('fs_nome') || ''),
       cargo: upperSave(localStorage.getItem('fs_cargo') || ''),
-      whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || '')
+      whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || ''),
+      genero: upperSave(localStorage.getItem('fs_genero') || 'AUTOMATICO')
     };
   }
 
@@ -9971,6 +9994,7 @@ window.addEventListener('DOMContentLoaded', function(){
     localStorage.setItem('fs_nome', upperSave(u.nome||''));
     localStorage.setItem('fs_cargo', upperSave(u.cargo||''));
     localStorage.setItem('fs_whatsapp', onlyDigits(u.whatsapp||''));
+    localStorage.setItem('fs_genero', upperSave(u.genero||'AUTOMATICO'));
     localStorage.setItem('fsAuthGlobal', 'ok-@fildO1060');
     localStorage.setItem('fs_access_persisted', '1');
     sessionStorage.setItem('fs_access_done', '1');
@@ -9981,6 +10005,7 @@ window.addEventListener('DOMContentLoaded', function(){
     localStorage.removeItem('fs_nome');
     localStorage.removeItem('fs_cargo');
     localStorage.removeItem('fs_whatsapp');
+    localStorage.removeItem('fs_genero');
     localStorage.removeItem('fs_access_persisted');
     sessionStorage.removeItem('fs_access_done');
   }
@@ -10050,6 +10075,7 @@ window.addEventListener('DOMContentLoaded', function(){
       var nome = document.getElementById('fsAccessNome');
       var cargo = document.getElementById('fsAccessCargo');
       var whats = document.getElementById('fsAccessWhats');
+      var genero = document.getElementById('fsAccessGenero');
       var ok = document.getElementById('fsAccessOk');
       var cancel = document.getElementById('fsAccessCancel');
 
@@ -10065,6 +10091,7 @@ window.addEventListener('DOMContentLoaded', function(){
       nome.value = current.nome || '';
       cargo.value = current.cargo || '';
       whats.value = current.whatsapp || '';
+      if(genero) genero.value = current.genero || 'AUTOMATICO';
       whats.oninput = function(){ whats.value = onlyDigits(whats.value); };
 
       function close(result){
@@ -10076,10 +10103,11 @@ window.addEventListener('DOMContentLoaded', function(){
 
       ok.onclick = function(){
         var payload = {
-          filial: upperSave(filial.value),
+          filial: normalizarFilial(filial.value),
           nome: upperSave(nome.value),
           cargo: upperSave(cargo.value),
-          whatsapp: onlyDigits(whats.value)
+          whatsapp: onlyDigits(whats.value),
+          genero: upperSave(genero && genero.value || 'AUTOMATICO')
         };
         if(!filialOk(payload.filial)){ alert('USE O PADRÃO: FILIAL 28'); filial.focus(); return; }
         if(!payload.nome){ nome.focus(); return; }
@@ -10207,10 +10235,10 @@ window.addEventListener('DOMContentLoaded', function(){
     if(!splash) return;
     splash.classList.add('hide');
     document.body.classList.add('fs-app-ready');
-    setTimeout(function(){ splash.style.display='none'; }, 520);
+    setTimeout(function(){ splash.style.display='none'; }, 180);
   }
-  window.addEventListener('load', function(){ setTimeout(hideSplash, 420); });
-  setTimeout(hideSplash, 2200);
+  window.addEventListener('load', function(){ setTimeout(hideSplash, 120); });
+  setTimeout(hideSplash, 1000);
 
   var toast = document.getElementById('fsUpdateToast');
   var btnNow = document.getElementById('fsUpdateNow');
@@ -12604,7 +12632,8 @@ document.addEventListener('DOMContentLoaded', function(){
     { id:'filial', label:'Filial', icon:'🏬' },
     { id:'nome', label:'Nome completo', icon:'👤' },
     { id:'cargo', label:'Cargo / função', icon:'💼' },
-    { id:'whats', label:'WhatsApp', icon:'📱' }
+    { id:'whats', label:'WhatsApp', icon:'📱' },
+    { id:'genero', label:'Perfil visual', icon:'🎨' }
   ];
 
   fieldMap.forEach(function(field){
@@ -12898,6 +12927,9 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <style id="fs-perfil-identificado-v11">
 #fsOptionsAvatar{position:relative;overflow:visible;cursor:pointer;background-size:cover;background-position:center}
+#fsOptionsAvatar.fs-avatar-feminino{background:linear-gradient(145deg,#fff1f5,#fb7185 52%,#be123c) !important;color:#fff !important;border-color:#e11d48 !important;box-shadow:inset 0 2px 2px rgba(255,255,255,.7),0 9px 22px rgba(225,29,72,.34),0 0 0 5px rgba(251,113,133,.14) !important;text-shadow:0 2px 0 #9f1239,0 5px 10px rgba(76,5,25,.38)}
+#fsOptionsAvatar.fs-avatar-masculino{background:linear-gradient(145deg,#eff6ff,#3b82f6 52%,#1e3a8a) !important;color:#fff !important;border-color:#1d4ed8 !important;box-shadow:inset 0 2px 2px rgba(255,255,255,.7),0 9px 22px rgba(29,78,216,.34),0 0 0 5px rgba(59,130,246,.14) !important;text-shadow:0 2px 0 #1e3a8a,0 5px 10px rgba(15,23,42,.42)}
+#fsOptionsAvatar.fs-avatar-neutro{background:linear-gradient(145deg,#f5f3ff,#8b5cf6 52%,#4338ca) !important;color:#fff !important;border-color:#5b21b6 !important;box-shadow:inset 0 2px 2px rgba(255,255,255,.7),0 9px 22px rgba(91,33,182,.30) !important;text-shadow:0 2px 0 #4c1d95,0 5px 10px rgba(15,23,42,.38)}
 #fsOptionsAvatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
 #fsOptionsAvatar .fs-avatar-camera{position:absolute;right:-4px;bottom:-3px;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #2f2f96;font-size:13px;box-shadow:0 3px 9px rgba(15,23,42,.22)}
 </style>
@@ -12916,12 +12948,13 @@ document.addEventListener('DOMContentLoaded', function () {
     filial: filial(query.get('filial')),
     nome: maiusculo(query.get('nome')),
     cargo: maiusculo(query.get('cargo')),
-    whatsapp: digitos(query.get('whatsapp'))
+    whatsapp: digitos(query.get('whatsapp')),
+    genero: maiusculo(query.get('genero')) || 'AUTOMATICO'
   } : null;
 
   if(convite && convite.filial && convite.nome && convite.cargo){
     window.__fsConvitePendente = convite;
-    ['fs_filial','fs_nome','fs_cargo','fs_whatsapp','fs_access_persisted'].forEach(function(chave){
+    ['fs_filial','fs_nome','fs_cargo','fs_whatsapp','fs_genero','fs_access_persisted'].forEach(function(chave){
       localStorage.removeItem(chave);
     });
     sessionStorage.removeItem('fs_access_done');
@@ -12932,15 +12965,25 @@ document.addEventListener('DOMContentLoaded', function () {
     return limpo.charAt(0) || 'U';
   }
 
+  function generoVisual(nome){
+    var salvo = maiusculo(localStorage.getItem('fs_genero'));
+    if(['FEMININO','MASCULINO','NEUTRO'].includes(salvo)) return salvo;
+    var primeiro = maiusculo(nome).split(/\s+/)[0] || '';
+    return /A$/.test(primeiro) ? 'FEMININO' : 'MASCULINO';
+  }
+
   function atualizarPerfil(){
     var nome = maiusculo(localStorage.getItem('fs_nome')) || 'USUÁRIO';
     var cargo = maiusculo(localStorage.getItem('fs_cargo')) || 'COLABORADOR';
+    var genero = generoVisual(nome);
     var avatar = document.getElementById('fsOptionsAvatar');
     var nomeEl = document.getElementById('fsOptionsUser');
     var cargoEl = document.getElementById('fsOptionsRole');
     if(nomeEl) nomeEl.textContent = nome;
     if(cargoEl) cargoEl.textContent = cargo;
     if(!avatar) return;
+    avatar.classList.remove('fs-avatar-feminino','fs-avatar-masculino','fs-avatar-neutro');
+    avatar.classList.add('fs-avatar-' + genero.toLowerCase());
     var foto = localStorage.getItem('fs_profile_photo') || '';
     avatar.innerHTML = '';
     if(foto){
@@ -12964,13 +13007,15 @@ document.addEventListener('DOMContentLoaded', function () {
       fsAccessFilial: window.__fsConvitePendente.filial,
       fsAccessNome: window.__fsConvitePendente.nome,
       fsAccessCargo: window.__fsConvitePendente.cargo,
-      fsAccessWhats: window.__fsConvitePendente.whatsapp
+      fsAccessWhats: window.__fsConvitePendente.whatsapp,
+      fsAccessGenero: window.__fsConvitePendente.genero
     };
     Object.keys(mapa).forEach(function(id){
       var campo = document.getElementById(id);
       if(!campo) return;
       campo.value = mapa[id];
-      campo.readOnly = true;
+      if(campo.tagName === 'SELECT') campo.disabled = true;
+      else campo.readOnly = true;
       campo.setAttribute('aria-readonly', 'true');
     });
   }
@@ -13058,5 +13103,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
+<script src="./pwa-update.js?v=13"></script>
 </body>
 </html>

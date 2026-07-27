@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v12-navegacao-unificada";
+const CACHE_NAME = "fs-central-v13-atualizacao-obrigatoria";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -11,12 +11,12 @@ const APP_FILES = [
   "/manifest.webmanifest",
   "/favicon.svg",
   "/icon-192.png",
-  "/icon-512.png"
+  "/icon-512.png",
+  "/pwa-update.js"
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
