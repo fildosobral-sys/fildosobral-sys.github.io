@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v13-atualizacao-obrigatoria";
+const CACHE_NAME = "fs-central-v14-estavel";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -12,7 +12,7 @@ const APP_FILES = [
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js"
+  "/pwa-update.js?v=14"
 ];
 
 self.addEventListener("install", (event) => {

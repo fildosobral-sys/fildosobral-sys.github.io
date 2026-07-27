@@ -2170,7 +2170,6 @@ let currentData = [];
             }, 200);
             
             const primeiroNome = nomeUsuario.split(' ')[0];
-            showToast(`👋 Bem-vindo(a), ${primeiroNome}! Sistema pronto para uso!`, "success");
         }
 
         // Funções do menu de usuários
@@ -4694,6 +4693,7 @@ document.addEventListener('click', function(event){
   background:#111827 !important;color:#fff !important;font:700 14px/1 Arial,sans-serif !important;
   text-decoration:none !important;box-shadow:0 10px 24px rgba(15,23,42,.28) !important;z-index:2147483000 !important;
 }
+#btnShareAccess{display:none !important}
 </style>
 <script id="fs-sem-boas-vindas-repetidas-v12">
 (function(){
@@ -4704,8 +4704,16 @@ document.addEventListener('click', function(event){
       return toastOriginal.apply(this, arguments);
     };
   }
+  function removerSaudacoesAntigas(){
+    document.querySelectorAll('.toast').forEach(function(el){
+      if(/bem-vind/i.test(String(el.textContent || ''))) el.remove();
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    removerSaudacoesAntigas();
+    new MutationObserver(removerSaudacoesAntigas).observe(document.body,{childList:true});
+  });
 })();
 </script>
-<script src="./pwa-update.js?v=13"></script>
 </body>
 </html>

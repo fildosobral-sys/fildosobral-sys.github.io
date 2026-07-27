@@ -3773,7 +3773,6 @@ function buscarPropostaPorCodigo() {
         setDataAtual();
         configurarBuscaGerente();
       try{ fsRefreshLista(); }catch(e){}
-        showToast(`👋 Bem-vindo de volta, ${nomeSalvo}!`, 'success');
       } else {
         // Se não tem nome salvo, mostra a tela de boas-vindas
         document.getElementById('welcomeScreen').classList.remove('hidden');
@@ -3907,7 +3906,6 @@ function buscarPropostaPorCodigo() {
       try{ fsRefreshLista(); }catch(e){}
       
       // Mostra mensagem de boas-vindas
-      showToast(`🎉 Bem-vindo(a), ${nome}!`, 'success');
     }
 
     function applyConfigToUI(config) {
@@ -9800,7 +9798,6 @@ const html = `
           // Carrega/atualiza lista offline sempre que entrar no app
           try { fsRefreshLista(); } catch (e) { console.warn('[FS] fsRefreshLista falhou:', e); }
 
-          showToast(`👋 Bem-vindo de volta, ${nomeSalvo}!`, 'success');
         } else {
           // Se não tem nome salvo, mostra a tela de boas-vindas
           document.getElementById('welcomeScreen').classList.remove('hidden');
@@ -12102,7 +12099,6 @@ window.fsBuildClipboardPayload = function(){
         if(typeof originalShowToast === "function"){
           originalShowToast("👋 Bem-vindo(a), " + (rawName || "") + "!", "success");
         }else if(typeof showToast === "function"){
-          showToast("👋 Bem-vindo(a), " + (rawName || "") + "!", "success");
         }
       }catch(e){}
     }catch(e){
@@ -17136,13 +17132,24 @@ document.addEventListener('click', function(event){
       linha.appendChild(motivacao);
     }
   }
+  function removerSaudacoesAntigas(){
+    document.querySelectorAll('body > div').forEach(function(el){
+      if(/bem-vind/i.test(String(el.textContent || '')) && el.id !== 'modalMenu'){
+        var estilo = getComputedStyle(el);
+        if(estilo.position === 'fixed' || el.classList.contains('toast')){
+          el.remove();
+        }
+      }
+    });
+  }
   document.addEventListener('DOMContentLoaded', function(){
     manterSomenteMotivacao();
+    removerSaudacoesAntigas();
     setTimeout(manterSomenteMotivacao, 250);
     setTimeout(manterSomenteMotivacao, 900);
+    new MutationObserver(removerSaudacoesAntigas).observe(document.body,{childList:true});
   });
 })();
 </script>
-<script src="./pwa-update.js?v=13"></script>
 </body>
 </html>

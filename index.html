@@ -8720,11 +8720,6 @@ img{
 <div class="fs-splash-bar"></div>
 </div>
 </div>
-<div aria-live="polite" id="fsUpdateToast" role="status">
-<div style="flex:1;min-width:0"><strong style="display:block;font-size:14px">Nova versão disponível</strong><span style="font-size:12px;opacity:.88">Toque para atualizar o app agora.</span></div>
-<button id="fsUpdateNow" type="button">Atualizar</button>
-<button id="fsUpdateDismiss" type="button">Depois</button>
-</div>
 <div class="fs-contingencia-banner" onclick="abrirSobreSistema()">
 <div class="fs-contingencia-banner-track">
 <span>CENTRAL INTELIGENTE DE VENDAS • SUPORTE ÀS NEGOCIAÇÕES</span>
@@ -8735,9 +8730,9 @@ img{
 <div class="fs-about-backdrop" id="fsAboutBackdrop"></div>
 <div aria-labelledby="fsAboutTitle" aria-modal="true" class="fs-about-modal" id="fsAboutModal" role="dialog">
 <h3 id="fsAboutTitle">Sobre a Plataforma</h3>
-<p>A Central Inteligente de Vendas foi desenvolvida para apoiar os vendedores durante os atendimentos e tornar as negociações mais rápidas, organizadas e profissionais.</p>
-<p>A plataforma reúne, em um único ambiente, ferramentas para cotações, simulações de planos e parcelamentos e criação de orçamentos.</p>
-<p>Sua finalidade é oferecer suporte às decisões comerciais e melhorar a apresentação das propostas ao cliente. As vendas devem continuar sendo registradas e concluídas nos sistemas oficiais da empresa.</p>
+<p>A Central Inteligente de Vendas é uma plataforma de finalidade exclusivamente educacional, criada para ensinar, orientar e apoiar os colegas nas negociações, cotações, orçamentos, planos e formas de parcelamento, sempre seguindo as regras e orientações da empresa.</p>
+<p>Este é um projeto independente, voluntário, sem finalidade comercial, sem remuneração e sem vínculo institucional. A plataforma não presta serviços em nome da empresa e não substitui seus sistemas, normas ou canais oficiais.</p>
+<p>As informações apresentadas funcionam somente como material de apoio e aprendizagem. As vendas e decisões comerciais devem ser conferidas e concluídas nos sistemas oficiais. Desenvolvimento, manutenção e responsabilidade pela plataforma: <strong>Fildo Sobral</strong>.</p>
 <button class="fs-about-close" onclick="fecharSobreSistema()" type="button">Fechar</button>
 </div>
 <div class="page">
@@ -10240,25 +10235,6 @@ window.addEventListener('DOMContentLoaded', function(){
   window.addEventListener('load', function(){ setTimeout(hideSplash, 120); });
   setTimeout(hideSplash, 1000);
 
-  var toast = document.getElementById('fsUpdateToast');
-  var btnNow = document.getElementById('fsUpdateNow');
-  var btnDismiss = document.getElementById('fsUpdateDismiss');
-  window.fsShowUpdateToast = function(reg){
-    if(!toast) return;
-    toast.classList.add('show');
-    if(btnNow){
-      btnNow.onclick = function(){
-        if(reg && reg.waiting){
-          reg.waiting.postMessage({ type:'SKIP_WAITING' });
-        }else{
-          location.reload();
-        }
-      };
-    }
-    if(btnDismiss){
-      btnDismiss.onclick = function(){ toast.classList.remove('show'); };
-    }
-  };
 })();
 </script>
 <script>
@@ -13103,6 +13079,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=13"></script>
+<script src="./pwa-update.js?v=14"></script>
 </body>
 </html>
