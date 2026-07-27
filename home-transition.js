@@ -16,6 +16,7 @@
     if (navigating) return false;
     navigating = true;
     var overlay = ensureOverlay();
+    try { sessionStorage.setItem("fs_returning_home", "1"); } catch (e) {}
     requestAnimationFrame(function () { overlay.classList.add("is-visible"); });
     window.setTimeout(function () { window.location.replace("./index.html"); }, 720);
     return false;

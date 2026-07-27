@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v20-transicao-central";
+const CACHE_NAME = "fs-central-v22-sobre-desbloqueado";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -8,13 +8,13 @@ const APP_FILES = [
   "/parcelamentos-planos.webp",
   "/cotacoes-vendas.webp",
   "/orcamentos-card.webp",
-  "/manifest.webmanifest?v=20",
+  "/manifest.webmanifest?v=22",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=20",
-  "/draft-protection.js?v=20",
-  "/home-transition.js?v=20"
+  "/pwa-update.js?v=22",
+  "/draft-protection.js?v=22",
+  "/home-transition.js?v=22"
 ];
 
 self.addEventListener("install", (event) => {

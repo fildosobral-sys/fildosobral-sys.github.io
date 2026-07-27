@@ -12,7 +12,42 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=20" rel="manifest"/>
+<link href="/manifest.webmanifest?v=22" rel="manifest"/>
+<link rel="preload" as="image" href="./cotacoes-vendas.webp"/>
+<link rel="preload" as="image" href="./parcelamentos-planos.webp"/>
+<link rel="preload" as="image" href="./orcamentos-card.webp"/>
+<script>
+try{
+  if(sessionStorage.getItem('fs_returning_home') === '1'){
+    document.documentElement.classList.add('fs-returning-home');
+  }
+}catch(e){}
+</script>
+<style id="fs-retorno-sem-flash-v21">
+html.fs-returning-home::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:2147483646;
+  display:block;
+  background:
+    url("./icon-192.png") center calc(50% - 48px)/72px 72px no-repeat,
+    linear-gradient(145deg,#111b69,#3133a2);
+}
+html.fs-returning-home::after{
+  content:"FS Soluções\A Voltando à Central…";
+  white-space:pre;
+  position:fixed;
+  left:50%;
+  top:calc(50% + 42px);
+  z-index:2147483647;
+  transform:translate(-50%,-50%);
+  color:#fff;
+  text-align:center;
+  font:800 20px/1.75 system-ui,-apple-system,sans-serif;
+  text-shadow:0 2px 10px rgba(0,0,0,.22);
+}
+</style>
 <link href="/icon-192.png" rel="apple-touch-icon"/>
 <link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
 <script id="fs-auth-guard-boot">
@@ -8801,9 +8836,9 @@ img{
 <section class="section fs-home-section">
 <h2>Negociações</h2>
 <div class="grid">
-<article class="card"><img alt="Cotações e Vendas" decoding="async" fetchpriority="low" loading="lazy" src="cotacoes-vendas.webp"/><div class="card-body"><div class="card-title">Cotações / Vendas</div><p class="card-desc"></p><a aria-label="Abrir Cotações e Vendas" class="card-action" href="vendas-mobile.html"></a></div></article>
-<article class="card card-featured fs-planos-card"><img alt="Planos e Parcelamentos" decoding="async" fetchpriority="low" loading="lazy" src="parcelamentos-planos.webp"/><div class="card-body"><div class="card-title">Parcelamentos e Planos</div><p class="card-desc"></p><a aria-label="Abrir Planos e Parcelamentos" class="card-action" href="simulador.html"></a></div></article>
-<article class="card"><img alt="Orçamentos" decoding="async" fetchpriority="low" loading="lazy" src="orcamentos-card.webp"/><div class="card-body"><div class="card-title">Orçamentos</div><p class="card-desc"></p><a aria-label="Abrir Orçamentos" class="card-action" href="orcamentos.html"></a></div></article>
+<article class="card"><img alt="Cotações e Vendas" decoding="async" fetchpriority="high" loading="eager" src="cotacoes-vendas.webp"/><div class="card-body"><div class="card-title">Cotações / Vendas</div><p class="card-desc"></p><a aria-label="Abrir Cotações e Vendas" class="card-action" href="vendas-mobile.html"></a></div></article>
+<article class="card card-featured fs-planos-card"><img alt="Planos e Parcelamentos" decoding="async" fetchpriority="high" loading="eager" src="parcelamentos-planos.webp"/><div class="card-body"><div class="card-title">Parcelamentos e Planos</div><p class="card-desc"></p><a aria-label="Abrir Planos e Parcelamentos" class="card-action" href="simulador.html"></a></div></article>
+<article class="card"><img alt="Orçamentos" decoding="async" fetchpriority="high" loading="eager" src="orcamentos-card.webp"/><div class="card-body"><div class="card-title">Orçamentos</div><p class="card-desc"></p><a aria-label="Abrir Orçamentos" class="card-action" href="orcamentos.html"></a></div></article>
 </div>
 </section>
 <section class="section fs-home-section" hidden aria-hidden="true" style="margin-top:22px;">
@@ -13124,7 +13159,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<style id="fs-cards-sem-moldura-v20">
+<style id="fs-cards-sem-moldura-v21">
 /* Regra final: as imagens ocupam toda a largura útil e escondem as molduras laterais. */
 html body .fs-exact-home .fs-home-section .grid > .card{
   padding:0 !important;
@@ -13141,8 +13176,8 @@ html body .fs-exact-home .fs-home-section .grid > .card > img{
   border:0 !important;
   border-radius:0 !important;
   box-shadow:none !important;
-  transform:scale(1.055) !important;
-  transform-origin:center center !important;
+  transform:scale(1.10) !important;
+  transform-origin:center top !important;
 }
 html body .fs-exact-home .fs-home-section .grid > .card > .card-body{
   position:relative !important;
@@ -13157,7 +13192,7 @@ html body .fs-exact-home .fs-home-section .grid > .card > .card-body{
     min-height:240px !important;
     max-height:315px !important;
     margin:0 !important;
-    transform:scale(1.065) !important;
+    transform:scale(1.115) !important;
   }
 }
 html body .fs-author-signature{
@@ -13170,32 +13205,85 @@ html body .fs-categorias-wrap{
   padding-bottom:0 !important;
 }
 </style>
-<script id="fs-sobre-sem-travamento-v19">
+<script id="fs-sobre-sem-travamento-v22">
 (function(){
   function liberarTela(){
     ['fsAboutModal','fsAboutBackdrop','fsOptionsSheet','fsOptionsBackdrop'].forEach(function(id){
       var el=document.getElementById(id);
-      if(el) el.classList.remove('open');
+      if(!el) return;
+      el.classList.remove('open','active','show','visible');
+      if(id === 'fsOptionsSheet') el.setAttribute('aria-hidden','true');
     });
-    document.body.classList.remove('fs-hp-open','modal-open','lock-scroll');
-    document.documentElement.classList.remove('modal-open','lock-scroll');
-    document.body.style.removeProperty('overflow');
-    document.body.style.removeProperty('overflow-y');
-    document.body.style.removeProperty('position');
-    document.body.style.removeProperty('top');
-    document.documentElement.style.removeProperty('overflow');
-    document.documentElement.style.removeProperty('overflow-y');
+    ['fs-hp-open','modal-open','lock-scroll','fs-options-open','fs-modal-open','no-scroll'].forEach(function(classe){
+      document.body.classList.remove(classe);
+      document.documentElement.classList.remove(classe);
+    });
+    [document.body,document.documentElement].forEach(function(el){
+      ['overflow','overflow-y','position','top','height','touch-action'].forEach(function(prop){
+        el.style.removeProperty(prop);
+      });
+    });
+    document.body.style.setProperty('overflow-y','auto');
+    document.documentElement.style.setProperty('overflow-y','auto');
+    var inicio=document.getElementById('fsNavHome');
+    var opcoes=document.getElementById('fsNavOptions');
+    if(opcoes) opcoes.classList.remove('active');
+    if(inicio) inicio.classList.add('active');
   }
-  window.fecharSobreSistema=liberarTela;
+
+  function abrirSobreLimpo(){
+    liberarTela();
+    var fundo=document.getElementById('fsAboutBackdrop');
+    var modal=document.getElementById('fsAboutModal');
+    if(fundo) fundo.classList.add('open');
+    if(modal) modal.classList.add('open');
+  }
+
+  window.fecharSobreSistema=function(){ liberarTela(); };
+  window.abrirSobreSistema=abrirSobreLimpo;
+
   document.addEventListener('DOMContentLoaded',function(){
     var fechar=document.querySelector('.fs-about-close');
     var fundo=document.getElementById('fsAboutBackdrop');
+    var inicio=document.getElementById('fsNavHome');
+    var sobreMenu=document.getElementById('btnSobrePlataforma');
+    var sobreRodape=document.getElementById('btnSobrePlataformaFooter');
     if(fechar) fechar.addEventListener('click',function(e){e.preventDefault();liberarTela();},true);
     if(fundo) fundo.addEventListener('click',function(e){e.preventDefault();liberarTela();},true);
+    if(inicio) inicio.addEventListener('click',liberarTela,true);
+    [sobreMenu,sobreRodape].forEach(function(botao){
+      if(botao) botao.addEventListener('click',function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        abrirSobreLimpo();
+      },true);
+    });
     document.addEventListener('keydown',function(e){if(e.key==='Escape') liberarTela();});
+    window.addEventListener('pageshow',function(){ liberarTela(); });
   });
 })();
 </script>
-<script src="./pwa-update.js?v=20"></script>
+<script id="fs-finaliza-retorno-v21">
+(function(){
+  if(!document.documentElement.classList.contains('fs-returning-home')) return;
+  var done=false;
+  function liberar(){
+    if(done) return;
+    done=true;
+    document.documentElement.classList.remove('fs-returning-home');
+    try{ sessionStorage.removeItem('fs_returning_home'); }catch(e){}
+  }
+  var imgs=Array.from(document.querySelectorAll('.fs-home-section .grid > .card > img')).slice(0,3);
+  Promise.all(imgs.map(function(img){
+    if(img.complete && img.naturalWidth) return Promise.resolve();
+    return new Promise(function(resolve){
+      img.addEventListener('load',resolve,{once:true});
+      img.addEventListener('error',resolve,{once:true});
+    });
+  })).then(function(){ requestAnimationFrame(function(){ requestAnimationFrame(liberar); }); });
+  setTimeout(liberar,2200);
+})();
+</script>
+<script src="./pwa-update.js?v=22"></script>
 </body>
 </html>
