@@ -12,7 +12,7 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=17" rel="manifest"/>
+<link href="/manifest.webmanifest?v=18" rel="manifest"/>
 <link href="/icon-192.png" rel="apple-touch-icon"/>
 <link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
 <script id="fs-auth-guard-boot">
@@ -13124,6 +13124,38 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=17"></script>
+<style id="fs-cards-sem-moldura-v18">
+/* Regra final: as imagens ocupam toda a largura útil e escondem as molduras laterais. */
+html body.fs-exact-home .fs-home-section .grid > .card{
+  padding:0 !important;
+  overflow:hidden !important;
+}
+html body.fs-exact-home .fs-home-section .grid > .card > img{
+  display:block !important;
+  width:104% !important;
+  max-width:none !important;
+  height:clamp(245px,52vw,340px) !important;
+  margin:0 -2% !important;
+  object-fit:cover !important;
+  object-position:center center !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+html body.fs-exact-home .fs-home-section .grid > .card > .card-body{
+  width:100% !important;
+  margin:0 !important;
+}
+@media(max-width:640px){
+  html body.fs-exact-home .fs-home-section .grid > .card > img{
+    width:106% !important;
+    height:53vw !important;
+    min-height:230px !important;
+    max-height:315px !important;
+    margin:0 -3% !important;
+  }
+}
+</style>
+<script src="./pwa-update.js?v=18"></script>
 </body>
 </html>
