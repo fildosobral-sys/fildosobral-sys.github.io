@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v25-banner-faixas";
+const CACHE_NAME = "fs-central-v26-rodape-cards-compacto";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -8,13 +8,13 @@ const APP_FILES = [
   "/parcelamentos-planos.webp",
   "/cotacoes-vendas.webp",
   "/orcamentos-card.webp",
-  "/manifest.webmanifest?v=25",
+  "/manifest.webmanifest?v=26",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=25",
-  "/draft-protection.js?v=25",
-  "/home-transition.js?v=25"
+  "/pwa-update.js?v=26",
+  "/draft-protection.js?v=26",
+  "/home-transition.js?v=26"
 ];
 
 self.addEventListener("install", (event) => {
