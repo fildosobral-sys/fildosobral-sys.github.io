@@ -2297,36 +2297,76 @@ try{
 </script>
 
 <style id="fs-v30-export-resumo">
+  .fs-resumo-cabecalho{
+    display:block !important;
+    margin-bottom:12px !important;
+  }
+  .fs-resumo-toolbar{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) 44px !important;
+    align-items:center !important;
+    gap:10px !important;
+    width:100% !important;
+    margin-bottom:12px !important;
+  }
+  .fs-resumo-toolbar h3{
+    min-width:0 !important;
+    margin:0 !important;
+  }
+  .fs-resumo-controles{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:10px !important;
+    align-items:end !important;
+    width:100% !important;
+  }
+  #resumoModalidadeWrap,
+  #resumoParcelasWrap{
+    min-width:0 !important;
+  }
+  #wrapCarneTools{
+    grid-column:1 / -1 !important;
+    margin:0 !important;
+  }
   .fs-preco-riscado{
     display:inline-block;
+    position:relative;
     text-decoration:none !important;
-    background-image:linear-gradient(currentColor,currentColor);
-    background-position:center;
-    background-repeat:no-repeat;
-    background-size:100% 1.5px;
+    background:none !important;
+  }
+  .fs-preco-riscado::after{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    top:52%;
+    height:1px;
+    background:currentColor;
+    transform:translateY(-50%);
+    pointer-events:none;
+  }
+  .fs-preco-riscado:has(.fs-risco-export)::after{
+    display:none;
+  }
+  .fs-risco-export{
+    position:absolute;
+    left:0;
+    right:0;
+    top:52%;
+    height:1px;
+    background:currentColor;
+    transform:translateY(-50%);
+    pointer-events:none;
   }
   @media (max-width:768px){
-    #resumoGeralContainer .flex.items-center.gap-2{
-      display:grid !important;
-      grid-template-columns:minmax(0,1fr) 44px !important;
-      align-items:center !important;
-      gap:10px !important;
-      width:100% !important;
-      margin-bottom:10px !important;
-    }
-    #resumoGeralContainer .flex.items-center.gap-2 h3{
-      grid-column:1 !important;
-      grid-row:1 !important;
-      margin:0 !important;
-      min-width:0 !important;
-    }
     #btnToggleResumoGeral{
-      grid-column:2 !important;
-      grid-row:1 !important;
       justify-self:end !important;
       width:44px !important;
       height:44px !important;
       margin:0 !important;
+    }
+    .fs-resumo-controles{
+      grid-template-columns:1fr !important;
     }
   }
 </style>
@@ -2918,8 +2958,8 @@ try{
 
        <div id="resumoGeralContainer" class="mb-8 hidden">
         <div class="bg-white rounded-lg border border-green-300 p-4 shadow-sm">
-         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-          <div class="flex items-center gap-2">
+         <div class="fs-resumo-cabecalho">
+          <div class="fs-resumo-toolbar">
            <h3 class="text-lg font-semibold text-gray-700">💰 Resumo Geral da Simulação</h3>
            <button id="btnToggleResumoGeral" type="button"
             class="px-2 py-1 rounded-full border border-green-300 bg-green-50 text-xs text-green-700 hover:bg-green-100 transition"
@@ -2927,17 +2967,14 @@ try{
             🔍
            </button>
           </div>
-          <div class="flex flex-wrap gap-3">
-           
-           </div>
-
+          <div class="fs-resumo-controles">
            <div id="wrapCarneTools" class="hidden mr-4">
              <button id="btnCarneVencAutor" type="button" class="inline-flex items-center gap-2 px-2 py-1 rounded-lg bg-white/80 border border-gray-200 shadow-sm hover:shadow-md transition text-xs">
                <span class="text-sm">📅</span>
                <span class="font-semibold text-gray-800">Vencimento</span>
              </button>
            </div>
-           <div id="resumoParcelasWrap">
+           <div id="resumoModalidadeWrap">
             <label for="resumoModalidade" class="block text-xs font-semibold text-gray-600 mb-1">Modalidade</label>
             <select id="resumoModalidade" class="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
              <option value="" selected disabled>Selecione</option>
@@ -2947,7 +2984,7 @@ try{
              <option value="carne">📄 Carnê</option>
             </select>
            </div>
-           <div>
+           <div id="resumoParcelasWrap">
             <label for="resumoParcelas" class="block text-xs font-semibold text-gray-600 mb-1">Número de Parcelas</label>
             <select id="resumoParcelas" class="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
              <option value="" selected disabled>Selecione</option>
@@ -2963,7 +3000,7 @@ try{
              <option value="10">10x</option>
              <option value="11">11x</option>
              <option value="12">12x</option>
-            </select>
+           </select>
            </div>
           </div>
          </div>
@@ -6212,13 +6249,6 @@ async function salvarProposta() {
               </div>
             </div>
             <div class="text-[11px] sm:text-xs text-gray-700 sm:text-right leading-snug">
-              <div class="fs-proposta-logo mb-2 sm:flex sm:justify-end" aria-label="Zenir">
-                <svg width="124" height="30" viewBox="0 0 248 60" role="img" aria-label="Zenir" xmlns="http://www.w3.org/2000/svg">
-                  <ellipse cx="36" cy="30" rx="34" ry="25" fill="#ed1c24"/>
-                  <path d="M13 13h43L24 46h38" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-                  <text x="76" y="43" fill="#2d3294" font-family="Arial, sans-serif" font-size="44" font-weight="700">zenir</text>
-                </svg>
-              </div>
               <p>Vendedor(a): <strong>${data.vendedor_nome || 'Vendedor(a)'}</strong></p>
               <p>Simulação para: <strong>${data.cliente_nome || 'Cliente'}</strong></p>
               <p>Código da simulação: <strong>${data.codigo_proposta || '---'}</strong></p>
@@ -6978,7 +7008,7 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
               <h3 class="text-sm font-bold text-gray-800 m-0">📊 Tabela completa de produtos com alçadas</h3>
               <div class="fs-tabela-diretoria-actions no-print">
                 <button type="button" id="btnExpandirTabelaDiretoria" class="fs-btn-expandir-tabela" onclick="toggleTabelaDiretoriaExpandida(this)">⛶ Expandir</button>
-                <button type="button" id="btnFecharTabelaDiretoria" class="fs-btn-fechar-tabela hidden" onclick="toggleTabelaDiretoriaExpandida(this)">✕ Fechar</button>
+                <button type="button" id="btnFecharTabelaDiretoria" class="fs-btn-fechar-tabela hidden" onclick="return fecharTabelaDiretoriaExpandida(event)">✕ Fechar</button>
               </div>
             </div>
             <div class="fs-tabela-diretoria-wrap overflow-x-auto">
@@ -8510,13 +8540,6 @@ function abrirAlterarStatusProposta(id) {
         wrapper.style.zIndex = '-1';
         const cloneConteudo = target.cloneNode(true);
         cloneConteudo.removeAttribute('id');
-        if (!cloneConteudo.querySelector('.fs-proposta-logo')) {
-          const marca = document.createElement('div');
-          marca.className = 'fs-proposta-logo';
-          marca.style.cssText = 'display:flex;justify-content:flex-end;align-items:center;margin:0 0 10px;padding:0 2px;';
-          marca.innerHTML = '<svg width="124" height="30" viewBox="0 0 248 60" role="img" aria-label="Zenir" xmlns="http://www.w3.org/2000/svg"><ellipse cx="36" cy="30" rx="34" ry="25" fill="#ed1c24"/><path d="M13 13h43L24 46h38" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><text x="76" y="43" fill="#2d3294" font-family="Arial, sans-serif" font-size="44" font-weight="700">zenir</text></svg>';
-          cloneConteudo.insertBefore(marca, cloneConteudo.firstChild);
-        }
         if (tipo === 'cliente') {
           cloneConteudo.style.width = `${larguraCliente}px`;
           cloneConteudo.style.maxWidth = 'none';
@@ -8575,17 +8598,21 @@ function abrirAlterarStatusProposta(id) {
             btn.style.display = 'none';
           }
         });
-        // O html2canvas varia o suporte a text-decoration em navegadores móveis.
-        // Converte todo preço riscado em uma linha de fundo estável, preservando
-        // exatamente a proporção mostrada na prévia.
+        // Usa uma linha física dentro do preço. Assim a prévia e o arquivo
+        // baixado mantêm o risco exatamente no mesmo centro tipográfico.
         wrapper.querySelectorAll('.line-through, .fs-preco-riscado').forEach(function(el){
           el.classList.remove('line-through');
+          el.classList.add('fs-preco-riscado');
           el.style.textDecoration = 'none';
+          el.style.position = 'relative';
           el.style.display = 'inline-block';
-          el.style.backgroundImage = 'linear-gradient(currentColor,currentColor)';
-          el.style.backgroundPosition = 'center';
-          el.style.backgroundRepeat = 'no-repeat';
-          el.style.backgroundSize = '100% 1.5px';
+          el.style.background = 'none';
+          if (!el.querySelector('.fs-risco-export')) {
+            const risco = document.createElement('i');
+            risco.className = 'fs-risco-export';
+            risco.setAttribute('aria-hidden', 'true');
+            el.appendChild(risco);
+          }
         });
 
         // Na visão do cliente preserva exatamente a largura da prévia.
@@ -10091,7 +10118,7 @@ const html = `
           if (!mod) {
             selPar.disabled = true;
             selPar.value = '';
-          } else if (mod === 'avista') {
+          } else if (mod === 'avista' || mod === 'pix') {
             selPar.disabled = true;
             selPar.value = '1';
           } else {
@@ -14708,7 +14735,32 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 
 <script>
-function toggleTabelaDiretoriaExpandida(){var bloco=document.getElementById('blocoTabelaDiretoriaAlcadas');if(!bloco)return;var vaiExpandir=!bloco.classList.contains('fs-tabela-diretoria-expandida');bloco.classList.toggle('fs-tabela-diretoria-expandida',vaiExpandir);var btnExpandir=document.getElementById('btnExpandirTabelaDiretoria');var btnFechar=document.getElementById('btnFecharTabelaDiretoria');if(btnExpandir&&btnFechar){btnExpandir.classList.toggle('hidden',vaiExpandir);btnFechar.classList.toggle('hidden',!vaiExpandir);}document.body.style.overflow=vaiExpandir?'hidden':'';try{var el=document.documentElement;if(vaiExpandir){var req=(el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen);if(req){var r=req.call(el);if(r&&typeof r.then==='function'){r.then(function(){try{if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('landscape').catch(function(){});}}catch(e){}}).catch(function(){});}else{try{if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('landscape').catch(function(){});}}catch(e){}}}else{try{if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('landscape').catch(function(){});}}catch(e){}}}else{try{if(screen.orientation&&screen.orientation.unlock){screen.orientation.unlock();}}catch(e){}var ex=(document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen);if(ex&&document.fullscreenElement){var rr=ex.call(document);if(rr&&typeof rr.catch==='function'){rr.catch(function(){});}}}}catch(e){}}
+function fsDefinirTabelaDiretoriaExpandida(expandir){
+  var bloco = document.getElementById('blocoTabelaDiretoriaAlcadas');
+  if (!bloco) return false;
+  bloco.classList.toggle('fs-tabela-diretoria-expandida', !!expandir);
+  var btnExpandir = document.getElementById('btnExpandirTabelaDiretoria');
+  var btnFechar = document.getElementById('btnFecharTabelaDiretoria');
+  if (btnExpandir) btnExpandir.classList.toggle('hidden', !!expandir);
+  if (btnFechar) btnFechar.classList.toggle('hidden', !expandir);
+  document.body.style.overflow = expandir ? 'hidden' : '';
+  return false;
+}
+function toggleTabelaDiretoriaExpandida(){
+  var bloco = document.getElementById('blocoTabelaDiretoriaAlcadas');
+  if (!bloco) return false;
+  return fsDefinirTabelaDiretoriaExpandida(!bloco.classList.contains('fs-tabela-diretoria-expandida'));
+}
+function fecharTabelaDiretoriaExpandida(evento){
+  if (evento) {
+    evento.preventDefault();
+    evento.stopPropagation();
+  }
+  return fsDefinirTabelaDiretoriaExpandida(false);
+}
+document.addEventListener('keydown', function(evento){
+  if (evento.key === 'Escape') fecharTabelaDiretoriaExpandida(evento);
+});
 </script>
 
 <script id="fs-direct-entry-v24">
