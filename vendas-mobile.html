@@ -2296,6 +2296,40 @@ try{
 }catch(e){}
 </script>
 
+<style id="fs-v30-export-resumo">
+  .fs-preco-riscado{
+    display:inline-block;
+    text-decoration:none !important;
+    background-image:linear-gradient(currentColor,currentColor);
+    background-position:center;
+    background-repeat:no-repeat;
+    background-size:100% 1.5px;
+  }
+  @media (max-width:768px){
+    #resumoGeralContainer .flex.items-center.gap-2{
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) 44px !important;
+      align-items:center !important;
+      gap:10px !important;
+      width:100% !important;
+      margin-bottom:10px !important;
+    }
+    #resumoGeralContainer .flex.items-center.gap-2 h3{
+      grid-column:1 !important;
+      grid-row:1 !important;
+      margin:0 !important;
+      min-width:0 !important;
+    }
+    #btnToggleResumoGeral{
+      grid-column:2 !important;
+      grid-row:1 !important;
+      justify-self:end !important;
+      width:44px !important;
+      height:44px !important;
+      margin:0 !important;
+    }
+  }
+</style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100">
 
@@ -2886,11 +2920,12 @@ try{
         <div class="bg-white rounded-lg border border-green-300 p-4 shadow-sm">
          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div class="flex items-center gap-2">
+           <h3 class="text-lg font-semibold text-gray-700">💰 Resumo Geral da Simulação</h3>
            <button id="btnToggleResumoGeral" type="button"
-            class="px-2 py-1 rounded-full border border-green-300 bg-green-50 text-xs text-green-700 hover:bg-green-100 transition">
+            class="px-2 py-1 rounded-full border border-green-300 bg-green-50 text-xs text-green-700 hover:bg-green-100 transition"
+            aria-label="Abrir ou fechar o resumo geral">
             🔍
            </button>
-           <h3 class="text-lg font-semibold text-gray-700">💰 Resumo Geral da Simulação</h3>
           </div>
           <div class="flex flex-wrap gap-3">
            
@@ -2902,7 +2937,7 @@ try{
                <span class="font-semibold text-gray-800">Vencimento</span>
              </button>
            </div>
-           <div>
+           <div id="resumoParcelasWrap">
             <label for="resumoModalidade" class="block text-xs font-semibold text-gray-600 mb-1">Modalidade</label>
             <select id="resumoModalidade" class="px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
              <option value="" selected disabled>Selecione</option>
@@ -2936,6 +2971,7 @@ try{
          <div id="resumoGeralBody" class="bg-green-50 rounded-lg p-4 border border-green-200 hidden">
           <h4 class="font-semibold text-center text-gray-700 mb-4">🧾 Resumo da Simulação</h4>
           
+          <div id="resumoParcelasFinanceiro">
           <p class="text-xs text-gray-500 text-center mb-2">Resumo financeiro (parcelas)</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center mb-4">
            <div class="bg-white rounded-lg border border-gray-200 p-3">
@@ -2952,6 +2988,7 @@ try{
             <p id="resumoEconomiaParcelaPerc" class="text-xs text-gray-500 mt-1">(0,0% de desconto)</p>
            </div>
           </div>
+          </div>
           
           <p class="text-xs text-gray-500 text-center mt-2 mb-2">Resumo total</p>
          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
@@ -2960,7 +2997,7 @@ try{
             <p id="resumoTotalNormal" class="text-sm font-semibold text-gray-500 line-through">R$ 0,00</p>
            </div>
            <div class="bg-white rounded-lg border border-green-300 p-3">
-            <p class="text-xs text-gray-500 mb-1">Valor Total Parcelado</p>
+            <p id="resumoTotalFinalLabel" class="text-xs text-gray-500 mb-1">Valor Total Parcelado</p>
             <p id="resumoTotalParcelado" class="text-sm font-bold text-green-600">R$ 0,00</p>
            </div>
            <div class="bg-white rounded-lg border border-red-200 p-3 md:col-span-2">
@@ -4198,8 +4235,20 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
 
       const selectModalidade = document.getElementById('resumoModalidade');
       const selectParcelas = document.getElementById('resumoParcelas');
+      const wrapParcelas = document.getElementById('resumoParcelasWrap');
+      const financeiroParcelas = document.getElementById('resumoParcelasFinanceiro');
+      const labelTotalFinal = document.getElementById('resumoTotalFinalLabel');
 
       const modalidade = (selectModalidade && selectModalidade.value) || '';
+      const modalidadeParcelada = modalidade === 'carne' || modalidade === 'cartao';
+
+      if (wrapParcelas) wrapParcelas.classList.toggle('hidden', !modalidadeParcelada);
+      if (financeiroParcelas) financeiroParcelas.classList.toggle('hidden', !modalidadeParcelada);
+      if (labelTotalFinal) {
+        labelTotalFinal.textContent = modalidade === 'pix'
+          ? 'Valor em Pix'
+          : (modalidade === 'avista' ? 'Valor em Dinheiro' : 'Valor Total Parcelado');
+      }
 
       // Se não selecionou modalidade ainda, mantém o corpo fechado e não calcula
       if (!modalidade) {
@@ -4214,7 +4263,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
 
       // À vista / Pix sempre 1x
       if (selectParcelas) {
-        if (modalidade === 'avista' || modalidade === 'pix') {
+        if (!modalidadeParcelada) {
           parcelas = 1;
           selectParcelas.value = '1';
           selectParcelas.disabled = true;
@@ -4260,7 +4309,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
       let parcelaNormal = totalNormalFinal;
       let parcelaPromo = totalPromoFinal;
 
-      if (modalidade !== 'avista' && modalidade !== 'pix' && parcelas > 0) {
+      if (modalidadeParcelada && parcelas > 0) {
         parcelaNormal = totalParceladoNormal / parcelas;
         parcelaPromo = totalParceladoPromo / parcelas;
       }
@@ -4315,7 +4364,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
           <div class="font-bold text-emerald-700">${formatarMoedaBR(totalParceladoPromo)}</div>
         </div>
       `;
-      info.classList.remove('hidden');
+      info.classList.toggle('hidden', !modalidadeParcelada);
     }
 
 
@@ -5594,7 +5643,7 @@ async function salvarProposta() {
           modalidade_resumo = 'Carnê – ' + modalidade_parcelas + 'x de ' + formatarMoeda(modalidade_valor_parcela);
         } else if (modalidade_tipo === 'cartao') {
           modalidade_resumo = 'Cartão – ' + modalidade_parcelas + 'x de ' + formatarMoeda(modalidade_valor_parcela);
-        } else if (modalidade_tipo === 'avista') {
+        } else if (modalidade_tipo === 'avista' || modalidade_tipo === 'pix') {
           modalidade_resumo = (modalidade_tipo === 'pix' ? 'Pix – ' : 'Dinheiro – ') + formatarMoeda(modalidade_total);
         } else {
           modalidade_resumo = 'Total: ' + formatarMoeda(modalidade_total);
@@ -5767,13 +5816,16 @@ async function salvarProposta() {
       if (resultado.isOk) {
         showToast('✅ Simulação salva neste dispositivo!', 'success');
         propostaFoiSalva = true;
-        try { atualizarResumoGeralProposta(); } catch(e) {}
         try {
           if (typeof voltarParaLista === 'function') {
-            setTimeout(function(){ voltarParaLista(); }, 180);
+            voltarParaLista();
+          } else {
+            showView('lista');
           }
+          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
         } catch(e) {
           console.warn('Não foi possível retornar para a lista após salvar.', e);
+          try { showView('lista'); } catch(_) {}
         }
       } else {
         showToast('❌ Erro ao salvar simulação. Tente novamente.', 'error');
@@ -6160,6 +6212,13 @@ async function salvarProposta() {
               </div>
             </div>
             <div class="text-[11px] sm:text-xs text-gray-700 sm:text-right leading-snug">
+              <div class="fs-proposta-logo mb-2 sm:flex sm:justify-end" aria-label="Zenir">
+                <svg width="124" height="30" viewBox="0 0 248 60" role="img" aria-label="Zenir" xmlns="http://www.w3.org/2000/svg">
+                  <ellipse cx="36" cy="30" rx="34" ry="25" fill="#ed1c24"/>
+                  <path d="M13 13h43L24 46h38" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+                  <text x="76" y="43" fill="#2d3294" font-family="Arial, sans-serif" font-size="44" font-weight="700">zenir</text>
+                </svg>
+              </div>
               <p>Vendedor(a): <strong>${data.vendedor_nome || 'Vendedor(a)'}</strong></p>
               <p>Simulação para: <strong>${data.cliente_nome || 'Cliente'}</strong></p>
               <p>Código da simulação: <strong>${data.codigo_proposta || '---'}</strong></p>
@@ -6254,11 +6313,11 @@ async function salvarProposta() {
                     <div class="flex justify-between items-center mt-2 pt-2 border-t">
                       <div>
                         ${(modalidade === 'avista' || modalidade === 'pix') 
-                          ? `<p class="text-xs text-gray-500 line-through">De ${formatarMoedaBR(precoNormalCliente)}</p>
+                          ? `<p class="text-xs text-gray-500"><span class="fs-preco-riscado">De ${formatarMoedaBR(precoNormalCliente)}</span></p>
                              <p class="text-lg font-bold text-green-600">${formatarMoedaBR(precoFinalCliente)}</p>
                              <p class="text-xs text-blue-600 font-semibold mt-1">${((p.modalidade||'')==='pix' ? 'Pix' : 'Dinheiro')}</p>
                              <p class="text-xs text-green-600 font-bold mt-1">💰 Economia: ${formatarMoedaBR(economiaModalidade)}</p>` 
-                          : `<p class="text-xs text-gray-500 line-through">De ${p.parcelas}x ${formatarMoedaBR(finNormal ? finNormal.parcela : calcularParcela({...p, preco_promo: p.preco_normal}))}</p>
+                          : `<p class="text-xs text-gray-500"><span class="fs-preco-riscado">De ${p.parcelas}x ${formatarMoedaBR(finNormal ? finNormal.parcela : calcularParcela({...p, preco_promo: p.preco_normal}))}</span></p>
                              ${entradaValor > 0 ? `
                              <p class="text-xs text-amber-700 font-bold">💵 Entrada: ${formatarMoedaBR(entradaValor)}</p>
                              <p class="text-base font-bold text-green-600">${p.parcelas}x de ${formatarMoedaBR(finPromo ? finPromo.parcela : calcularParcela(p))}</p>
@@ -8451,6 +8510,13 @@ function abrirAlterarStatusProposta(id) {
         wrapper.style.zIndex = '-1';
         const cloneConteudo = target.cloneNode(true);
         cloneConteudo.removeAttribute('id');
+        if (!cloneConteudo.querySelector('.fs-proposta-logo')) {
+          const marca = document.createElement('div');
+          marca.className = 'fs-proposta-logo';
+          marca.style.cssText = 'display:flex;justify-content:flex-end;align-items:center;margin:0 0 10px;padding:0 2px;';
+          marca.innerHTML = '<svg width="124" height="30" viewBox="0 0 248 60" role="img" aria-label="Zenir" xmlns="http://www.w3.org/2000/svg"><ellipse cx="36" cy="30" rx="34" ry="25" fill="#ed1c24"/><path d="M13 13h43L24 46h38" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><text x="76" y="43" fill="#2d3294" font-family="Arial, sans-serif" font-size="44" font-weight="700">zenir</text></svg>';
+          cloneConteudo.insertBefore(marca, cloneConteudo.firstChild);
+        }
         if (tipo === 'cliente') {
           cloneConteudo.style.width = `${larguraCliente}px`;
           cloneConteudo.style.maxWidth = 'none';
@@ -8508,6 +8574,18 @@ function abrirAlterarStatusProposta(id) {
           if (txt.indexOf('expandir') >= 0 || txt.indexOf('fechar') >= 0 || txt.indexOf('enviar') >= 0 || txt.indexOf('baixar') >= 0) {
             btn.style.display = 'none';
           }
+        });
+        // O html2canvas varia o suporte a text-decoration em navegadores móveis.
+        // Converte todo preço riscado em uma linha de fundo estável, preservando
+        // exatamente a proporção mostrada na prévia.
+        wrapper.querySelectorAll('.line-through, .fs-preco-riscado').forEach(function(el){
+          el.classList.remove('line-through');
+          el.style.textDecoration = 'none';
+          el.style.display = 'inline-block';
+          el.style.backgroundImage = 'linear-gradient(currentColor,currentColor)';
+          el.style.backgroundPosition = 'center';
+          el.style.backgroundRepeat = 'no-repeat';
+          el.style.backgroundSize = '100% 1.5px';
         });
 
         // Na visão do cliente preserva exatamente a largura da prévia.
@@ -16017,7 +16095,7 @@ window.fsEnviarAnaliseLista = async function(id){
         var left = pricingWrap.children && pricingWrap.children[0];
         if (!left) return;
         if (modalidade === 'avista' || modalidade === 'pix') {
-          left.innerHTML = '<p class="text-xs text-gray-500 line-through">De ' + formatarMoedaBR((rNormal && rNormal.totalFinal) || 0) + '</p>' +
+          left.innerHTML = '<p class="text-xs text-gray-500"><span class="fs-preco-riscado">De ' + formatarMoedaBR((rNormal && rNormal.totalFinal) || 0) + '</span></p>' +
                            '<p class="text-lg font-bold text-green-600">' + formatarMoedaBR(rPromo.totalFinal || 0) + '</p>' +
                            '<p class="text-xs text-blue-600 font-semibold mt-1">' + (((p.modalidade||'')==='pix') ? 'Pix' : 'Dinheiro') + '</p>';
         } else {
@@ -16027,7 +16105,7 @@ window.fsEnviarAnaliseLista = async function(id){
           var restanteHtml = (rPromo.entrada > 0)
             ? '<p class="text-xs text-gray-600 mt-1">Restante no ' + (modalidade === 'carne' ? 'Carnê' : 'Cartão') + '</p>'
             : '<p class="text-xs text-gray-600 mt-1">no ' + (modalidade === 'carne' ? 'Carnê' : 'Cartão') + '</p>';
-          left.innerHTML = '<p class="text-xs text-gray-500 line-through">De ' + rPromo.parcelas + 'x ' + formatarMoedaBR((rNormal && rNormal.parcela) || 0) + '</p>' +
+          left.innerHTML = '<p class="text-xs text-gray-500"><span class="fs-preco-riscado">De ' + rPromo.parcelas + 'x ' + formatarMoedaBR((rNormal && rNormal.parcela) || 0) + '</span></p>' +
                            entradaHtml +
                            '<p class="text-base font-bold text-green-600">' + rPromo.parcelas + 'x de ' + formatarMoedaBR(rPromo.parcela || 0) + '</p>' +
                            '<p class="text-xs text-gray-700 font-semibold mt-1">Total final: ' + formatarMoedaBR(rPromo.totalFinal || 0) + '</p>' +
@@ -16052,7 +16130,7 @@ window.fsEnviarAnaliseLista = async function(id){
         if (!parcelasRef) {
           bloco.innerHTML = '<h3 class="text-base font-bold text-gray-800 mb-3 text-center">💰 Resumo da Simulação</h3>' +
             '<div class="bg-gray-50 p-4 rounded-lg"><div class="grid grid-cols-3 gap-3 text-center">' +
-              '<div><p class="text-xs text-gray-500">Total Normal</p><p class="text-sm font-semibold text-gray-400 line-through">' + formatarMoedaBR(totalNormal) + '</p></div>' +
+              '<div><p class="text-xs text-gray-500">Total Normal</p><p class="text-sm font-semibold text-gray-400"><span class="fs-preco-riscado">' + formatarMoedaBR(totalNormal) + '</span></p></div>' +
               '<div><p class="text-xs text-gray-500">Valor Final</p><p class="text-lg font-bold text-green-600">' + formatarMoedaBR(totalFinal) + '</p></div>' +
               '<div><p class="text-xs text-gray-500">Economia</p><p class="text-sm font-semibold text-red-600">' + formatarMoedaBR(economia) + '</p></div>' +
             '</div></div>';
@@ -16062,13 +16140,13 @@ window.fsEnviarAnaliseLista = async function(id){
           '<div class="bg-white p-4 rounded-lg shadow-lg mb-3 border-2 border-green-400">' +
             (totalEntrada > 0 ? '<div class="text-center mb-2"><span class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">💵 ENTRADA: ' + formatarMoedaBR(totalEntrada) + '</span></div>' : '') +
             '<div class="grid grid-cols-3 gap-4 text-center">' +
-              '<div><p class="text-xs text-gray-600 mb-1">Parcela Normal</p><p class="text-base font-bold text-gray-500 line-through">' + (parcelasRef ? parcelasLabel + ' ' + formatarMoedaBR(totalParcelaNormal) : '—') + '</p></div>' +
+              '<div><p class="text-xs text-gray-600 mb-1">Parcela Normal</p><p class="text-base font-bold text-gray-500"><span class="fs-preco-riscado">' + (parcelasRef ? parcelasLabel + ' ' + formatarMoedaBR(totalParcelaNormal) : '—') + '</span></p></div>' +
               '<div><p class="text-xs text-gray-600 mb-1">Sua Parcela</p><p class="text-xl font-bold text-green-600">' + (parcelasRef ? parcelasLabel + ' ' + formatarMoedaBR(totalParcela) : formatarMoedaBR(totalFinal)) + '</p></div>' +
               '<div><p class="text-xs text-gray-600 mb-1">Valor Final</p><p class="text-xl font-bold text-blue-700">' + formatarMoedaBR(totalFinal) + '</p></div>' +
             '</div>' +
           '</div>' +
           '<div class="bg-gray-50 p-3 rounded-lg"><div class="grid grid-cols-3 gap-3 text-center">' +
-            '<div><p class="text-xs text-gray-500">Total Normal</p><p class="text-sm font-semibold text-gray-400 line-through">' + formatarMoedaBR(totalNormal) + '</p></div>' +
+            '<div><p class="text-xs text-gray-500">Total Normal</p><p class="text-sm font-semibold text-gray-400"><span class="fs-preco-riscado">' + formatarMoedaBR(totalNormal) + '</span></p></div>' +
             '<div><p class="text-xs text-gray-500">Total Final</p><p class="text-sm font-semibold text-green-600">' + formatarMoedaBR(totalFinal) + '</p></div>' +
             '<div><p class="text-xs text-gray-500">Economia</p><p class="text-sm font-semibold text-red-600">' + formatarMoedaBR(economia) + '</p>' + (economiaParcela > 0 ? '<p class="text-[11px] text-gray-500">Parcela: ' + formatarMoedaBR(economiaParcela) + '</p>' : '') + '</div>' +
           '</div></div>';
