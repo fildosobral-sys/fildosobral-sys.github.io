@@ -8796,7 +8796,7 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-kicker{font-size:8px;font-weight:800;letter-spacing:1.2px;color:#2e54a7;margin-bottom:4px}
         .fs-a4-cabecalho h1{font-size:20px;line-height:1.05;margin:0;color:#172554}
         .fs-a4-cabecalho p{font-size:9px;color:#667085;margin:4px 0 0}
-        .fs-a4-logo{width:142px;height:52px;object-fit:contain;object-position:center;padding:5px 9px;margin-right:2px}
+        .fs-a4-logo{width:142px;height:36px;object-fit:fill;object-position:center;padding:3px 9px;margin-right:2px}
         .fs-a4-faixa{height:3px;margin:11px 0 9px;border-radius:99px;background:linear-gradient(90deg,#233c96 0 74%,#e62e45 74% 100%)}
         .fs-a4-dados{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:8px 10px;background:#fffef7;border:1px solid #eadf9c;border-radius:8px}
         .fs-a4-dados div{min-width:0}.fs-a4-dados span{display:block;font-size:6.5px;text-transform:uppercase;letter-spacing:.5px;color:#7b8496;margin-bottom:2px}
@@ -8836,7 +8836,7 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-rodape{display:flex;justify-content:space-between;gap:20px;margin-top:13px;padding-top:7px;border-top:1px solid #dce3f1;color:#7b8496;font-size:6.5px}
         .fs-a4-rodape strong{color:#536078;font-weight:600}
         .fs-a4-paisagem{padding:20px 24px 16px}.fs-a4-paisagem .fs-a4-cabecalho{margin-bottom:12px}
-        .fs-a4-paisagem .fs-a4-logo{width:150px;height:50px}
+        .fs-a4-paisagem .fs-a4-logo{width:150px;height:34px}
       `;
       palco.appendChild(estilo);
       palco.appendChild(folha);
@@ -8844,13 +8844,13 @@ function abrirAlterarStatusProposta(id) {
       return { palco, folha, largura, alturaMinima };
     }
 
-    function fsAbrirImagemPronta(url, nomeArquivo, blobImagem) {
+    function fsAbrirImagemPronta(url, nomeArquivo, blobImagem, tipoImagem) {
       const overlay = document.createElement('div');
       overlay.className = 'fixed inset-0 z-[10050] bg-black/70 flex items-center justify-center p-4';
       overlay.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
           <div class="px-5 py-4 border-b flex items-center justify-between gap-3">
-            <div><h3 class="font-bold text-lg text-gray-900">✅ Imagem A4 pronta</h3><p class="text-xs text-gray-500 mt-1">Salve o PNG no aparelho ou compartilhe mantendo o mesmo arquivo.</p></div>
+            <div><h3 class="font-bold text-lg text-gray-900">✅ Imagem A4 pronta</h3><p class="text-xs text-gray-500 mt-1">Salve o PNG em alta definição. O WhatsApp será aberto somente com a mensagem.</p></div>
             <button type="button" data-fs-fechar class="w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl">×</button>
           </div>
           <div class="p-3 bg-gray-100 overflow-auto flex-1"><img src="${url}" alt="Prévia da imagem A4" class="block w-full h-auto bg-white shadow"></div>
@@ -8867,13 +8867,20 @@ function abrirAlterarStatusProposta(id) {
         botao.disabled = true;
         botao.textContent = '⏳ Preparando...';
         try {
+          const dataUrl = await new Promise(function(resolve, reject) {
+            const leitor = new FileReader();
+            leitor.onload = function() { resolve(leitor.result); };
+            leitor.onerror = reject;
+            leitor.readAsDataURL(blobImagem);
+          });
           const link = document.createElement('a');
-          link.href = url;
+          link.href = dataUrl;
           link.download = nomeArquivo;
           link.rel = 'noopener';
+          link.style.display = 'none';
           document.body.appendChild(link);
-          link.click();
-          link.remove();
+          link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+          setTimeout(function(){ if (link.parentNode) link.remove(); }, 800);
           showToast('✅ PNG salvo em Downloads. Ele ficará disponível para a galeria e o WhatsApp.', 'success');
         } catch (erro) {
           if (erro && erro.name === 'AbortError') return;
@@ -8892,18 +8899,24 @@ function abrirAlterarStatusProposta(id) {
         botao.disabled = true;
         botao.textContent = '⏳ Preparando...';
         try {
-          const arquivo = new File([blobImagem], nomeArquivo, { type: 'image/png' });
-          if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [arquivo] }))) {
-            await navigator.share({
-              files: [arquivo],
-              title: 'Proposta comercial A4',
-              text: 'Imagem da proposta comercial'
-            });
+          const dados = window.currentProposalData || {};
+          const cliente = String(dados.cliente_nome || 'cliente').trim();
+          const vendedor = String(dados.vendedor_nome || localStorage.getItem('nomeVendedor') || 'seu vendedor').trim();
+          const filial = String(dados.loja_nome || dados.filial || dados.loja || '').trim();
+          let mensagem;
+          if (tipoImagem === 'diretoriaAlcadas' || tipoImagem === 'diretoria') {
+            mensagem = `Olá! Segue a proposta referente ao cliente ${cliente}, preparada por ${vendedor}${filial ? ` — ${filial}` : ''}. A imagem em alta definição já foi salva no aparelho e pode ser anexada pelo menu do WhatsApp.`;
           } else {
-            const novaAba = window.open(url, '_blank', 'noopener');
-            if (!novaAba) window.location.href = url;
-            showToast('ℹ️ Use o menu do navegador para compartilhar a imagem.', 'success');
+            mensagem = `Olá, ${cliente}! Tudo bem? Aqui é ${vendedor}${filial ? `, da ${filial}` : ''}. Preparei sua proposta com muito cuidado. A imagem em alta definição será enviada logo em seguida para você conferir todos os detalhes.`;
           }
+          const destino = String(dados.cliente_contato || '').replace(/\D/g, '');
+          const numero = tipoImagem === 'cliente' && destino
+            ? (destino.startsWith('55') ? destino : `55${destino}`)
+            : '';
+          const whatsapp = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+          const aba = window.open(whatsapp, '_blank', 'noopener');
+          if (!aba) window.location.href = whatsapp;
+          showToast('✅ WhatsApp aberto somente com a mensagem. Anexe o PNG salvo e marque HD.', 'success');
         } catch (erro) {
           if (!erro || erro.name !== 'AbortError') {
             console.warn('Falha no compartilhamento:', erro);
@@ -9014,7 +9027,7 @@ function abrirAlterarStatusProposta(id) {
         showToast('📄 Montando imagem padronizada...', 'success');
         const arquivo = await fsGerarImagemA4Padrao(tipo);
         const url = URL.createObjectURL(arquivo.blob);
-        fsAbrirImagemPronta(url, arquivo.nomeArquivo, arquivo.blob);
+        fsAbrirImagemPronta(url, arquivo.nomeArquivo, arquivo.blob, tipo);
         showToast('✅ Imagem pronta para salvar ou compartilhar!', 'success');
         return arquivo;
       } catch (error) {
