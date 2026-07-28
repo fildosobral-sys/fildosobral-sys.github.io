@@ -8850,18 +8850,44 @@ function abrirAlterarStatusProposta(id) {
       overlay.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
           <div class="px-5 py-4 border-b flex items-center justify-between gap-3">
-            <div><h3 class="font-bold text-lg text-gray-900">✅ Imagem A4 pronta</h3><p class="text-xs text-gray-500 mt-1">Salve pelo menu do celular ou abra a imagem em tela cheia.</p></div>
+            <div><h3 class="font-bold text-lg text-gray-900">✅ Imagem A4 pronta</h3><p class="text-xs text-gray-500 mt-1">Salve o PNG no aparelho ou compartilhe mantendo o mesmo arquivo.</p></div>
             <button type="button" data-fs-fechar class="w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl">×</button>
           </div>
           <div class="p-3 bg-gray-100 overflow-auto flex-1"><img src="${url}" alt="Prévia da imagem A4" class="block w-full h-auto bg-white shadow"></div>
           <div class="p-4 grid grid-cols-2 gap-3 border-t">
-            <button type="button" data-fs-salvar class="rounded-xl bg-blue-600 text-white font-bold px-4 py-3">⬇️ Salvar imagem</button>
+            <button type="button" data-fs-salvar class="rounded-xl bg-blue-600 text-white font-bold px-4 py-3">⬇️ Salvar PNG</button>
+            <button type="button" data-fs-compartilhar class="rounded-xl bg-emerald-600 text-white font-bold px-4 py-3">📤 Compartilhar</button>
             <button type="button" data-fs-abrir class="rounded-xl bg-indigo-100 text-indigo-800 font-bold px-4 py-3">🔎 Abrir imagem</button>
-            <button type="button" data-fs-fechar class="col-span-2 rounded-xl bg-gray-200 text-gray-800 font-bold px-4 py-3">Fechar</button>
+            <button type="button" data-fs-fechar class="rounded-xl bg-gray-200 text-gray-800 font-bold px-4 py-3">Fechar</button>
           </div>
         </div>`;
       const salvar = async function() {
         const botao = overlay.querySelector('[data-fs-salvar]');
+        const textoAnterior = botao.textContent;
+        botao.disabled = true;
+        botao.textContent = '⏳ Preparando...';
+        try {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = nomeArquivo;
+          link.rel = 'noopener';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          showToast('✅ PNG salvo em Downloads. Ele ficará disponível para a galeria e o WhatsApp.', 'success');
+        } catch (erro) {
+          if (erro && erro.name === 'AbortError') return;
+          console.warn('Falha no salvamento nativo:', erro);
+          const novaAba = window.open(url, '_blank', 'noopener');
+          if (!novaAba) window.location.href = url;
+          showToast('ℹ️ A imagem foi aberta. Use o menu do navegador para salvar.', 'success');
+        } finally {
+          botao.disabled = false;
+          botao.textContent = textoAnterior;
+        }
+      };
+      const compartilhar = async function() {
+        const botao = overlay.querySelector('[data-fs-compartilhar]');
         const textoAnterior = botao.textContent;
         botao.disabled = true;
         botao.textContent = '⏳ Preparando...';
@@ -8873,23 +8899,16 @@ function abrirAlterarStatusProposta(id) {
               title: 'Proposta comercial A4',
               text: 'Imagem da proposta comercial'
             });
-            showToast('✅ Imagem enviada ao menu de salvamento do celular.', 'success');
           } else {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = nomeArquivo;
-            link.rel = 'noopener';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            showToast('✅ Download iniciado.', 'success');
+            const novaAba = window.open(url, '_blank', 'noopener');
+            if (!novaAba) window.location.href = url;
+            showToast('ℹ️ Use o menu do navegador para compartilhar a imagem.', 'success');
           }
         } catch (erro) {
-          if (erro && erro.name === 'AbortError') return;
-          console.warn('Falha no salvamento nativo:', erro);
-          const novaAba = window.open(url, '_blank', 'noopener');
-          if (!novaAba) window.location.href = url;
-          showToast('ℹ️ A imagem foi aberta. Use o menu do navegador para salvar.', 'success');
+          if (!erro || erro.name !== 'AbortError') {
+            console.warn('Falha no compartilhamento:', erro);
+            showToast('❌ Não foi possível abrir o compartilhamento.', 'error');
+          }
         } finally {
           botao.disabled = false;
           botao.textContent = textoAnterior;
@@ -8904,6 +8923,7 @@ function abrirAlterarStatusProposta(id) {
         setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
       };
       overlay.querySelector('[data-fs-salvar]').addEventListener('click', salvar);
+      overlay.querySelector('[data-fs-compartilhar]').addEventListener('click', compartilhar);
       overlay.querySelector('[data-fs-abrir]').addEventListener('click', abrir);
       overlay.querySelectorAll('[data-fs-fechar]').forEach(function(btn){ btn.addEventListener('click', fechar); });
       overlay.addEventListener('click', function(event){ if (event.target === overlay) fechar(); });
@@ -15362,48 +15382,8 @@ document.addEventListener('keydown', function(evento){
     }
   };
 
-  // 4) Preview da visão crediário / planos: baixar imagem e abrir WhatsApp de forma mais estável
-  if (typeof window.gerarImagem === 'function' && !window.__fsWrapGerarImagem) {
-    var _oldGerarImagem = window.gerarImagem;
-    window.gerarImagem = function(tipo){
-      var r = _oldGerarImagem.apply(this, arguments);
-      setTimeout(function(){
-        try{
-          var modals = Array.from(document.querySelectorAll('div.fixed.inset-0'));
-          var modal = modals.find(function(el){ return (el.textContent||'').includes('Preview da Proposta'); });
-          if(!modal) return;
-          var btn = modal.querySelector('#btnEnviarWhatsApp');
-          if(!btn) return;
-          var novo = btn.cloneNode(true);
-          btn.parentNode.replaceChild(novo, btn);
-          novo.addEventListener('click', async function(){
-            try{
-              novo.disabled = true;
-              var urlWhats = '';
-              if(tipo === 'cliente'){
-                if (typeof enviarWhatsApp === 'function') {
-                  await enviarWhatsApp(tipo);
-                  return;
-                }
-              } else {
-                var numero = '5588988222564';
-                var msg = 'Fala Meu Líder, segue proposta para análise';
-                urlWhats = 'https://wa.me/' + numero + '?text=' + encodeURIComponent(msg);
-                try{
-                  await baixarComoImagem(tipo);
-                }catch(e){ console.warn('baixar imagem antes do whatsapp', e); }
-                setTimeout(function(){ window.open(urlWhats, '_blank'); }, 400);
-              }
-            } finally {
-              novo.disabled = false;
-            }
-          });
-        }catch(e){ console.warn('wrap gerarImagem', e); }
-      }, 120);
-      return r;
-    };
-    window.__fsWrapGerarImagem = true;
-  }
+  // O modal já possui um único gerador A4 para salvar e compartilhar.
+  // Não reassociar o botão aqui: o fluxo antigo criava um segundo modelo de imagem.
 })();
 </script>
 
