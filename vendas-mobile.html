@@ -8645,6 +8645,15 @@ function abrirAlterarStatusProposta(id) {
       );
     }
 
+    function fsAlcadaProdutoA4(produto) {
+      const info = calcularInfoDiretoriaAlcadasProduto(produto);
+      const status = String(info && info.status ? info.status : 'Gerente');
+      const classe = status === 'Produto em promoção'
+        ? 'promocao'
+        : (status === 'Supervisor' ? 'supervisor' : 'gerente');
+      return `<small class="fs-a4-alcada ${classe}">${fsTextoSeguroExportacao(status)}</small>`;
+    }
+
     function fsModalidadeA4(produto) {
       const modalidade = String(produto.modalidade || 'avista').toLowerCase();
       if (modalidade === 'pix') return 'Pix';
@@ -8669,7 +8678,7 @@ function abrirAlterarStatusProposta(id) {
         return `
           <tr>
             <td class="fs-a4-numero">${indice + 1}</td>
-            <td class="fs-a4-produto">${fsNomeProdutoA4(produto)}</td>
+            <td class="fs-a4-produto"><span>${fsNomeProdutoA4(produto)}</span></td>
             <td class="fs-a4-centro">${quantidade}</td>
             <td class="fs-a4-direita">${formatarMoedaBR(normal)}</td>
             <td class="fs-a4-direita fs-a4-verde">${formatarMoedaBR(final)}</td>
@@ -8711,7 +8720,7 @@ function abrirAlterarStatusProposta(id) {
         return `
           <tr>
             <td class="fs-a4-numero">${indice + 1}</td>
-            <td class="fs-a4-produto">${fsNomeProdutoA4(produto)}</td>
+            <td class="fs-a4-produto"><span>${fsNomeProdutoA4(produto)}</span>${fsAlcadaProdutoA4(produto)}</td>
             <td class="fs-a4-centro">${info.quantidade}</td>
             <td class="fs-a4-direita">${formatarMoedaBR(info.totalNormal)}</td>
             <td class="fs-a4-direita fs-a4-verde">${formatarMoedaBR(info.totalPromo)}</td>
@@ -8822,6 +8831,8 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-tabela-planos th:nth-child(1){width:3%}.fs-a4-tabela-planos th:nth-child(2){width:29%}.fs-a4-tabela-planos th:nth-child(3){width:5%}
         .fs-a4-tabela-planos th:nth-child(n+4){width:10.5%}
         .fs-a4-numero,.fs-a4-centro{text-align:center}.fs-a4-direita{text-align:right}.fs-a4-produto{font-weight:600;overflow-wrap:anywhere}
+        .fs-a4-produto>span{display:block}.fs-a4-alcada{display:inline-block;margin-top:3px;padding:2px 6px;border-radius:999px;font-size:6.5px;line-height:1.15;font-weight:700;white-space:nowrap}
+        .fs-a4-alcada.gerente{background:#dcfce7;color:#18753c}.fs-a4-alcada.supervisor{background:#ffedd5;color:#a94c08}.fs-a4-alcada.promocao{background:#fee2e2;color:#ad2525}
         .fs-a4-verde{color:#16864b;font-weight:700}.fs-a4-vermelho{color:#c43232;font-weight:700}.fs-a4-azul{color:#2458b8;font-weight:700}.fs-a4-roxo{color:#7936a8;font-weight:700}
         .fs-a4-vazio{text-align:center;color:#667085;padding:18px!important}
         .fs-a4-totalizadores{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
@@ -8844,7 +8855,7 @@ function abrirAlterarStatusProposta(id) {
       return { palco, folha, largura, alturaMinima };
     }
 
-    function fsAbrirImagemPronta(url, nomeArquivo, blobImagem, tipoImagem) {
+    function fsAbrirImagemPronta(url, nomeArquivo, blobImagem, tipoImagem, dataUrlImagem) {
       const overlay = document.createElement('div');
       overlay.className = 'fixed inset-0 z-[10050] bg-black/70 flex items-center justify-center p-4';
       overlay.innerHTML = `
@@ -8862,16 +8873,19 @@ function abrirAlterarStatusProposta(id) {
           </div>
         </div>`;
       let sequenciaDownloads = 0;
-      const salvar = function() {
+      const salvar = async function() {
         const botao = overlay.querySelector('[data-fs-salvar]');
         const textoAnterior = botao.textContent;
         botao.disabled = true;
         botao.textContent = '⏳ Preparando...';
         try {
-          // O download precisa acontecer diretamente no clique. Converter imagens
-          // paisagem maiores para data: faz alguns navegadores móveis perderem a
-          // autorização do gesto e ignorarem o salvamento.
-          const urlDownload = URL.createObjectURL(blobImagem);
+          // Cria um arquivo novo em cada toque. Alguns navegadores Android
+          // bloqueiam a reutilização do mesmo blob depois do primeiro download.
+          const bytes = blobImagem.arrayBuffer
+            ? await blobImagem.arrayBuffer()
+            : await (await fetch(dataUrlImagem)).arrayBuffer();
+          const blobDownload = new Blob([bytes], { type: 'image/png' });
+          const urlDownload = URL.createObjectURL(blobDownload);
           const link = document.createElement('a');
           sequenciaDownloads += 1;
           const instante = new Date();
@@ -8896,7 +8910,7 @@ function abrirAlterarStatusProposta(id) {
           setTimeout(function(){
             if (link.parentNode) link.remove();
             URL.revokeObjectURL(urlDownload);
-          }, 60000);
+          }, 15000);
           showToast('✅ PNG salvo em Downloads. Ele ficará disponível para a galeria e o WhatsApp.', 'success');
         } catch (erro) {
           if (erro && erro.name === 'AbortError') return;
@@ -9007,6 +9021,7 @@ function abrirAlterarStatusProposta(id) {
           scrollY: 0
         });
 
+        const dataUrl = canvasGerado.toDataURL('image/png', 1);
         const blob = await new Promise(function(resolve, reject) {
           canvasGerado.toBlob(function(resultado) {
             if (resultado) resolve(resultado);
@@ -9022,6 +9037,7 @@ function abrirAlterarStatusProposta(id) {
           (tipo === 'diretoriaAlcadas' ? 'PLANOS_E_COTACOES' : 'CREDIARIO');
         return {
           blob,
+          dataUrl,
           nomeArquivo: `${label}_${cliente}_${codigo}.png`
         };
       } finally {
@@ -9047,7 +9063,7 @@ function abrirAlterarStatusProposta(id) {
         showToast('📄 Montando imagem padronizada...', 'success');
         const arquivo = await fsGerarImagemA4Padrao(tipo);
         const url = URL.createObjectURL(arquivo.blob);
-        fsAbrirImagemPronta(url, arquivo.nomeArquivo, arquivo.blob, tipo);
+        fsAbrirImagemPronta(url, arquivo.nomeArquivo, arquivo.blob, tipo, arquivo.dataUrl);
         showToast('✅ Imagem pronta para salvar ou compartilhar!', 'success');
         return arquivo;
       } catch (error) {
@@ -15182,6 +15198,16 @@ function fecharTabelaDiretoriaExpandida(evento){
   }
   return fsDefinirTabelaDiretoriaExpandida(false);
 }
+document.addEventListener('click', function(evento){
+  var fechar = evento.target && evento.target.closest
+    ? evento.target.closest('#btnFecharTabelaDiretoria')
+    : null;
+  if (!fechar) return;
+  evento.preventDefault();
+  evento.stopPropagation();
+  evento.stopImmediatePropagation();
+  fsDefinirTabelaDiretoriaExpandida(false);
+}, true);
 document.addEventListener('keydown', function(evento){
   if (evento.key === 'Escape') fecharTabelaDiretoriaExpandida(evento);
 });
