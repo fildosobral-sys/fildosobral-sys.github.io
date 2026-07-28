@@ -3047,7 +3047,7 @@ try{
            <select
              id="inputParcelasPlanoExclusivo"
              class="w-full px-4 py-2 rounded-lg border border-purple-200 bg-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-             onchange="calcularParcelaPlanoExclusivo()"
+             onchange="calcularParcelaPlanoExclusivo(true, event)"
            >
             <option value="1">1x</option>
             <option value="2">2x</option>
@@ -5044,9 +5044,12 @@ function responderServicos(id, temServicos) {
     }
 
     
-    function calcularParcelaPlanoExclusivo(mostrarAlertas = true) {
+    function calcularParcelaPlanoExclusivo(mostrarAlertas = false, eventoUsuario = null) {
       const selectParcelas = document.getElementById('inputParcelasPlanoExclusivo');
       const parcelas = parseInt(selectParcelas && selectParcelas.value, 10) || 1;
+      // Alertas só podem nascer de uma alteração manual real do usuário.
+      // Restaurações automáticas, carregamento e sincronizações ficam silenciosos.
+      mostrarAlertas = mostrarAlertas === true && !!(eventoUsuario && eventoUsuario.isTrusted);
       
       // Verifica se tem produtos no carnê ou cartão
       const temCarne = produtos.some(p => p.modalidade === 'carne');
@@ -6683,6 +6686,17 @@ async function salvarProposta() {
       if (typeof saveToStorage === 'function') {
         try { saveToStorage(); } catch(e) {}
       }
+      // Mantém o valor também no HTML serializado usado pela captura 8K.
+      // Sem esta sincronização, o texto digitado existe só na propriedade
+      // "value" do textarea e pode desaparecer ao clonar via innerHTML.
+      const seletor = campo === 'proposta_gerente'
+        ? 'textarea[data-fs-observacao="proposta-gerente"]'
+        : 'textarea[data-fs-observacao="diretoria"]';
+      document.querySelectorAll(seletor).forEach(function(textarea){
+        if (textarea.value !== valorFormatado) textarea.value = valorFormatado;
+        textarea.textContent = valorFormatado;
+        textarea.setAttribute('data-export-value', valorFormatado);
+      });
     }
 
     function mostrarAvisoDiretoriaAlcadas(message, tipo) {
@@ -6833,6 +6847,8 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       }).join('');
 
       const percentualBase = totais.totalNormal > 0 ? ((totais.descontoBase / totais.totalNormal) * 100).toFixed(1) : '0.0';
+      const descontoTotal = Math.max(0, totais.totalNormal - totais.totalFinal);
+      const percentualDescontoTotal = totais.totalNormal > 0 ? ((descontoTotal / totais.totalNormal) * 100).toFixed(1) : '0.0';
       const qtdTotalItens = Math.max(1, produtosDiretoria.reduce((acc, p) => acc + (parseInt(p.quantidade, 10) || 1), 0));
       const mediaSolicitada = (totais.descontoSolicitadoPctPonderado / qtdTotalItens).toFixed(1);
 
@@ -6856,11 +6872,12 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+          <div class="fs-diretoria-resumo-grid grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 mb-4">
             <div class="fs-diretoria-resumo-card bg-white rounded-lg border border-gray-200 p-3"><div class="text-[11px] text-gray-500 uppercase">Total Tabela</div><div class="text-lg font-bold text-gray-800">${formatarMoedaBR(totais.totalNormal)}</div></div>
             <div class="fs-diretoria-resumo-card bg-white rounded-lg border border-red-200 p-3"><div class="text-[11px] text-gray-500 uppercase">Desc. Promocional</div><div class="text-lg font-bold text-red-600">${formatarMoedaBR(totais.descontoBase)}</div><div class="text-[10px] text-red-500 mt-1">${percentualBase}%</div></div>
             <div class="fs-diretoria-resumo-card bg-white rounded-lg border border-green-200 p-3"><div class="text-[11px] text-gray-500 uppercase">Promoção Atual</div><div class="text-lg font-bold text-green-600">${formatarMoedaBR(totais.totalPromo)}</div></div>
             <div class="fs-diretoria-resumo-card bg-white rounded-lg border border-blue-200 p-3"><div class="text-[11px] text-gray-500 uppercase">Desconto Adicional</div><div class="text-sm font-bold text-blue-700">${formatarMoedaBR(totais.descontoGerente + totais.descontoSupervisor)}</div></div>
+            <div class="fs-diretoria-resumo-card bg-white rounded-lg border border-orange-200 p-3"><div class="text-[11px] text-gray-500 uppercase">Desconto Total</div><div class="text-lg font-bold text-orange-600">${formatarMoedaBR(descontoTotal)}</div><div class="text-[10px] text-orange-500 mt-1">${percentualDescontoTotal}%</div></div>
             <div class="fs-diretoria-resumo-card bg-white rounded-lg border border-purple-200 p-3"><div class="text-[11px] text-gray-500 uppercase">Total Final</div><div class="text-lg font-bold text-purple-700">${formatarMoedaBR(totais.totalFinal)}</div></div>
           </div>
 
@@ -6904,11 +6921,11 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
           <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
             <div class="bg-white p-2 rounded-lg border border-yellow-300 fs-diretoria-resumo-card fs-diretoria-card-proposta">
               <h4 class="text-sm font-bold text-gray-800 mb-2">📝 Proposta do Gerente</h4>
-              <textarea oninput="this.value = this.value.toUpperCase(); atualizarObservacaoDiretoriaAlcadas('proposta_gerente', this.value)" style="text-transform: uppercase;" class="w-full min-h-[72px] rounded-lg border border-yellow-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Ex.: PRODUTO EM OFERTA MANTIDO. NOS DEMAIS ITENS PROPONHO 3% DE AJUSTE PARA FECHAMENTO DA VENDA EM 2X.">${(currentProposalData && currentProposalData.proposta_gerente_diretoria) || data.simulacao_perdas_ganhos || ''}</textarea>
+              <textarea data-fs-observacao="proposta-gerente" oninput="this.value = this.value.toUpperCase(); atualizarObservacaoDiretoriaAlcadas('proposta_gerente', this.value)" style="text-transform: uppercase;" class="w-full min-h-[72px] rounded-lg border border-yellow-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Ex.: PRODUTO EM OFERTA MANTIDO. NOS DEMAIS ITENS PROPONHO 3% DE AJUSTE PARA FECHAMENTO DA VENDA EM 2X.">${(currentProposalData && currentProposalData.proposta_gerente_diretoria) || data.simulacao_perdas_ganhos || ''}</textarea>
             </div>
             <div class="bg-white p-2 rounded-lg border border-yellow-300 fs-diretoria-resumo-card fs-diretoria-card-observacao">
               <h4 class="text-sm font-bold text-gray-800 mb-2">📌 Observações para Diretoria</h4>
-              <textarea oninput="this.value = this.value.toUpperCase(); atualizarObservacaoDiretoriaAlcadas('observacao_diretoria', this.value)" style="text-transform: uppercase;" class="w-full min-h-[72px] rounded-lg border border-yellow-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Ex.: CLIENTE SINALIZOU FECHAMENTO IMEDIATO MEDIANTE APROVAÇÃO COMERCIAL FINAL.">${(currentProposalData && currentProposalData.observacao_diretoria) || data.oportunidades_melhoria || ''}</textarea>
+              <textarea data-fs-observacao="diretoria" oninput="this.value = this.value.toUpperCase(); atualizarObservacaoDiretoriaAlcadas('observacao_diretoria', this.value)" style="text-transform: uppercase;" class="w-full min-h-[72px] rounded-lg border border-yellow-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Ex.: CLIENTE SINALIZOU FECHAMENTO IMEDIATO MEDIANTE APROVAÇÃO COMERCIAL FINAL.">${(currentProposalData && currentProposalData.observacao_diretoria) || data.oportunidades_melhoria || ''}</textarea>
             </div>
           </div>
 
@@ -7755,7 +7772,9 @@ function updateContador(count) {
           modalidade_parcelas: proposta.modalidade_parcelas || '',
           modalidade_valor_parcela: proposta.modalidade_valor_parcela || '',
           modalidade_total: proposta.modalidade_total || '',
-          modalidade_resumo: proposta.modalidade_resumo || ''
+          modalidade_resumo: proposta.modalidade_resumo || '',
+          proposta_gerente_diretoria: proposta.proposta_gerente_diretoria || proposta.simulacao_perdas_ganhos || '',
+          observacao_diretoria: proposta.observacao_diretoria || proposta.oportunidades_melhoria || ''
         };
 
         renderVisaoCliente(currentProposalData);
@@ -8397,6 +8416,30 @@ function abrirAlterarStatusProposta(id) {
         wrapper.innerHTML = target.innerHTML;
 
         document.body.appendChild(wrapper);
+
+        // Na exportação, transforma as anotações em texto estático.
+        // Isso evita que navegadores móveis ignorem o valor visual do textarea
+        // durante a captura e garante que as duas observações saiam na imagem.
+        wrapper.querySelectorAll('textarea[data-fs-observacao]').forEach(function(textarea){
+          const tipoCampo = textarea.getAttribute('data-fs-observacao');
+          const valorEstado = tipoCampo === 'proposta-gerente'
+            ? (currentProposalData && currentProposalData.proposta_gerente_diretoria)
+            : (currentProposalData && currentProposalData.observacao_diretoria);
+          const valor = String(valorEstado || textarea.getAttribute('data-export-value') || textarea.value || textarea.textContent || '').trim();
+          const card = textarea.closest('.fs-diretoria-resumo-card');
+          if (!valor) {
+            if (card) card.style.display = 'none';
+            return;
+          }
+          const bloco = document.createElement('div');
+          bloco.className = 'w-full rounded-lg border border-yellow-200 px-3 py-2 text-sm text-gray-700';
+          bloco.style.minHeight = '56px';
+          bloco.style.whiteSpace = 'pre-wrap';
+          bloco.style.textTransform = 'uppercase';
+          bloco.style.lineHeight = '1.35';
+          bloco.textContent = valor;
+          textarea.parentNode.replaceChild(bloco, textarea);
+        });
 
         wrapper.querySelectorAll('.no-print, .fs-tabela-diretoria-actions').forEach(function(el){
           el.style.display = 'none';
@@ -17202,7 +17245,59 @@ html body a.fs-back-home.fs-back-home[aria-label]{
   z-index:2147483000 !important;
 }
 </style>
-<script src="./draft-protection.js?v=27"></script>
-<script src="./home-transition.js?v=27"></script>
+<style id="fs-cotacoes-mobile-v28">
+/* Resumo de Planos e Cotações compacto no celular: duas colunas,
+   valores legíveis e sem cartões excessivamente altos. */
+#contentDiretoriaAlcadas .fs-diretoria-resumo-grid{
+  align-items:stretch !important;
+}
+#contentDiretoriaAlcadas .fs-diretoria-resumo-grid > .fs-diretoria-resumo-card{
+  min-width:0 !important;
+  min-height:82px !important;
+  padding:10px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+}
+#contentDiretoriaAlcadas .fs-diretoria-resumo-grid > .fs-diretoria-resumo-card > div{
+  overflow-wrap:anywhere !important;
+}
+@media(max-width:640px){
+  #contentDiretoriaAlcadas .fs-diretoria-sheet{
+    padding:12px !important;
+  }
+  #contentDiretoriaAlcadas .fs-diretoria-sheet > div:first-child > .flex{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    gap:10px !important;
+  }
+  #contentDiretoriaAlcadas .fs-diretoria-sheet > div:first-child .text-right{
+    text-align:left !important;
+  }
+  #contentDiretoriaAlcadas .fs-diretoria-resumo-grid{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:8px !important;
+  }
+  #contentDiretoriaAlcadas .fs-diretoria-resumo-grid .text-lg{
+    font-size:16px !important;
+    line-height:1.15 !important;
+  }
+  #contentDiretoriaAlcadas .fs-diretoria-resumo-grid .text-sm{
+    font-size:15px !important;
+    line-height:1.15 !important;
+  }
+  #contentDiretoriaAlcadas .fs-diretoria-card-proposta,
+  #contentDiretoriaAlcadas .fs-diretoria-card-observacao{
+    padding:12px !important;
+  }
+  #contentDiretoriaAlcadas textarea[data-fs-observacao]{
+    min-height:96px !important;
+    resize:vertical !important;
+  }
+}
+</style>
+<script src="./draft-protection.js?v=28"></script>
+<script src="./home-transition.js?v=28"></script>
 </body>
 </html>
