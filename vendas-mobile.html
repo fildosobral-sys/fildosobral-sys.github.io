@@ -3250,15 +3250,15 @@ try{
        <div class="mt-6 no-print space-y-3">
         <div id="acoesCliente" class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <button id="btnGerarImagemCliente" class="w-full bg-green-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-600">👁️ Visualizar e Enviar - Visão Cliente</button>
-          <button id="btnBaixarImagemCliente8K" class="w-full bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-800">⬇️ Baixar 8K - Visão Cliente</button>
+          <button id="btnBaixarImagemCliente8K" class="w-full bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-800">⬇️ Baixar A4 - Visão Cliente</button>
         </div>
         <div id="acoesDiretoriaAlcadas" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
           <button id="btnGerarImagemDiretoriaAlcadas" class="w-full bg-amber-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-600">👁️ Visualizar e Enviar - Planos e Cotações</button>
-          <button id="btnBaixarImagemDiretoriaAlcadas8K" class="w-full bg-amber-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-800">⬇️ Baixar 8K - Planos e Cotações</button>
+          <button id="btnBaixarImagemDiretoriaAlcadas8K" class="w-full bg-amber-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-800">⬇️ Baixar A4 - Planos e Cotações</button>
         </div>
         <div id="acoesDiretoria" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
           <button id="btnGerarImagemDiretoria" class="w-full bg-purple-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-600">📤 Enviar para atendente</button>
-          <button id="btnBaixarImagemDiretoria8K" class="w-full bg-fuchsia-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-fuchsia-800">⬇️ Baixar 8K - Crediário</button>
+          <button id="btnBaixarImagemDiretoria8K" class="w-full bg-fuchsia-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-fuchsia-800">⬇️ Baixar A4 - Crediário</button>
         </div>
        </div>
       </div>
@@ -8591,8 +8591,162 @@ function abrirAlterarStatusProposta(id) {
 
 
 
-    // ========== BAIXAR IMAGEM 8K ==========
+    function fsTextoSeguroExportacao(valor, fallback) {
+      const texto = String(valor == null ? '' : valor).trim();
+      return escapeHtml(texto || fallback || '—');
+    }
+
+    function fsCabecalhoA4Exportacao(tipo, data) {
+      const titulo = tipo === 'diretoriaAlcadas' ? 'PLANOS E COTAÇÕES' :
+        (tipo === 'diretoria' ? 'VISÃO CREDIÁRIO' : 'SIMULAÇÃO COMERCIAL');
+      const subtitulo = tipo === 'diretoriaAlcadas'
+        ? 'Demonstrativo comercial de produtos, preços e descontos'
+        : (tipo === 'diretoria'
+            ? 'Demonstrativo para análise de crediário'
+            : 'Proposta comercial ao cliente');
+      const filial = window.fsNormalizeFilialText
+        ? window.fsNormalizeFilialText(data.loja_nome || data.filial || data.loja || (window.fsGetFilialAtual ? window.fsGetFilialAtual() : '') || '—')
+        : (data.loja_nome || data.filial || data.loja || '—');
+      return `
+        <header class="fs-a4-cabecalho">
+          <div class="fs-a4-cabecalho-topo">
+            <div>
+              <div class="fs-a4-kicker">CENTRAL INTELIGENTE DE VENDAS</div>
+              <h1>${titulo}</h1>
+              <p>${subtitulo}</p>
+            </div>
+            <img class="fs-a4-logo" src="./zenir.png" alt="Zenir Móveis e Eletros">
+          </div>
+          <div class="fs-a4-faixa"></div>
+          <div class="fs-a4-dados">
+            <div><span>Vendedor(a)</span><strong>${fsTextoSeguroExportacao(data.vendedor_nome, 'Vendedor(a)')}</strong></div>
+            <div><span>Cliente</span><strong>${fsTextoSeguroExportacao(data.cliente_nome, 'Cliente')}</strong></div>
+            <div><span>Filial</span><strong>${fsTextoSeguroExportacao(filial, '—')}</strong></div>
+            <div><span>Simulação</span><strong>${fsTextoSeguroExportacao(data.codigo_proposta || data.codigoSimulacao, '---')}</strong></div>
+            <div><span>Data</span><strong>${fsTextoSeguroExportacao(formatarData(data.data_proposta), '—')}</strong></div>
+            <div><span>Contato</span><strong>${fsTextoSeguroExportacao(data.cliente_contato, 'Não informado')}</strong></div>
+          </div>
+        </header>`;
+    }
+
+    function fsCriarFolhaA4Exportacao(tipo, data) {
+      const idOrigem = tipo === 'cliente' ? 'contentCliente' :
+        (tipo === 'diretoriaAlcadas' ? 'contentDiretoriaAlcadas' : 'contentDiretoria');
+      const origem = document.getElementById(idOrigem);
+      if (!origem) throw new Error('Conteúdo da visualização não encontrado');
+
+      const paisagem = tipo === 'diretoriaAlcadas';
+      const largura = paisagem ? 1123 : 794;
+      const alturaMinima = paisagem ? 794 : 1123;
+      const palco = document.createElement('div');
+      palco.className = 'fs-a4-palco-exportacao';
+      palco.style.cssText = `position:fixed;left:-12000px;top:0;width:${largura}px;background:#eef3fb;z-index:-99999;`;
+
+      const folha = document.createElement('article');
+      folha.className = `fs-a4-folha ${paisagem ? 'fs-a4-paisagem' : 'fs-a4-retrato'}`;
+      folha.style.width = largura + 'px';
+      folha.style.minHeight = alturaMinima + 'px';
+      folha.innerHTML = fsCabecalhoA4Exportacao(tipo, data);
+
+      const corpo = origem.cloneNode(true);
+      corpo.removeAttribute('id');
+      corpo.classList.remove('hidden');
+      corpo.classList.add('fs-a4-corpo');
+      corpo.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
+      corpo.querySelectorAll('.no-print, .fs-tabela-diretoria-actions, button, .acao, .edit, .lapis').forEach(function(el) {
+        el.remove();
+      });
+      corpo.querySelectorAll('.fs-proposta-cabecalho').forEach(function(el) { el.remove(); });
+      if (tipo === 'diretoriaAlcadas') {
+        const sheet = corpo.querySelector('.fs-diretoria-sheet');
+        if (sheet && sheet.firstElementChild) sheet.firstElementChild.remove();
+      }
+      corpo.querySelectorAll('textarea[data-fs-observacao]').forEach(function(textarea) {
+        const tipoCampo = textarea.getAttribute('data-fs-observacao');
+        const valorEstado = tipoCampo === 'proposta-gerente'
+          ? data.proposta_gerente_diretoria
+          : data.observacao_diretoria;
+        const valor = String(valorEstado || textarea.value || textarea.textContent || '').trim();
+        const card = textarea.closest('.fs-diretoria-resumo-card');
+        if (!valor) {
+          if (card) card.remove();
+          else textarea.remove();
+          return;
+        }
+        const bloco = document.createElement('div');
+        bloco.className = 'fs-a4-observacao';
+        bloco.textContent = valor.toUpperCase();
+        textarea.replaceWith(bloco);
+      });
+
+      folha.appendChild(corpo);
+      const rodape = document.createElement('footer');
+      rodape.className = 'fs-a4-rodape';
+      rodape.innerHTML = '<span>Central Inteligente de Vendas</span><strong>Documento educacional de apoio às negociações</strong>';
+      folha.appendChild(rodape);
+
+      const estilo = document.createElement('style');
+      estilo.textContent = `
+        .fs-a4-palco-exportacao,.fs-a4-palco-exportacao *{box-sizing:border-box}
+        .fs-a4-folha{font-family:Arial,Helvetica,sans-serif;color:#172033;background:#fff;padding:42px 46px 30px;overflow:hidden}
+        .fs-a4-cabecalho{margin-bottom:26px}
+        .fs-a4-cabecalho-topo{display:flex;align-items:center;justify-content:space-between;gap:32px}
+        .fs-a4-kicker{font-size:11px;font-weight:800;letter-spacing:1.4px;color:#2e54a7;margin-bottom:7px}
+        .fs-a4-cabecalho h1{font-size:27px;line-height:1.05;margin:0;color:#172554}
+        .fs-a4-cabecalho p{font-size:12px;color:#667085;margin:7px 0 0}
+        .fs-a4-logo{width:154px;height:58px;object-fit:contain;object-position:right center}
+        .fs-a4-faixa{height:4px;margin:20px 0 16px;border-radius:99px;background:linear-gradient(90deg,#233c96 0 74%,#e62e45 74% 100%)}
+        .fs-a4-dados{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 18px;padding:14px 16px;background:#f5f7fb;border:1px solid #dce3f1;border-radius:12px}
+        .fs-a4-dados div{min-width:0}.fs-a4-dados span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#7b8496;margin-bottom:3px}
+        .fs-a4-dados strong{display:block;font-size:12px;color:#1f2937;white-space:normal;overflow-wrap:anywhere}
+        .fs-a4-corpo{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+        .fs-a4-corpo>.bg-gradient-to-br{padding:0!important;border:0!important;border-radius:0!important;background:#fff!important}
+        .fs-a4-corpo .fs-diretoria-sheet{padding:0!important;border:0!important;border-radius:0!important;background:#fff!important}
+        .fs-a4-corpo .fs-diretoria-resumo-grid{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:8px!important}
+        .fs-a4-corpo .fs-diretoria-resumo-card{min-width:0!important;padding:10px!important;break-inside:avoid}
+        .fs-a4-corpo .fs-tabela-diretoria-wrap{overflow:visible!important;width:100%!important}
+        .fs-a4-corpo .fs-tabela-diretoria{width:100%!important;table-layout:fixed!important;font-size:10px!important}
+        .fs-a4-corpo .fs-tabela-diretoria th,.fs-a4-corpo .fs-tabela-diretoria td{padding:5px 4px!important;overflow-wrap:anywhere}
+        .fs-a4-corpo .space-y-4>*+*{margin-top:12px!important}
+        .fs-a4-corpo .rounded-lg,.fs-a4-corpo .rounded-xl{break-inside:avoid}
+        .fs-a4-observacao{min-height:54px;padding:10px 12px;border:1px solid #eadc74;border-radius:8px;background:#fff;white-space:pre-wrap;line-height:1.35;font-size:12px}
+        .fs-a4-rodape{display:flex;justify-content:space-between;gap:20px;margin-top:28px;padding-top:13px;border-top:1px solid #dce3f1;color:#7b8496;font-size:9px}
+        .fs-a4-rodape strong{color:#536078;font-weight:600}
+        .fs-a4-paisagem{padding:34px 38px 25px}.fs-a4-paisagem .fs-a4-cabecalho{margin-bottom:20px}
+      `;
+      palco.appendChild(estilo);
+      palco.appendChild(folha);
+      document.body.appendChild(palco);
+      return { palco, folha, largura, alturaMinima };
+    }
+
+    function fsAbrirImagemPronta(url, nomeArquivo) {
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 z-[10050] bg-black/70 flex items-center justify-center p-4';
+      overlay.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
+          <div class="px-5 py-4 border-b flex items-center justify-between gap-3">
+            <div><h3 class="font-bold text-lg text-gray-900">✅ Imagem A4 pronta</h3><p class="text-xs text-gray-500 mt-1">Use o botão abaixo para salvar. Ele funciona também em downloads repetidos.</p></div>
+            <button type="button" data-fs-fechar class="w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl">×</button>
+          </div>
+          <div class="p-3 bg-gray-100 overflow-auto flex-1"><img src="${url}" alt="Prévia da imagem A4" class="block w-full h-auto bg-white shadow"></div>
+          <div class="p-4 grid grid-cols-2 gap-3 border-t">
+            <a href="${url}" download="${nomeArquivo}" class="text-center rounded-xl bg-blue-600 text-white font-bold px-4 py-3">⬇️ Salvar imagem</a>
+            <button type="button" data-fs-fechar class="rounded-xl bg-gray-200 text-gray-800 font-bold px-4 py-3">Fechar</button>
+          </div>
+        </div>`;
+      const fechar = function() {
+        if (overlay.parentNode) overlay.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      };
+      overlay.querySelectorAll('[data-fs-fechar]').forEach(function(btn){ btn.addEventListener('click', fechar); });
+      overlay.addEventListener('click', function(event){ if (event.target === overlay) fechar(); });
+      document.body.appendChild(overlay);
+    }
+
+    // ========== BAIXAR IMAGEM EM FOLHA A4 ==========
     async function baixarImagem8K(tipo) {
+      let estruturaA4 = null;
       let canvasGerado = null;
       const botoesDownload = Array.from(document.querySelectorAll(
         '#btnBaixarImagemCliente8K, #btnBaixarImagemDiretoriaAlcadas8K, #btnBaixarImagemDiretoria8K, #btnBaixar8KModal'
@@ -8602,128 +8756,61 @@ function abrirAlterarStatusProposta(id) {
           showToast('❌ Dados da proposta não encontrados', 'error');
           return;
         }
-
-        const target = tipo === 'cliente'
-          ? document.getElementById('contentCliente')
-          : (tipo === 'diretoriaAlcadas'
-              ? document.getElementById('contentDiretoriaAlcadas')
-              : document.getElementById('contentDiretoria'));
-
-        if (!target) {
-          showToast('❌ Conteúdo da visualização não encontrado', 'error');
-          return;
-        }
-
-        if (target.classList.contains('hidden')) {
-          showToast('⚠️ Abra primeiro a aba que deseja baixar.', 'error');
-          return;
-        }
-
         botoesDownload.forEach(function(btn) {
           btn.disabled = true;
           btn.dataset.fsTextoAnterior = btn.textContent;
-          btn.textContent = '⏳ Gerando imagem...';
+          btn.textContent = '⏳ Montando folha A4...';
         });
-        showToast('🖼️ Gerando imagem...', 'success');
-
-        if (document.fonts && document.fonts.ready) {
-          await document.fonts.ready;
-        }
-        await Promise.all(Array.from(target.querySelectorAll('img')).map(function(img){
+        showToast('📄 Montando folha A4...', 'success');
+        estruturaA4 = fsCriarFolhaA4Exportacao(tipo, currentProposalData);
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        await Promise.all(Array.from(estruturaA4.folha.querySelectorAll('img')).map(function(img){
           if (img.complete && img.naturalWidth > 0) return Promise.resolve();
           return new Promise(function(resolve){
             img.addEventListener('load', resolve, { once:true });
             img.addEventListener('error', resolve, { once:true });
           });
         }));
+        await new Promise(function(resolve){ requestAnimationFrame(function(){ requestAnimationFrame(resolve); }); });
 
-        // Captura o próprio quadro visível. Assim o arquivo mantém exatamente
-        // o mesmo esquadro, proporções e quebras da pré-visualização.
-        const larguraCaptura = Math.ceil(Math.max(
-          target.getBoundingClientRect().width,
-          tipo === 'diretoriaAlcadas' ? target.scrollWidth : 0,
-          320
-        ));
-        const alturaCaptura = Math.ceil(Math.max(target.scrollHeight, target.getBoundingClientRect().height, 1));
-        const escalaCaptura = Math.max(2, Math.min(
-          tipo === 'diretoriaAlcadas' ? 2.25 : 3,
-          2600 / Math.max(1, larguraCaptura)
-        ));
-
-        canvasGerado = await html2canvas(target, {
-          scale: escalaCaptura,
+        const altura = Math.max(estruturaA4.alturaMinima, Math.ceil(estruturaA4.folha.scrollHeight));
+        estruturaA4.folha.style.height = altura + 'px';
+        const escala = tipo === 'diretoriaAlcadas' ? 2 : 2.4;
+        canvasGerado = await html2canvas(estruturaA4.folha, {
+          scale: escala,
           useCORS: true,
-          allowTaint: true,
-          backgroundColor: tipo === 'diretoriaAlcadas' ? '#fffbeb' : '#ffffff',
+          allowTaint: false,
+          backgroundColor: '#ffffff',
           logging: false,
-          width: larguraCaptura,
-          height: alturaCaptura,
-          windowWidth: Math.max(document.documentElement.clientWidth, larguraCaptura),
-          windowHeight: Math.max(document.documentElement.clientHeight, alturaCaptura),
+          width: estruturaA4.largura,
+          height: altura,
+          windowWidth: estruturaA4.largura,
+          windowHeight: altura,
           scrollX: 0,
-          scrollY: -window.scrollY,
-          onclone: function(docClonado) {
-            const alvoClonado = docClonado.getElementById(target.id);
-            if (!alvoClonado) return;
-            alvoClonado.querySelectorAll('.no-print, .fs-tabela-diretoria-actions, button, .acao, .edit, .lapis').forEach(function(el) {
-              el.style.display = 'none';
-            });
-            alvoClonado.querySelectorAll('textarea[data-fs-observacao]').forEach(function(textarea) {
-              const tipoCampo = textarea.getAttribute('data-fs-observacao');
-              const valorEstado = tipoCampo === 'proposta-gerente'
-                ? currentProposalData.proposta_gerente_diretoria
-                : currentProposalData.observacao_diretoria;
-              const valor = String(valorEstado || textarea.value || textarea.textContent || '').trim();
-              const card = textarea.closest('.fs-diretoria-resumo-card');
-              if (!valor) {
-                if (card) card.style.display = 'none';
-                return;
-              }
-              const bloco = docClonado.createElement('div');
-              bloco.className = textarea.className;
-              bloco.style.minHeight = '56px';
-              bloco.style.whiteSpace = 'pre-wrap';
-              bloco.style.lineHeight = '1.35';
-              bloco.textContent = valor.toUpperCase();
-              textarea.replaceWith(bloco);
-            });
-          }
+          scrollY: 0
         });
-
-        const clienteNome = (currentProposalData?.cliente_nome || 'cliente').trim() || 'cliente';
-        const stamp = String(Date.now());
-        const label = tipo === 'cliente' ? 'visao_cliente' : (tipo === 'diretoriaAlcadas' ? 'planos_cotacoes' : 'crediario');
-        const nomeArquivo = `proposta_${label}_8k_${clienteNome.replace(/\s+/g,'_').toLowerCase()}_${stamp}.png`;
 
         const blob = await new Promise(function(resolve, reject) {
           canvasGerado.toBlob(function(resultado) {
             if (resultado) resolve(resultado);
-            else reject(new Error('Falha ao converter a imagem para PNG'));
-          }, 'image/png', 1.0);
+            else reject(new Error('Falha ao converter a folha A4 em PNG'));
+          }, 'image/png', 1);
         });
+        const clienteNome = String(currentProposalData.cliente_nome || 'cliente').trim() || 'cliente';
+        const label = tipo === 'cliente' ? 'visao_cliente' : (tipo === 'diretoriaAlcadas' ? 'planos_cotacoes' : 'crediario');
+        const nomeArquivo = `proposta_${label}_A4_${clienteNome.replace(/\s+/g,'_').toLowerCase()}_${Date.now()}.png`;
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = nomeArquivo;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-        setTimeout(function() {
-          URL.revokeObjectURL(url);
-          if (link.parentNode) link.parentNode.removeChild(link);
-          if (canvasGerado) {
-            canvasGerado.width = 1;
-            canvasGerado.height = 1;
-            canvasGerado = null;
-          }
-        }, 10000);
-
-        showToast('✅ Imagem baixada com sucesso!', 'success');
+        fsAbrirImagemPronta(url, nomeArquivo);
+        showToast('✅ Folha A4 pronta para salvar!', 'success');
       } catch (error) {
-        console.error('Erro ao baixar imagem 8K:', error);
-        document.body.classList.remove('export-mode');
-        showToast('❌ Não foi possível gerar a imagem. Tente novamente.', 'error');
+        console.error('Erro ao baixar imagem A4:', error);
+        showToast('❌ Não foi possível gerar a folha A4. Tente novamente.', 'error');
       } finally {
+        if (estruturaA4 && estruturaA4.palco && estruturaA4.palco.parentNode) estruturaA4.palco.remove();
+        if (canvasGerado) {
+          canvasGerado.width = 1;
+          canvasGerado.height = 1;
+        }
         botoesDownload.forEach(function(btn) {
           btn.disabled = false;
           if (btn.dataset.fsTextoAnterior) {
@@ -8908,7 +8995,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
               </button>
               <button id="btnBaixar8KModal" class="flex-1 bg-blue-600 text-white px-6 py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
                 <span class="text-xl">📥</span>
-                <span>Baixar 8K</span>
+                <span>Baixar A4</span>
               </button>
               <button id="btnCancelarModal" class="bg-gray-300 text-gray-700 px-6 py-4 rounded-lg font-semibold hover:bg-gray-400 transition-colors">
                 Cancelar
