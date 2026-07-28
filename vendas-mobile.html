@@ -8867,20 +8867,21 @@ function abrirAlterarStatusProposta(id) {
         botao.disabled = true;
         botao.textContent = '⏳ Preparando...';
         try {
-          const dataUrl = await new Promise(function(resolve, reject) {
-            const leitor = new FileReader();
-            leitor.onload = function() { resolve(leitor.result); };
-            leitor.onerror = reject;
-            leitor.readAsDataURL(blobImagem);
-          });
+          // O download precisa acontecer diretamente no clique. Converter imagens
+          // paisagem maiores para data: faz alguns navegadores móveis perderem a
+          // autorização do gesto e ignorarem o salvamento.
+          const urlDownload = URL.createObjectURL(blobImagem);
           const link = document.createElement('a');
-          link.href = dataUrl;
+          link.href = urlDownload;
           link.download = nomeArquivo;
           link.rel = 'noopener';
           link.style.display = 'none';
           document.body.appendChild(link);
-          link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-          setTimeout(function(){ if (link.parentNode) link.remove(); }, 800);
+          link.click();
+          setTimeout(function(){
+            if (link.parentNode) link.remove();
+            URL.revokeObjectURL(urlDownload);
+          }, 5000);
           showToast('✅ PNG salvo em Downloads. Ele ficará disponível para a galeria e o WhatsApp.', 'success');
         } catch (erro) {
           if (erro && erro.name === 'AbortError') return;
@@ -8904,8 +8905,10 @@ function abrirAlterarStatusProposta(id) {
           const vendedor = String(dados.vendedor_nome || localStorage.getItem('nomeVendedor') || 'seu vendedor').trim();
           const filial = String(dados.loja_nome || dados.filial || dados.loja || '').trim();
           let mensagem;
-          if (tipoImagem === 'diretoriaAlcadas' || tipoImagem === 'diretoria') {
-            mensagem = `Olá! Segue a proposta referente ao cliente ${cliente}, preparada por ${vendedor}${filial ? ` — ${filial}` : ''}. A imagem em alta definição já foi salva no aparelho e pode ser anexada pelo menu do WhatsApp.`;
+          if (tipoImagem === 'diretoriaAlcadas') {
+            mensagem = `Olá! Segue a cotação do cliente ${cliente} para análise.\n\nVendedor: ${vendedor}${filial ? `\nFilial: ${filial}` : ''}.\n\nA imagem com os valores e descontos será enviada em seguida.`;
+          } else if (tipoImagem === 'diretoria') {
+            mensagem = `Olá! Seguem os dados do cliente ${cliente} para análise do crediário.\n\nVendedor: ${vendedor}${filial ? `\nFilial: ${filial}` : ''}.\n\nA imagem completa será enviada em seguida.`;
           } else {
             mensagem = `Olá, ${cliente}! Tudo bem? Aqui é ${vendedor}${filial ? `, da ${filial}` : ''}. Preparei sua proposta com muito cuidado. A imagem em alta definição será enviada logo em seguida para você conferir todos os detalhes.`;
           }
