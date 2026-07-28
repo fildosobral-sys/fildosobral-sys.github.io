@@ -9841,17 +9841,19 @@ img{
     }catch(e){}
   }
 
+  const HP12C_WEB_URL = 'https://simulado.estacio.br/img/Hp/';
   let hpPreviousBodyOverflow = '';
 
   function abrirHP12C(){
-    if(!hpModal) return;
-    hpPreviousBodyOverflow = document.body.style.overflow || '';
-    hpModal.classList.add('open');
-    hpModal.setAttribute('aria-hidden','false');
-    document.body.classList.add('fs-hp-open');
-    document.body.style.overflow = 'hidden';
     btnCalc && btnCalc.classList.add('fs-calc-live');
     setTimeout(function(){ btnCalc && btnCalc.classList.remove('fs-calc-live'); }, 1400);
+    const link = document.createElement('a');
+    link.href = HP12C_WEB_URL;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer external';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }
 
   async function fecharHP12C(){
@@ -9886,9 +9888,7 @@ function showGuide(){ try{ var p=document.getElementById('hpGuidePanel'); if(p) 
   });
   hpClose && hpClose.addEventListener('click', fecharHP12C);
   hpBackSystem && hpBackSystem.addEventListener('click', function(){
-    const hpUrl = 'https://simulado.estacio.br/img/Hp/';
-    const popup = window.open(hpUrl,'_blank','noopener,noreferrer');
-    if(!popup) window.location.assign(hpUrl);
+    abrirHP12C();
   });
   hpModal && hpModal.addEventListener('click', function(e){
     if(e.target === hpModal) fecharHP12C();

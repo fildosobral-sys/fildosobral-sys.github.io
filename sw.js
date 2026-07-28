@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v48-hp12c-integrada";
+const CACHE_NAME = "fs-central-v49-hp12c-web";
 const APP_FILES = [
   "/",
   "/index.html",
