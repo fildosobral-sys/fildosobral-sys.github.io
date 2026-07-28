@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v44-lista-simulacoes";
+const CACHE_NAME = "fs-central-v45-download-planos-cotacoes";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -12,7 +12,7 @@ const APP_FILES = [
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=44",
+  "/pwa-update.js?v=45",
   "/zenir.png",
   "/draft-protection.js?v=29",
   "/home-transition.js?v=29"

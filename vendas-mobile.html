@@ -8918,20 +8918,21 @@ function abrirAlterarStatusProposta(id) {
           </div>
         </div>`;
       let sequenciaDownloads = 0;
-      const salvar = async function() {
+      const salvar = function() {
         const botao = overlay.querySelector('[data-fs-salvar]');
         const textoAnterior = botao.textContent;
         botao.disabled = true;
         botao.textContent = '⏳ Preparando...';
+        let urlDownload = '';
+        let link = null;
         try {
-          // Cria um arquivo novo em cada toque. Alguns navegadores Android
-          // bloqueiam a reutilização do mesmo blob depois do primeiro download.
-          const bytes = blobImagem.arrayBuffer
-            ? await blobImagem.arrayBuffer()
-            : await (await fetch(dataUrlImagem)).arrayBuffer();
-          const blobDownload = new Blob([bytes], { type: 'image/png' });
-          const urlDownload = URL.createObjectURL(blobDownload);
-          const link = document.createElement('a');
+          // O PNG já está pronto. Reler o Blob com arrayBuffer() pode ficar
+          // pendente no Chrome/Android e prender o botão em “Preparando...”.
+          if (!blobImagem || blobImagem.size < 1) {
+            throw new Error('Arquivo PNG indisponível para download');
+          }
+          urlDownload = URL.createObjectURL(blobImagem);
+          link = document.createElement('a');
           sequenciaDownloads += 1;
           const instante = new Date();
           const sufixoUnico = [
@@ -8952,22 +8953,26 @@ function abrirAlterarStatusProposta(id) {
           link.style.display = 'none';
           document.body.appendChild(link);
           link.click();
+          botao.disabled = false;
+          botao.textContent = textoAnterior;
           setTimeout(function(){
             if (link.parentNode) link.remove();
             URL.revokeObjectURL(urlDownload);
-          }, 15000);
-          showToast('✅ PNG salvo em Downloads. Ele ficará disponível para a galeria e o WhatsApp.', 'success');
+          }, 60000);
+          showToast('✅ PNG enviado para Downloads. Toque novamente para salvar outra cópia.', 'success');
         } catch (erro) {
-          if (erro && erro.name === 'AbortError') return;
           console.warn('Falha no salvamento nativo:', erro);
-          const novaAba = window.open(url, '_blank', 'noopener');
-          if (!novaAba) window.location.href = url;
+          if (link && link.parentNode) link.remove();
+          if (urlDownload) URL.revokeObjectURL(urlDownload);
+          const destinoAlternativo = dataUrlImagem || url;
+          const novaAba = window.open(destinoAlternativo, '_blank', 'noopener');
+          if (!novaAba) window.location.href = destinoAlternativo;
           showToast('ℹ️ A imagem foi aberta. Use o menu do navegador para salvar.', 'success');
         } finally {
-          setTimeout(function(){
+          window.setTimeout(function(){
             botao.disabled = false;
             botao.textContent = textoAnterior;
-          }, 350);
+          }, 100);
         }
       };
       const compartilhar = async function() {
