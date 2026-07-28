@@ -7065,6 +7065,9 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
                 <p class="text-xs text-gray-600 mt-1">Visão comercial com preços à vista e descontos por item</p>
               </div>
               <div class="text-right">
+                <div class="fs-proposta-logo-oficial">
+                  <img src="./zenir.png" alt="Zenir Móveis e Eletros">
+                </div>
                 <p class="text-xs text-gray-600">Loja: <strong>${window.fsNormalizeFilialText(data.loja_nome || data.filial || (window.fsGetFilialAtual ? window.fsGetFilialAtual() : '') || 'N/A')}</strong></p>
                 <p class="text-xs text-gray-600">Vendedor: <strong>${data.vendedor_nome || 'N/A'}</strong></p>
                 <p class="text-xs text-gray-600">Simulação: <strong>${data.codigo_proposta || data.codigoSimulacao || '---'}</strong></p>
@@ -8590,6 +8593,10 @@ function abrirAlterarStatusProposta(id) {
 
     // ========== BAIXAR IMAGEM 8K ==========
     async function baixarImagem8K(tipo) {
+      let canvasGerado = null;
+      const botoesDownload = Array.from(document.querySelectorAll(
+        '#btnBaixarImagemCliente8K, #btnBaixarImagemDiretoriaAlcadas8K, #btnBaixarImagemDiretoria8K, #btnBaixar8KModal'
+      ));
       try {
         if (!currentProposalData) {
           showToast('❌ Dados da proposta não encontrados', 'error');
@@ -8607,38 +8614,22 @@ function abrirAlterarStatusProposta(id) {
           return;
         }
 
-        showToast('🖼️ Gerando imagem 8K...', 'success');
+        if (target.classList.contains('hidden')) {
+          showToast('⚠️ Abra primeiro a aba que deseja baixar.', 'error');
+          return;
+        }
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'fs-export-wrapper';
-        wrapper.style.position = 'fixed';
-        wrapper.style.left = '-100000px';
-        wrapper.style.top = '0';
-        const larguraCliente = Math.ceil(Math.max(target.getBoundingClientRect().width, 320));
-        // A tabela completa não precisa de um canvas 8K real no celular.
-        // Uma base entre 960 e 1280 px preserva todas as colunas e evita
-        // estouro de memória no html2canvas.
-        const larguraTabela = Math.min(1280, Math.max(960, target.scrollWidth || 0));
-        const larguraExportacao = tipo === 'cliente' ? larguraCliente : larguraTabela;
-        wrapper.style.width = `${larguraExportacao}px`;
-        wrapper.style.background = '#ffffff';
-        wrapper.style.padding = (tipo === 'cliente' ? '0' : '24px 32px');
-        wrapper.style.boxSizing = 'border-box';
-        wrapper.style.zIndex = '-1';
-        const cloneConteudo = target.cloneNode(true);
-        cloneConteudo.removeAttribute('id');
-        cloneConteudo.style.width = tipo === 'cliente' ? `${larguraCliente}px` : '100%';
-        cloneConteudo.style.maxWidth = 'none';
-        cloneConteudo.style.margin = '0';
-        cloneConteudo.style.transform = 'none';
-        cloneConteudo.style.boxSizing = 'border-box';
-        wrapper.appendChild(cloneConteudo);
+        botoesDownload.forEach(function(btn) {
+          btn.disabled = true;
+          btn.dataset.fsTextoAnterior = btn.textContent;
+          btn.textContent = '⏳ Gerando imagem...';
+        });
+        showToast('🖼️ Gerando imagem...', 'success');
 
-        document.body.appendChild(wrapper);
         if (document.fonts && document.fonts.ready) {
           await document.fonts.ready;
         }
-        await Promise.all(Array.from(wrapper.querySelectorAll('img')).map(function(img){
+        await Promise.all(Array.from(target.querySelectorAll('img')).map(function(img){
           if (img.complete && img.naturalWidth > 0) return Promise.resolve();
           return new Promise(function(resolve){
             img.addEventListener('load', resolve, { once:true });
@@ -8646,97 +8637,66 @@ function abrirAlterarStatusProposta(id) {
           });
         }));
 
-        // Na exportação, transforma as anotações em texto estático.
-        // Isso evita que navegadores móveis ignorem o valor visual do textarea
-        // durante a captura e garante que as duas observações saiam na imagem.
-        wrapper.querySelectorAll('textarea[data-fs-observacao]').forEach(function(textarea){
-          const tipoCampo = textarea.getAttribute('data-fs-observacao');
-          const valorEstado = tipoCampo === 'proposta-gerente'
-            ? (currentProposalData && currentProposalData.proposta_gerente_diretoria)
-            : (currentProposalData && currentProposalData.observacao_diretoria);
-          const valor = String(valorEstado || textarea.getAttribute('data-export-value') || textarea.value || textarea.textContent || '').trim();
-          const card = textarea.closest('.fs-diretoria-resumo-card');
-          if (!valor) {
-            if (card) card.style.display = 'none';
-            return;
-          }
-          const bloco = document.createElement('div');
-          bloco.className = 'w-full rounded-lg border border-yellow-200 px-3 py-2 text-sm text-gray-700';
-          bloco.style.minHeight = '56px';
-          bloco.style.whiteSpace = 'pre-wrap';
-          bloco.style.textTransform = 'uppercase';
-          bloco.style.lineHeight = '1.35';
-          bloco.textContent = valor;
-          textarea.parentNode.replaceChild(bloco, textarea);
-        });
+        // Captura o próprio quadro visível. Assim o arquivo mantém exatamente
+        // o mesmo esquadro, proporções e quebras da pré-visualização.
+        const larguraCaptura = Math.ceil(Math.max(
+          target.getBoundingClientRect().width,
+          tipo === 'diretoriaAlcadas' ? target.scrollWidth : 0,
+          320
+        ));
+        const alturaCaptura = Math.ceil(Math.max(target.scrollHeight, target.getBoundingClientRect().height, 1));
+        const escalaCaptura = Math.max(2, Math.min(
+          tipo === 'diretoriaAlcadas' ? 2.25 : 3,
+          2600 / Math.max(1, larguraCaptura)
+        ));
 
-        wrapper.querySelectorAll('.no-print, .fs-tabela-diretoria-actions').forEach(function(el){
-          el.style.display = 'none';
-        });
-        // ocultar lapis / ações
-        wrapper.querySelectorAll('button, .acao, .edit, .lapis').forEach(function(el){
-          const t=(el.textContent||'').toLowerCase();
-          if(t.includes('expandir')||t.includes('editar')||t.includes('ação')) el.style.display='none';
-        });
-        // ocultar campos vazios
-        wrapper.querySelectorAll('textarea, input').forEach(function(el){
-          if(!el.value || !el.value.trim()){
-            const box=el.closest('div');
-            if(box) box.style.display='none';
-          }
-        });
-        wrapper.querySelectorAll('button').forEach(function(btn){
-          const txt = (btn.textContent || '').toLowerCase();
-          if (txt.indexOf('expandir') >= 0 || txt.indexOf('fechar') >= 0 || txt.indexOf('enviar') >= 0 || txt.indexOf('baixar') >= 0) {
-            btn.style.display = 'none';
-          }
-        });
-        // Usa uma linha física dentro do preço. Assim a prévia e o arquivo
-        // baixado mantêm o risco exatamente no mesmo centro tipográfico.
-        wrapper.querySelectorAll('.line-through, .fs-preco-riscado').forEach(function(el){
-          el.classList.remove('line-through');
-          el.classList.add('fs-preco-riscado');
-          el.style.textDecoration = 'none';
-          el.style.position = 'relative';
-          el.style.display = 'inline-block';
-          el.style.background = 'none';
-          if (!el.querySelector('.fs-risco-export')) {
-            const risco = document.createElement('i');
-            risco.className = 'fs-risco-export';
-            risco.setAttribute('aria-hidden', 'true');
-            el.appendChild(risco);
-          }
-        });
-
-        // Na visão do cliente preserva exatamente a largura da prévia.
-        // Limitar a escala evita estouro de memória em Android/iPhone.
-        const scale = tipo === 'cliente'
-          ? Math.max(2, Math.min(4, 2400 / Math.max(1, wrapper.scrollWidth)))
-          : Math.max(2, Math.min(3, 3200 / Math.max(1, wrapper.scrollWidth)));
-
-        const canvas = await html2canvas(wrapper, {
-          scale: scale,
+        canvasGerado = await html2canvas(target, {
+          scale: escalaCaptura,
           useCORS: true,
           allowTaint: true,
-          backgroundColor: '#ffffff',
+          backgroundColor: tipo === 'diretoriaAlcadas' ? '#fffbeb' : '#ffffff',
           logging: false,
-          width: wrapper.scrollWidth,
-          height: wrapper.scrollHeight,
-          windowWidth: wrapper.scrollWidth,
-          windowHeight: wrapper.scrollHeight,
+          width: larguraCaptura,
+          height: alturaCaptura,
+          windowWidth: Math.max(document.documentElement.clientWidth, larguraCaptura),
+          windowHeight: Math.max(document.documentElement.clientHeight, alturaCaptura),
           scrollX: 0,
-          scrollY: 0
+          scrollY: -window.scrollY,
+          onclone: function(docClonado) {
+            const alvoClonado = docClonado.getElementById(target.id);
+            if (!alvoClonado) return;
+            alvoClonado.querySelectorAll('.no-print, .fs-tabela-diretoria-actions, button, .acao, .edit, .lapis').forEach(function(el) {
+              el.style.display = 'none';
+            });
+            alvoClonado.querySelectorAll('textarea[data-fs-observacao]').forEach(function(textarea) {
+              const tipoCampo = textarea.getAttribute('data-fs-observacao');
+              const valorEstado = tipoCampo === 'proposta-gerente'
+                ? currentProposalData.proposta_gerente_diretoria
+                : currentProposalData.observacao_diretoria;
+              const valor = String(valorEstado || textarea.value || textarea.textContent || '').trim();
+              const card = textarea.closest('.fs-diretoria-resumo-card');
+              if (!valor) {
+                if (card) card.style.display = 'none';
+                return;
+              }
+              const bloco = docClonado.createElement('div');
+              bloco.className = textarea.className;
+              bloco.style.minHeight = '56px';
+              bloco.style.whiteSpace = 'pre-wrap';
+              bloco.style.lineHeight = '1.35';
+              bloco.textContent = valor.toUpperCase();
+              textarea.replaceWith(bloco);
+            });
+          }
         });
 
-        document.body.removeChild(wrapper);
-
         const clienteNome = (currentProposalData?.cliente_nome || 'cliente').trim() || 'cliente';
-        const stamp = new Date().toISOString().replace(/[-:T.]/g,'').slice(0,14);
+        const stamp = String(Date.now());
         const label = tipo === 'cliente' ? 'visao_cliente' : (tipo === 'diretoriaAlcadas' ? 'planos_cotacoes' : 'crediario');
         const nomeArquivo = `proposta_${label}_8k_${clienteNome.replace(/\s+/g,'_').toLowerCase()}_${stamp}.png`;
 
         const blob = await new Promise(function(resolve, reject) {
-          canvas.toBlob(function(resultado) {
+          canvasGerado.toBlob(function(resultado) {
             if (resultado) resolve(resultado);
             else reject(new Error('Falha ao converter a imagem para PNG'));
           }, 'image/png', 1.0);
@@ -8747,20 +8707,30 @@ function abrirAlterarStatusProposta(id) {
         link.download = nomeArquivo;
         link.style.display = 'none';
         document.body.appendChild(link);
-        link.click();
+        link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
         setTimeout(function() {
           URL.revokeObjectURL(url);
           if (link.parentNode) link.parentNode.removeChild(link);
-        }, 1500);
+          if (canvasGerado) {
+            canvasGerado.width = 1;
+            canvasGerado.height = 1;
+            canvasGerado = null;
+          }
+        }, 10000);
 
-        showToast('✅ Imagem 8K baixada com sucesso!', 'success');
+        showToast('✅ Imagem baixada com sucesso!', 'success');
       } catch (error) {
         console.error('Erro ao baixar imagem 8K:', error);
-        document.querySelectorAll('.fs-export-wrapper').forEach(function(el) {
-          try { el.remove(); } catch (_) {}
-        });
         document.body.classList.remove('export-mode');
-        showToast('❌ Não foi possível gerar a imagem 8K.', 'error');
+        showToast('❌ Não foi possível gerar a imagem. Tente novamente.', 'error');
+      } finally {
+        botoesDownload.forEach(function(btn) {
+          btn.disabled = false;
+          if (btn.dataset.fsTextoAnterior) {
+            btn.textContent = btn.dataset.fsTextoAnterior;
+            delete btn.dataset.fsTextoAnterior;
+          }
+        });
       }
     }
 
