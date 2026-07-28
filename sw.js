@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v36-cotacoes-vendas";
+const CACHE_NAME = "fs-central-v37-cotacoes-vendas";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -12,7 +12,7 @@ const APP_FILES = [
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=36",
+  "/pwa-update.js?v=37",
   "/zenir.png",
   "/draft-protection.js?v=29",
   "/home-transition.js?v=29"

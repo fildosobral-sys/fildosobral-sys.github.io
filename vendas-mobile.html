@@ -8629,6 +8629,121 @@ function abrirAlterarStatusProposta(id) {
         </header>`;
     }
 
+    function fsProdutosValidosA4(data) {
+      return (Array.isArray(data.produtos) ? data.produtos : []).filter(function(produto) {
+        const identificacao = String(produto.produto_completo || produto.nome || produto.descricao || produto.codigo || '').trim();
+        const normal = parseFloat(produto.preco_normal) || 0;
+        const promo = parseFloat(produto.preco_promo) || 0;
+        return identificacao && (normal > 0 || promo > 0);
+      });
+    }
+
+    function fsNomeProdutoA4(produto) {
+      return fsTextoSeguroExportacao(
+        produto.produto_completo || produto.nome || produto.descricao || produto.codigo,
+        'Produto'
+      );
+    }
+
+    function fsModalidadeA4(produto) {
+      const modalidade = String(produto.modalidade || 'avista').toLowerCase();
+      if (modalidade === 'pix') return 'Pix';
+      if (modalidade === 'carne') return produto.parcelas ? `Carnê • ${produto.parcelas}x` : 'Carnê';
+      if (modalidade === 'cartao') return produto.parcelas ? `Cartão • ${produto.parcelas}x` : 'Cartão';
+      return 'À vista';
+    }
+
+    function fsCorpoClienteA4(data) {
+      const produtos = fsProdutosValidosA4(data);
+      let totalNormal = 0;
+      let totalFinal = 0;
+      const linhas = produtos.map(function(produto, indice) {
+        const quantidade = Math.max(1, parseInt(produto.quantidade, 10) || 1);
+        const normalUnit = parseFloat(produto.preco_normal) || parseFloat(produto.preco_promo) || 0;
+        const finalUnit = parseFloat(produto.preco_promo) || normalUnit;
+        const normal = normalUnit * quantidade;
+        const final = finalUnit * quantidade;
+        const economia = Math.max(0, normal - final);
+        totalNormal += normal;
+        totalFinal += final;
+        return `
+          <tr>
+            <td class="fs-a4-numero">${indice + 1}</td>
+            <td class="fs-a4-produto">${fsNomeProdutoA4(produto)}</td>
+            <td class="fs-a4-centro">${quantidade}</td>
+            <td class="fs-a4-direita">${formatarMoedaBR(normal)}</td>
+            <td class="fs-a4-direita fs-a4-verde">${formatarMoedaBR(final)}</td>
+            <td class="fs-a4-centro fs-a4-azul">${fsModalidadeA4(produto)}</td>
+            <td class="fs-a4-direita fs-a4-vermelho">${formatarMoedaBR(economia)}</td>
+          </tr>`;
+      }).join('');
+      const economiaTotal = Math.max(0, totalNormal - totalFinal);
+      return `
+        <section class="fs-a4-secao">
+          <div class="fs-a4-titulo-secao"><span>🛒</span><strong>Produtos incluídos</strong><em>${produtos.length} ${produtos.length === 1 ? 'item' : 'itens'}</em></div>
+          <table class="fs-a4-tabela fs-a4-tabela-cliente">
+            <thead><tr><th>#</th><th>Produto / Código</th><th>Qtd.</th><th>Preço tabela</th><th>Preço final</th><th>Pagamento</th><th>Economia</th></tr></thead>
+            <tbody>${linhas || '<tr><td colspan="7" class="fs-a4-vazio">Nenhum produto válido informado.</td></tr>'}</tbody>
+          </table>
+        </section>
+        <section class="fs-a4-totalizadores">
+          <div><span>Total de tabela</span><strong>${formatarMoedaBR(totalNormal)}</strong></div>
+          <div class="destaque"><span>Valor final</span><strong>${formatarMoedaBR(totalFinal)}</strong></div>
+          <div><span>Economia total</span><strong class="fs-a4-vermelho">${formatarMoedaBR(economiaTotal)}</strong></div>
+        </section>
+        <section class="fs-a4-condicoes">
+          <strong>Condições especiais</strong>
+          <span>🚚 Entregas e 🧰 montagens de móveis grátis no Interior, conforme as regras vigentes.</span>
+          <span>Para não perder estas ofertas, sinalize ao vendedor.</span>
+        </section>`;
+    }
+
+    function fsCorpoPlanosA4(data) {
+      const produtos = fsProdutosValidosA4(data);
+      const totais = { normal: 0, promo: 0, adicional: 0, final: 0 };
+      const linhas = produtos.map(function(produto, indice) {
+        const info = calcularInfoDiretoriaAlcadasProduto(produto);
+        const adicional = info.descontoGerenteTotal + info.descontoSupervisorTotal;
+        totais.normal += info.totalNormal;
+        totais.promo += info.totalPromo;
+        totais.adicional += adicional;
+        totais.final += info.totalFinal;
+        return `
+          <tr>
+            <td class="fs-a4-numero">${indice + 1}</td>
+            <td class="fs-a4-produto">${fsNomeProdutoA4(produto)}</td>
+            <td class="fs-a4-centro">${info.quantidade}</td>
+            <td class="fs-a4-direita">${formatarMoedaBR(info.totalNormal)}</td>
+            <td class="fs-a4-direita fs-a4-verde">${formatarMoedaBR(info.totalPromo)}</td>
+            <td class="fs-a4-direita fs-a4-vermelho">${formatarMoedaBR(info.descontoBaseTotal)}</td>
+            <td class="fs-a4-direita fs-a4-azul">${info.descontoSolicitadoPct.toFixed(1)}%</td>
+            <td class="fs-a4-direita fs-a4-azul">${formatarMoedaBR(adicional)}</td>
+            <td class="fs-a4-direita fs-a4-roxo">${formatarMoedaBR(info.totalFinal)}</td>
+          </tr>`;
+      }).join('');
+      const descontoTotal = Math.max(0, totais.normal - totais.final);
+      const proposta = String(data.proposta_gerente_diretoria || '').trim();
+      const observacao = String(data.observacao_diretoria || '').trim();
+      return `
+        <section class="fs-a4-secao">
+          <div class="fs-a4-titulo-secao"><span>📊</span><strong>Tabela de produtos e alçadas</strong><em>${produtos.length} ${produtos.length === 1 ? 'item' : 'itens'}</em></div>
+          <table class="fs-a4-tabela fs-a4-tabela-planos">
+            <thead><tr><th>#</th><th>Produto / Código</th><th>Qtd.</th><th>Tabela</th><th>Promoção</th><th>Desc. promoção</th><th>Desc. adicional</th><th>Adicional R$</th><th>Total final</th></tr></thead>
+            <tbody>${linhas || '<tr><td colspan="9" class="fs-a4-vazio">Nenhum produto válido informado.</td></tr>'}</tbody>
+            <tfoot><tr><td colspan="3">TOTAL</td><td>${formatarMoedaBR(totais.normal)}</td><td>${formatarMoedaBR(totais.promo)}</td><td>${formatarMoedaBR(Math.max(0, totais.normal - totais.promo))}</td><td>—</td><td>${formatarMoedaBR(totais.adicional)}</td><td>${formatarMoedaBR(totais.final)}</td></tr></tfoot>
+          </table>
+        </section>
+        <section class="fs-a4-totalizadores fs-a4-totalizadores-planos">
+          <div><span>Total tabela</span><strong>${formatarMoedaBR(totais.normal)}</strong></div>
+          <div><span>Desconto total</span><strong class="fs-a4-vermelho">${formatarMoedaBR(descontoTotal)}</strong></div>
+          <div class="destaque"><span>Total final</span><strong>${formatarMoedaBR(totais.final)}</strong></div>
+        </section>
+        ${(proposta || observacao) ? `<section class="fs-a4-notas">
+          ${proposta ? `<div><strong>Proposta do gerente</strong><p>${fsTextoSeguroExportacao(proposta)}</p></div>` : ''}
+          ${observacao ? `<div><strong>Observações para diretoria</strong><p>${fsTextoSeguroExportacao(observacao)}</p></div>` : ''}
+        </section>` : ''}`;
+    }
+
     function fsCriarFolhaA4Exportacao(tipo, data) {
       const idOrigem = tipo === 'cliente' ? 'contentCliente' :
         (tipo === 'diretoriaAlcadas' ? 'contentDiretoriaAlcadas' : 'contentDiretoria');
@@ -8648,36 +8763,20 @@ function abrirAlterarStatusProposta(id) {
       folha.style.minHeight = alturaMinima + 'px';
       folha.innerHTML = fsCabecalhoA4Exportacao(tipo, data);
 
-      const corpo = origem.cloneNode(true);
-      corpo.removeAttribute('id');
-      corpo.classList.remove('hidden');
-      corpo.classList.add('fs-a4-corpo');
-      corpo.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
-      corpo.querySelectorAll('.no-print, .fs-tabela-diretoria-actions, button, .acao, .edit, .lapis').forEach(function(el) {
-        el.remove();
-      });
-      corpo.querySelectorAll('.fs-proposta-cabecalho').forEach(function(el) { el.remove(); });
-      if (tipo === 'diretoriaAlcadas') {
-        const sheet = corpo.querySelector('.fs-diretoria-sheet');
-        if (sheet && sheet.firstElementChild) sheet.firstElementChild.remove();
+      let corpo;
+      if (tipo === 'cliente' || tipo === 'diretoriaAlcadas') {
+        corpo = document.createElement('div');
+        corpo.className = 'fs-a4-corpo fs-a4-corpo-tabela';
+        corpo.innerHTML = tipo === 'cliente' ? fsCorpoClienteA4(data) : fsCorpoPlanosA4(data);
+      } else {
+        corpo = origem.cloneNode(true);
+        corpo.removeAttribute('id');
+        corpo.classList.remove('hidden');
+        corpo.classList.add('fs-a4-corpo');
+        corpo.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
+        corpo.querySelectorAll('.no-print, .fs-tabela-diretoria-actions, button, .acao, .edit, .lapis').forEach(function(el) { el.remove(); });
+        corpo.querySelectorAll('.fs-proposta-cabecalho').forEach(function(el) { el.remove(); });
       }
-      corpo.querySelectorAll('textarea[data-fs-observacao]').forEach(function(textarea) {
-        const tipoCampo = textarea.getAttribute('data-fs-observacao');
-        const valorEstado = tipoCampo === 'proposta-gerente'
-          ? data.proposta_gerente_diretoria
-          : data.observacao_diretoria;
-        const valor = String(valorEstado || textarea.value || textarea.textContent || '').trim();
-        const card = textarea.closest('.fs-diretoria-resumo-card');
-        if (!valor) {
-          if (card) card.remove();
-          else textarea.remove();
-          return;
-        }
-        const bloco = document.createElement('div');
-        bloco.className = 'fs-a4-observacao';
-        bloco.textContent = valor.toUpperCase();
-        textarea.replaceWith(bloco);
-      });
 
       folha.appendChild(corpo);
       const rodape = document.createElement('footer');
@@ -8688,17 +8787,17 @@ function abrirAlterarStatusProposta(id) {
       const estilo = document.createElement('style');
       estilo.textContent = `
         .fs-a4-palco-exportacao,.fs-a4-palco-exportacao *{box-sizing:border-box}
-        .fs-a4-folha{font-family:Arial,Helvetica,sans-serif;color:#172033;background:#fff;padding:42px 46px 30px;overflow:hidden}
-        .fs-a4-cabecalho{margin-bottom:26px}
+        .fs-a4-folha{font-family:Arial,Helvetica,sans-serif;color:#172033;background:#fff;padding:24px 28px 20px;overflow:hidden}
+        .fs-a4-cabecalho{margin-bottom:15px}
         .fs-a4-cabecalho-topo{display:flex;align-items:center;justify-content:space-between;gap:32px}
-        .fs-a4-kicker{font-size:11px;font-weight:800;letter-spacing:1.4px;color:#2e54a7;margin-bottom:7px}
-        .fs-a4-cabecalho h1{font-size:27px;line-height:1.05;margin:0;color:#172554}
-        .fs-a4-cabecalho p{font-size:12px;color:#667085;margin:7px 0 0}
-        .fs-a4-logo{width:154px;height:58px;object-fit:contain;object-position:right center}
-        .fs-a4-faixa{height:4px;margin:20px 0 16px;border-radius:99px;background:linear-gradient(90deg,#233c96 0 74%,#e62e45 74% 100%)}
-        .fs-a4-dados{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 18px;padding:14px 16px;background:#f5f7fb;border:1px solid #dce3f1;border-radius:12px}
-        .fs-a4-dados div{min-width:0}.fs-a4-dados span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#7b8496;margin-bottom:3px}
-        .fs-a4-dados strong{display:block;font-size:12px;color:#1f2937;white-space:normal;overflow-wrap:anywhere}
+        .fs-a4-kicker{font-size:8px;font-weight:800;letter-spacing:1.2px;color:#2e54a7;margin-bottom:4px}
+        .fs-a4-cabecalho h1{font-size:20px;line-height:1.05;margin:0;color:#172554}
+        .fs-a4-cabecalho p{font-size:9px;color:#667085;margin:4px 0 0}
+        .fs-a4-logo{width:112px;height:38px;object-fit:contain;object-position:right center}
+        .fs-a4-faixa{height:3px;margin:11px 0 9px;border-radius:99px;background:linear-gradient(90deg,#233c96 0 74%,#e62e45 74% 100%)}
+        .fs-a4-dados{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:8px 10px;background:#f5f7fb;border:1px solid #dce3f1;border-radius:8px}
+        .fs-a4-dados div{min-width:0}.fs-a4-dados span{display:block;font-size:6.5px;text-transform:uppercase;letter-spacing:.5px;color:#7b8496;margin-bottom:2px}
+        .fs-a4-dados strong{display:block;font-size:8.5px;color:#1f2937;white-space:normal;overflow-wrap:anywhere}
         .fs-a4-corpo{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;border:0!important;border-radius:0!important;box-shadow:none!important}
         .fs-a4-corpo>.bg-gradient-to-br{padding:0!important;border:0!important;border-radius:0!important;background:#fff!important}
         .fs-a4-corpo .fs-diretoria-sheet{padding:0!important;border:0!important;border-radius:0!important;background:#fff!important}
@@ -8709,10 +8808,30 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-corpo .fs-tabela-diretoria th,.fs-a4-corpo .fs-tabela-diretoria td{padding:5px 4px!important;overflow-wrap:anywhere}
         .fs-a4-corpo .space-y-4>*+*{margin-top:12px!important}
         .fs-a4-corpo .rounded-lg,.fs-a4-corpo .rounded-xl{break-inside:avoid}
-        .fs-a4-observacao{min-height:54px;padding:10px 12px;border:1px solid #eadc74;border-radius:8px;background:#fff;white-space:pre-wrap;line-height:1.35;font-size:12px}
-        .fs-a4-rodape{display:flex;justify-content:space-between;gap:20px;margin-top:28px;padding-top:13px;border-top:1px solid #dce3f1;color:#7b8496;font-size:9px}
+        .fs-a4-secao{margin-top:10px}.fs-a4-titulo-secao{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+        .fs-a4-titulo-secao strong{font-size:13px}.fs-a4-titulo-secao em{margin-left:auto;font-size:8px;font-style:normal;color:#667085}
+        .fs-a4-tabela{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px;border:1px solid #d7deea}
+        .fs-a4-tabela th{padding:5px 4px;background:#eef2f8;color:#344054;text-transform:uppercase;font-size:6.5px;letter-spacing:.25px;border:1px solid #d7deea}
+        .fs-a4-tabela td{height:31px;padding:4px;border:1px solid #e0e5ed;vertical-align:middle;line-height:1.15}
+        .fs-a4-tabela tbody tr:nth-child(even){background:#fafbfc}.fs-a4-tabela tfoot td{font-weight:800;background:#eef2f8;text-align:right;padding:6px 4px}
+        .fs-a4-tabela-cliente th:nth-child(1){width:4%}.fs-a4-tabela-cliente th:nth-child(2){width:38%}.fs-a4-tabela-cliente th:nth-child(3){width:6%}
+        .fs-a4-tabela-cliente th:nth-child(4),.fs-a4-tabela-cliente th:nth-child(5),.fs-a4-tabela-cliente th:nth-child(7){width:14%}.fs-a4-tabela-cliente th:nth-child(6){width:10%}
+        .fs-a4-tabela-planos th:nth-child(1){width:3%}.fs-a4-tabela-planos th:nth-child(2){width:29%}.fs-a4-tabela-planos th:nth-child(3){width:5%}
+        .fs-a4-tabela-planos th:nth-child(n+4){width:10.5%}
+        .fs-a4-numero,.fs-a4-centro{text-align:center}.fs-a4-direita{text-align:right}.fs-a4-produto{font-weight:600;overflow-wrap:anywhere}
+        .fs-a4-verde{color:#16864b;font-weight:700}.fs-a4-vermelho{color:#c43232;font-weight:700}.fs-a4-azul{color:#2458b8;font-weight:700}.fs-a4-roxo{color:#7936a8;font-weight:700}
+        .fs-a4-vazio{text-align:center;color:#667085;padding:18px!important}
+        .fs-a4-totalizadores{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+        .fs-a4-totalizadores div{padding:7px 9px;border:1px solid #dce3f1;border-radius:7px;background:#f8fafc}
+        .fs-a4-totalizadores span{display:block;font-size:7px;text-transform:uppercase;color:#667085;margin-bottom:2px}.fs-a4-totalizadores strong{font-size:12px}
+        .fs-a4-totalizadores .destaque{background:#ecfdf3;border-color:#9be5bd}.fs-a4-totalizadores .destaque strong{color:#16864b}
+        .fs-a4-condicoes{display:grid;gap:3px;margin-top:11px;padding-top:8px;border-top:1px solid #dce3f1;font-size:8px;color:#475467}
+        .fs-a4-condicoes strong{color:#1f2937}.fs-a4-notas{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+        .fs-a4-notas div{padding:7px 9px;border:1px solid #eadc74;border-radius:7px;background:#fffdf2}.fs-a4-notas strong{font-size:8px}.fs-a4-notas p{margin:3px 0 0;font-size:8px;line-height:1.25;white-space:pre-wrap}
+        .fs-a4-observacao{min-height:42px;padding:8px 10px;border:1px solid #eadc74;border-radius:7px;background:#fff;white-space:pre-wrap;line-height:1.25;font-size:9px}
+        .fs-a4-rodape{display:flex;justify-content:space-between;gap:20px;margin-top:13px;padding-top:7px;border-top:1px solid #dce3f1;color:#7b8496;font-size:6.5px}
         .fs-a4-rodape strong{color:#536078;font-weight:600}
-        .fs-a4-paisagem{padding:34px 38px 25px}.fs-a4-paisagem .fs-a4-cabecalho{margin-bottom:20px}
+        .fs-a4-paisagem{padding:20px 24px 16px}.fs-a4-paisagem .fs-a4-cabecalho{margin-bottom:12px}
       `;
       palco.appendChild(estilo);
       palco.appendChild(folha);
@@ -8720,25 +8839,67 @@ function abrirAlterarStatusProposta(id) {
       return { palco, folha, largura, alturaMinima };
     }
 
-    function fsAbrirImagemPronta(url, nomeArquivo) {
+    function fsAbrirImagemPronta(url, nomeArquivo, blobImagem) {
       const overlay = document.createElement('div');
       overlay.className = 'fixed inset-0 z-[10050] bg-black/70 flex items-center justify-center p-4';
       overlay.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
           <div class="px-5 py-4 border-b flex items-center justify-between gap-3">
-            <div><h3 class="font-bold text-lg text-gray-900">✅ Imagem A4 pronta</h3><p class="text-xs text-gray-500 mt-1">Use o botão abaixo para salvar. Ele funciona também em downloads repetidos.</p></div>
+            <div><h3 class="font-bold text-lg text-gray-900">✅ Imagem A4 pronta</h3><p class="text-xs text-gray-500 mt-1">Salve pelo menu do celular ou abra a imagem em tela cheia.</p></div>
             <button type="button" data-fs-fechar class="w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl">×</button>
           </div>
           <div class="p-3 bg-gray-100 overflow-auto flex-1"><img src="${url}" alt="Prévia da imagem A4" class="block w-full h-auto bg-white shadow"></div>
           <div class="p-4 grid grid-cols-2 gap-3 border-t">
-            <a href="${url}" download="${nomeArquivo}" class="text-center rounded-xl bg-blue-600 text-white font-bold px-4 py-3">⬇️ Salvar imagem</a>
-            <button type="button" data-fs-fechar class="rounded-xl bg-gray-200 text-gray-800 font-bold px-4 py-3">Fechar</button>
+            <button type="button" data-fs-salvar class="rounded-xl bg-blue-600 text-white font-bold px-4 py-3">⬇️ Salvar imagem</button>
+            <button type="button" data-fs-abrir class="rounded-xl bg-indigo-100 text-indigo-800 font-bold px-4 py-3">🔎 Abrir imagem</button>
+            <button type="button" data-fs-fechar class="col-span-2 rounded-xl bg-gray-200 text-gray-800 font-bold px-4 py-3">Fechar</button>
           </div>
         </div>`;
+      const salvar = async function() {
+        const botao = overlay.querySelector('[data-fs-salvar]');
+        const textoAnterior = botao.textContent;
+        botao.disabled = true;
+        botao.textContent = '⏳ Preparando...';
+        try {
+          const arquivo = new File([blobImagem], nomeArquivo, { type: 'image/png' });
+          if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [arquivo] }))) {
+            await navigator.share({
+              files: [arquivo],
+              title: 'Proposta comercial A4',
+              text: 'Imagem da proposta comercial'
+            });
+            showToast('✅ Imagem enviada ao menu de salvamento do celular.', 'success');
+          } else {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = nomeArquivo;
+            link.rel = 'noopener';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            showToast('✅ Download iniciado.', 'success');
+          }
+        } catch (erro) {
+          if (erro && erro.name === 'AbortError') return;
+          console.warn('Falha no salvamento nativo:', erro);
+          const novaAba = window.open(url, '_blank', 'noopener');
+          if (!novaAba) window.location.href = url;
+          showToast('ℹ️ A imagem foi aberta. Use o menu do navegador para salvar.', 'success');
+        } finally {
+          botao.disabled = false;
+          botao.textContent = textoAnterior;
+        }
+      };
+      const abrir = function() {
+        const novaAba = window.open(url, '_blank', 'noopener');
+        if (!novaAba) window.location.href = url;
+      };
       const fechar = function() {
         if (overlay.parentNode) overlay.remove();
         setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
       };
+      overlay.querySelector('[data-fs-salvar]').addEventListener('click', salvar);
+      overlay.querySelector('[data-fs-abrir]').addEventListener('click', abrir);
       overlay.querySelectorAll('[data-fs-fechar]').forEach(function(btn){ btn.addEventListener('click', fechar); });
       overlay.addEventListener('click', function(event){ if (event.target === overlay) fechar(); });
       document.body.appendChild(overlay);
@@ -8800,7 +8961,7 @@ function abrirAlterarStatusProposta(id) {
         const label = tipo === 'cliente' ? 'visao_cliente' : (tipo === 'diretoriaAlcadas' ? 'planos_cotacoes' : 'crediario');
         const nomeArquivo = `proposta_${label}_A4_${clienteNome.replace(/\s+/g,'_').toLowerCase()}_${Date.now()}.png`;
         const url = URL.createObjectURL(blob);
-        fsAbrirImagemPronta(url, nomeArquivo);
+        fsAbrirImagemPronta(url, nomeArquivo, blob);
         showToast('✅ Folha A4 pronta para salvar!', 'success');
       } catch (error) {
         console.error('Erro ao baixar imagem A4:', error);
