@@ -2370,6 +2370,65 @@ try{
     }
   }
 </style>
+<style id="fs-v32-relatorios">
+  #modalRelatorios{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:99999 !important;
+    align-items:flex-end !important;
+    justify-content:center !important;
+    overflow:hidden !important;
+  }
+  #modalRelatorios.hidden{
+    display:none !important;
+  }
+  #modalRelatorios:not(.hidden){
+    display:flex !important;
+  }
+  #modalRelatorios > div{
+    height:min(88dvh,900px) !important;
+    max-height:88dvh !important;
+    display:flex !important;
+    flex-direction:column !important;
+    overflow:hidden !important;
+  }
+  #modalRelatorios > div > .bg-gradient-to-r{
+    flex:0 0 auto !important;
+    position:relative !important;
+    top:auto !important;
+  }
+  #modalRelatorios > div > .p-6{
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    overflow-y:auto !important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .fs-proposta-logo-oficial{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    min-height:38px;
+    margin:0 0 8px;
+  }
+  .fs-proposta-logo-oficial img{
+    display:block;
+    width:150px;
+    max-width:38vw;
+    height:auto;
+    object-fit:contain;
+  }
+  .fs-proposta-cabecalho{
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) auto !important;
+    align-items:start !important;
+  }
+  @media (max-width:640px){
+    .fs-proposta-cabecalho{gap:10px !important}
+    .fs-proposta-logo-oficial{justify-content:flex-end;margin-top:2px}
+    .fs-proposta-logo-oficial img{width:108px;max-width:34vw}
+  }
+</style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100">
 
@@ -4200,16 +4259,36 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
 
     function voltarParaLista() {
       showView('lista');
+      fsAtualizarListaAposSalvar();
+    }
+
+    async function fsAtualizarListaAposSalvar() {
+      let lista = [];
       try {
-        const lista = obterListaPropostasOffline();
-        if (Array.isArray(lista)) {
-          allProposals = lista;
-          if (typeof renderListaPropostas === 'function') renderListaPropostas(allProposals);
-          if (typeof updateContador === 'function') updateContador();
-        }
+        lista = await fsLoadPropostasOfflineAsync();
       } catch (e) {
-        console.warn('voltarParaLista: erro ao recarregar lista', e);
+        try { lista = obterListaPropostasOffline(); } catch (_) { lista = []; }
       }
+      allProposals = Array.isArray(lista) ? lista : [];
+      if (typeof renderListaPropostas === 'function') renderListaPropostas(allProposals);
+      if (typeof updateContador === 'function') updateContador(allProposals.length);
+      return allProposals;
+    }
+
+    async function fsFecharEditorAposSalvar() {
+      const listaView = document.getElementById('listaView');
+      const editorView = document.getElementById('editorView');
+      const visualizacaoView = document.getElementById('visualizacaoView');
+      try { showView('lista'); } catch (_) {}
+      if (editorView) editorView.classList.add('hidden');
+      if (visualizacaoView) visualizacaoView.classList.add('hidden');
+      if (listaView) {
+        listaView.classList.remove('hidden');
+        listaView.style.display = '';
+      }
+      await fsAtualizarListaAposSalvar();
+      await new Promise(function(resolve){ requestAnimationFrame(resolve); });
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
 
     function voltarParaEditor() {
@@ -5854,15 +5933,14 @@ async function salvarProposta() {
         showToast('✅ Simulação salva neste dispositivo!', 'success');
         propostaFoiSalva = true;
         try {
-          if (typeof voltarParaLista === 'function') {
-            voltarParaLista();
-          } else {
-            showView('lista');
-          }
-          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+          await fsFecharEditorAposSalvar();
         } catch(e) {
           console.warn('Não foi possível retornar para a lista após salvar.', e);
-          try { showView('lista'); } catch(_) {}
+          try {
+            document.getElementById('editorView')?.classList.add('hidden');
+            document.getElementById('visualizacaoView')?.classList.add('hidden');
+            document.getElementById('listaView')?.classList.remove('hidden');
+          } catch(_) {}
         }
       } else {
         showToast('❌ Erro ao salvar simulação. Tente novamente.', 'error');
@@ -6237,7 +6315,7 @@ async function salvarProposta() {
       const html = `
         <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-lg border-2 border-blue-200">
           <!-- Cabeçalho -->
-          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pb-4 border-b-2 border-blue-300">
+          <div class="fs-proposta-cabecalho flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pb-4 border-b-2 border-blue-300">
             <div>
               <p class="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
                 <span>📊</span><span>Simulações</span>
@@ -6249,6 +6327,9 @@ async function salvarProposta() {
               </div>
             </div>
             <div class="text-[11px] sm:text-xs text-gray-700 sm:text-right leading-snug">
+              <div class="fs-proposta-logo-oficial">
+                <img src="./zenir.png" alt="Zenir Móveis e Eletros">
+              </div>
               <p>Vendedor(a): <strong>${data.vendedor_nome || 'Vendedor(a)'}</strong></p>
               <p>Simulação para: <strong>${data.cliente_nome || 'Cliente'}</strong></p>
               <p>Código da simulação: <strong>${data.codigo_proposta || '---'}</strong></p>
@@ -8532,7 +8613,7 @@ function abrirAlterarStatusProposta(id) {
         wrapper.style.left = '-100000px';
         wrapper.style.top = '0';
         const larguraCliente = tipo === 'cliente'
-          ? Math.ceil(Math.max(target.getBoundingClientRect().width, target.scrollWidth, 320))
+          ? Math.ceil(Math.max(target.getBoundingClientRect().width, 320))
           : 0;
         wrapper.style.width = (tipo === 'cliente' ? `${larguraCliente}px` : '360mm');
         wrapper.style.background = '#ffffff';
@@ -8545,6 +8626,7 @@ function abrirAlterarStatusProposta(id) {
           cloneConteudo.style.maxWidth = 'none';
           cloneConteudo.style.margin = '0';
           cloneConteudo.style.transform = 'none';
+          cloneConteudo.style.boxSizing = 'border-box';
         }
         wrapper.appendChild(cloneConteudo);
 
@@ -8552,6 +8634,13 @@ function abrirAlterarStatusProposta(id) {
         if (document.fonts && document.fonts.ready) {
           await document.fonts.ready;
         }
+        await Promise.all(Array.from(wrapper.querySelectorAll('img')).map(function(img){
+          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+          return new Promise(function(resolve){
+            img.addEventListener('load', resolve, { once:true });
+            img.addEventListener('error', resolve, { once:true });
+          });
+        }));
 
         // Na exportação, transforma as anotações em texto estático.
         // Isso evita que navegadores móveis ignorem o valor visual do textarea
@@ -8627,9 +8716,9 @@ function abrirAlterarStatusProposta(id) {
           allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
-          width: wrapper.scrollWidth,
+          width: tipo === 'cliente' ? larguraCliente : wrapper.scrollWidth,
           height: wrapper.scrollHeight,
-          windowWidth: tipo === 'cliente' ? wrapper.scrollWidth : Math.max(wrapper.scrollWidth + 200, 2200),
+          windowWidth: tipo === 'cliente' ? larguraCliente : Math.max(wrapper.scrollWidth + 200, 2200),
           windowHeight: tipo === 'cliente' ? wrapper.scrollHeight : Math.max(wrapper.scrollHeight + 200, 2200),
           scrollX: 0,
           scrollY: 0
@@ -9399,17 +9488,33 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
       document.getElementById('modalCalculadora').classList.add('hidden');
     }
 
-    function abrirRelatorios() {
+    async function abrirRelatorios() {
       fecharMenu();
-      // Garante dados atualizados (IDB/localStorage) antes de montar o relatório
-      fsLoadPropostasOfflineAsync().then(function(lista){
+      const modal = document.getElementById('modalRelatorios');
+      const content = document.getElementById('relatoriosContent');
+      if (content) {
+        content.innerHTML = '<div class="py-10 text-center text-gray-500">⏳ Carregando simulações...</div>';
+      }
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.scrollTop = 0;
+      }
+      try {
+        const lista = await fsLoadPropostasOfflineAsync();
         allProposals = Array.isArray(lista) ? lista : [];
         gerarRelatorios();
-        document.getElementById('modalRelatorios').classList.remove('hidden');
-      }).catch(function(){
-        try { gerarRelatorios(); } catch(e) {}
-        document.getElementById('modalRelatorios').classList.remove('hidden');
-      });
+      } catch (erro) {
+        try {
+          allProposals = obterListaPropostasOffline();
+          if (!Array.isArray(allProposals)) allProposals = [];
+          gerarRelatorios();
+        } catch (erroFallback) {
+          console.error('Erro ao montar relatórios:', erroFallback);
+          if (content) {
+            content.innerHTML = '<div class="py-10 text-center text-red-600">Não foi possível carregar os relatórios. Feche e tente novamente.</div>';
+          }
+        }
+      }
     }
 
     function fecharRelatorios() {
@@ -9645,12 +9750,29 @@ async function fsEditarDoRelatorio(id){
 }
     function gerarRelatorios() {
       const container = document.getElementById('relatoriosContent');
+      if (!container) return;
+      if (!Array.isArray(allProposals)) allProposals = [];
+
+      function fsProdutosRelatorio(p) {
+        try {
+          if (Array.isArray(p && p.produtos)) return p.produtos;
+          const parsed = JSON.parse((p && p.produtos) || '[]');
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      function fsPrecoRelatorio(prod) {
+        const promocional = parseFloat(prod && prod.preco_promo);
+        if (Number.isFinite(promocional) && promocional > 0) return promocional;
+        return parseFloat(prod && prod.preco_normal) || 0;
+      }
       
       // Estatísticas gerais
       const totalPropostas = allProposals.length;
       const totalValor = allProposals.reduce((sum, p) => {
-        const produtos = JSON.parse(p.produtos || '[]');
-        return sum + produtos.reduce((s, prod) => s + (parseFloat(prod.preco_promo) || 0), 0);
+        const produtos = fsProdutosRelatorio(p);
+        return sum + produtos.reduce((s, prod) => s + fsPrecoRelatorio(prod) * (parseInt(prod && prod.quantidade, 10) || 1), 0);
       }, 0);
 
       // Propostas por vendedor
@@ -9661,8 +9783,8 @@ async function fsEditarDoRelatorio(id){
           porVendedor[vendedor] = { count: 0, valor: 0 };
         }
         porVendedor[vendedor].count++;
-        const produtos = JSON.parse(p.produtos || '[]');
-        porVendedor[vendedor].valor += produtos.reduce((s, prod) => s + (parseFloat(prod.preco_promo) || 0), 0);
+        const produtos = fsProdutosRelatorio(p);
+        porVendedor[vendedor].valor += produtos.reduce((s, prod) => s + fsPrecoRelatorio(prod) * (parseInt(prod && prod.quantidade, 10) || 1), 0);
       });
 
       // Propostas por mês
@@ -9675,8 +9797,8 @@ async function fsEditarDoRelatorio(id){
             porMes[chave] = { count: 0, valor: 0 };
           }
           porMes[chave].count++;
-          const produtos = JSON.parse(p.produtos || '[]');
-          porMes[chave].valor += produtos.reduce((s, prod) => s + (parseFloat(prod.preco_promo) || 0), 0);
+          const produtos = fsProdutosRelatorio(p);
+          porMes[chave].valor += produtos.reduce((s, prod) => s + fsPrecoRelatorio(prod) * (parseInt(prod && prod.quantidade, 10) || 1), 0);
         }
       });
 
@@ -9684,13 +9806,13 @@ async function fsEditarDoRelatorio(id){
       // ===== FS: Histórico (tabela) =====
       function fsValorTotalProposta(p){
         try{
-          const produtos = JSON.parse(p.produtos || '[]');
-          return produtos.reduce((s, prod) => s + ((parseFloat(prod.preco_promo) || 0) * (prod && prod.quantidade ? prod.quantidade : 1)), 0);
+          const produtos = fsProdutosRelatorio(p);
+          return produtos.reduce((s, prod) => s + (fsPrecoRelatorio(prod) * (parseInt(prod && prod.quantidade, 10) || 1)), 0);
         }catch(e){ return 0; }
       }
       function fsQtdProdutos(p){
         try{
-          const produtos = JSON.parse(p.produtos || '[]');
+          const produtos = fsProdutosRelatorio(p);
           return produtos.reduce((s, prod) => s + (prod && prod.quantidade ? parseInt(prod.quantidade,10) || 1 : 1), 0);
         }catch(e){ return 0; }
       }
