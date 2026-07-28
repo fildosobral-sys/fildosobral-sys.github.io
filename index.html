@@ -8993,7 +8993,7 @@ img{
 <div class="fs-hp-topbar">
 <div>
 <div class="fs-hp-title">🧮 HP12C FS</div>
-<div class="fs-hp-sub">Acesso externo à HP12C pelo navegador</div>
+<div class="fs-hp-sub">Calculadora financeira integrada à plataforma</div>
 </div>
 <div class="fs-hp-actions">
 <button class="fs-hp-btn secondary" id="hp12cBackSystem" type="button">Abrir no navegador</button>
@@ -9202,7 +9202,6 @@ img{
 <small id="fsOptionsRole">DESENVOLVEDOR_MASTER</small>
 <strong id="fsOptionsUser">FRANCIFILDO PEREIRA SOBRAL</strong>
 </div>
-<span class="fs-options-chevron">›</span>
 </button>
 <div class="fs-options-list">
 <button class="fs-options-item" id="btnSharePanelFooter" type="button"><span>🔗</span><span>Compartilhamento</span><b>›</b></button>
@@ -9842,13 +9841,27 @@ img{
     }catch(e){}
   }
 
+  let hpPreviousBodyOverflow = '';
+
   function abrirHP12C(){
-    window.open('https://simulado.estacio.br/img/Hp/','_blank','noopener');
+    if(!hpModal) return;
+    hpPreviousBodyOverflow = document.body.style.overflow || '';
+    hpModal.classList.add('open');
+    hpModal.setAttribute('aria-hidden','false');
+    document.body.classList.add('fs-hp-open');
+    document.body.style.overflow = 'hidden';
     btnCalc && btnCalc.classList.add('fs-calc-live');
     setTimeout(function(){ btnCalc && btnCalc.classList.remove('fs-calc-live'); }, 1400);
   }
 
-  function fecharHP12C(){}
+  async function fecharHP12C(){
+    if(!hpModal) return;
+    hpModal.classList.remove('open');
+    hpModal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('fs-hp-open');
+    document.body.style.overflow = hpPreviousBodyOverflow;
+    await releaseLandscape();
+  }
 function showGuide(){ try{ var p=document.getElementById('hpGuidePanel'); if(p) p.classList.toggle('open'); }catch(e){} }
 
   hpCopyDisplay && hpCopyDisplay.addEventListener('click', async function(){
@@ -9871,8 +9884,18 @@ function showGuide(){ try{ var p=document.getElementById('hpGuidePanel'); if(p) 
     e.preventDefault();
     abrirHP12C();
   });
-  hpClose && hpClose.addEventListener('click', function(){ abrirHP12C(); });
-  hpBackSystem && hpBackSystem.addEventListener('click', function(){ abrirHP12C(); });
+  hpClose && hpClose.addEventListener('click', fecharHP12C);
+  hpBackSystem && hpBackSystem.addEventListener('click', function(){
+    const hpUrl = 'https://simulado.estacio.br/img/Hp/';
+    const popup = window.open(hpUrl,'_blank','noopener,noreferrer');
+    if(!popup) window.location.assign(hpUrl);
+  });
+  hpModal && hpModal.addEventListener('click', function(e){
+    if(e.target === hpModal) fecharHP12C();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && hpModal && hpModal.classList.contains('open')) fecharHP12C();
+  });
   window.addEventListener('keydown', function(e){
     if(e.key.toLowerCase() === 'h' && (e.ctrlKey || e.metaKey)){
       e.preventDefault();
@@ -12300,6 +12323,13 @@ document.addEventListener('DOMContentLoaded', function(){
 #fsOptionsSheet .fs-options-profile,
 .fs-options-sheet .fs-options-profile{
   margin-top: 12px !important;
+  grid-template-columns:86px minmax(0,1fr) !important;
+}
+
+/* O cartão do usuário é apenas informativo: não exibe seta de navegação. */
+#fsOptionsSheet .fs-options-profile .fs-options-chevron,
+.fs-options-sheet .fs-options-profile .fs-options-chevron{
+  display:none !important;
 }
 
 /* garante emojis e alinhamento premium nos itens */
@@ -13320,6 +13350,6 @@ html body .fs-categorias-wrap{
   setTimeout(liberar,2200);
 })();
 </script>
-<script src="./pwa-update.js?v=46"></script>
+<script src="./pwa-update.js?v=48"></script>
 </body>
 </html>

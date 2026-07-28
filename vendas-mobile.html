@@ -8850,7 +8850,7 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-kicker{font-size:8px;font-weight:800;letter-spacing:1.2px;color:#2e54a7;margin-bottom:4px}
         .fs-a4-cabecalho h1{font-size:20px;line-height:1.05;margin:0;color:#172554}
         .fs-a4-cabecalho p{font-size:9px;color:#667085;margin:4px 0 0}
-        .fs-a4-logo{width:142px;height:36px;object-fit:fill;object-position:center;padding:3px 9px;margin-right:2px}
+        .fs-a4-logo{width:142px;height:28px;object-fit:fill;object-position:center;padding:2px 9px;margin-right:2px}
         .fs-a4-faixa{height:3px;margin:11px 0 9px;border-radius:99px;background:linear-gradient(90deg,#233c96 0 74%,#e62e45 74% 100%)}
         .fs-a4-dados{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:8px 10px;background:#fffef7;border:1px solid #eadf9c;border-radius:8px}
         .fs-a4-dados div{min-width:0}.fs-a4-dados span{display:block;font-size:6.5px;text-transform:uppercase;letter-spacing:.5px;color:#7b8496;margin-bottom:2px}
@@ -8892,7 +8892,7 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-rodape{display:flex;justify-content:space-between;gap:20px;margin-top:13px;padding-top:7px;border-top:1px solid #dce3f1;color:#7b8496;font-size:6.5px}
         .fs-a4-rodape strong{color:#536078;font-weight:600}
         .fs-a4-paisagem{padding:20px 24px 16px}.fs-a4-paisagem .fs-a4-cabecalho{margin-bottom:12px}
-        .fs-a4-paisagem .fs-a4-logo{width:150px;height:34px}
+        .fs-a4-paisagem .fs-a4-logo{width:150px;height:27px}
       `;
       palco.appendChild(estilo);
       palco.appendChild(folha);
@@ -8922,7 +8922,7 @@ function abrirAlterarStatusProposta(id) {
         const botao = overlay.querySelector('[data-fs-salvar]');
         const textoAnterior = botao.textContent;
         botao.disabled = true;
-        botao.textContent = '⏳ Abrindo salvamento...';
+        botao.textContent = '⏳ Salvando PNG...';
         let urlDownload = '';
         let link = null;
         try {
@@ -8944,52 +8944,34 @@ function abrirAlterarStatusProposta(id) {
           const nomeUnico = String(nomeArquivo || 'IMAGEM.png')
             .replace(/\.png$/i, '') + '_' + sufixoUnico + '.png';
 
-          // PWA/WebAPK no Android pode ignorar silenciosamente <a download>
-          // com um Blob grande. Entregar o File ao sistema é mais confiável e
-          // mantém o PNG original para salvar em Arquivos, Fotos ou Drive.
-          const arquivoNativo = new File([blobImagem], nomeUnico, {
-            type: 'image/png',
-            lastModified: Date.now()
-          });
-          const podeSalvarNativamente = !!(
-            navigator.share &&
-            navigator.canShare &&
-            navigator.canShare({ files: [arquivoNativo] })
-          );
+          const assinatura = new Uint8Array(await blobImagem.slice(0, 8).arrayBuffer());
+          const pngValido = assinatura.length === 8 &&
+            assinatura[0] === 0x89 && assinatura[1] === 0x50 &&
+            assinatura[2] === 0x4e && assinatura[3] === 0x47 &&
+            assinatura[4] === 0x0d && assinatura[5] === 0x0a &&
+            assinatura[6] === 0x1a && assinatura[7] === 0x0a;
+          if (!pngValido) throw new Error('A imagem gerada não é um PNG válido');
 
-          if (podeSalvarNativamente) {
-            await navigator.share({
-              files: [arquivoNativo],
-              title: nomeUnico,
-              text: 'Salvar imagem PNG em alta definição'
-            });
-            showToast('✅ PNG entregue ao sistema. Escolha Fotos ou Arquivos para guardar.', 'success');
-          } else {
-            urlDownload = URL.createObjectURL(blobImagem);
-            link = document.createElement('a');
-            link.href = urlDownload;
-            link.download = nomeUnico;
-            link.target = '_blank';
-            link.style.position = 'fixed';
-            link.style.left = '-9999px';
-            document.body.appendChild(link);
-            link.dispatchEvent(new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window
-            }));
-            setTimeout(function(){
-              if (link && link.parentNode) link.remove();
-              if (urlDownload) URL.revokeObjectURL(urlDownload);
-            }, 60000);
-            showToast('✅ PNG enviado para Downloads. Toque novamente para outra cópia.', 'success');
-          }
+          // O botão Salvar nunca chama navigator.share. No Android/PWA essa
+          // chamada podia permanecer em “Preparando...” e bloquear tentativas
+          // seguintes. Cada toque agora cria um URL e um nome inteiramente novos.
+          const blobDownload = new Blob([blobImagem], { type: 'image/png' });
+          urlDownload = URL.createObjectURL(blobDownload);
+          link = document.createElement('a');
+          link.href = urlDownload;
+          link.download = nomeUnico;
+          link.style.position = 'fixed';
+          link.style.left = '-9999px';
+          link.style.top = '-9999px';
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(function(){
+            if (link && link.parentNode) link.remove();
+            if (urlDownload) URL.revokeObjectURL(urlDownload);
+          }, 60000);
+          showToast('✅ PNG enviado para Downloads. Toque novamente para outra cópia.', 'success');
         } catch (erro) {
-          if (erro && erro.name === 'AbortError') {
-            showToast('Salvamento cancelado.', 'success');
-            return;
-          }
-          console.warn('Falha no salvamento nativo:', erro);
+          console.warn('Falha ao salvar PNG:', erro);
           if (link && link.parentNode) link.remove();
           if (urlDownload) URL.revokeObjectURL(urlDownload);
           const destinoAlternativo = dataUrlImagem || url;
@@ -9080,9 +9062,10 @@ function abrirAlterarStatusProposta(id) {
 
         const altura = Math.max(estruturaA4.alturaMinima, Math.ceil(estruturaA4.folha.scrollHeight));
         estruturaA4.folha.style.height = altura + 'px';
-        // Uma escala única evita que dois botões produzam imagens com qualidade
-        // e proporções diferentes. O limite também preserva a memória no celular.
-        const escala = tipo === 'diretoriaAlcadas' ? 2.8 : 3.2;
+        // Mantém a proporção A4 e gera aproximadamente 4K no maior lado,
+        // usando o mesmo critério em todos os modelos.
+        const maiorLado = Math.max(estruturaA4.largura, altura);
+        const escala = Math.max(2.8, Math.min(4, 3840 / maiorLado));
         canvasGerado = await html2canvas(estruturaA4.folha, {
           scale: escala,
           useCORS: true,
@@ -9100,7 +9083,7 @@ function abrirAlterarStatusProposta(id) {
         const dataUrl = canvasGerado.toDataURL('image/png', 1);
         const blob = await new Promise(function(resolve, reject) {
           canvasGerado.toBlob(function(resultado) {
-            if (resultado) resolve(resultado);
+            if (resultado && resultado.type === 'image/png') resolve(resultado);
             else reject(new Error('Falha ao converter a folha A4 em PNG'));
           }, 'image/png', 1);
         });
