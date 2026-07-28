@@ -8918,21 +8918,17 @@ function abrirAlterarStatusProposta(id) {
           </div>
         </div>`;
       let sequenciaDownloads = 0;
-      const salvar = function() {
+      const salvar = async function() {
         const botao = overlay.querySelector('[data-fs-salvar]');
         const textoAnterior = botao.textContent;
         botao.disabled = true;
-        botao.textContent = '⏳ Preparando...';
+        botao.textContent = '⏳ Abrindo salvamento...';
         let urlDownload = '';
         let link = null;
         try {
-          // O PNG já está pronto. Reler o Blob com arrayBuffer() pode ficar
-          // pendente no Chrome/Android e prender o botão em “Preparando...”.
           if (!blobImagem || blobImagem.size < 1) {
             throw new Error('Arquivo PNG indisponível para download');
           }
-          urlDownload = URL.createObjectURL(blobImagem);
-          link = document.createElement('a');
           sequenciaDownloads += 1;
           const instante = new Date();
           const sufixoUnico = [
@@ -8947,32 +8943,62 @@ function abrirAlterarStatusProposta(id) {
           ].join('');
           const nomeUnico = String(nomeArquivo || 'IMAGEM.png')
             .replace(/\.png$/i, '') + '_' + sufixoUnico + '.png';
-          link.href = urlDownload;
-          link.download = nomeUnico;
-          link.rel = 'noopener';
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          botao.disabled = false;
-          botao.textContent = textoAnterior;
-          setTimeout(function(){
-            if (link.parentNode) link.remove();
-            URL.revokeObjectURL(urlDownload);
-          }, 60000);
-          showToast('✅ PNG enviado para Downloads. Toque novamente para salvar outra cópia.', 'success');
+
+          // PWA/WebAPK no Android pode ignorar silenciosamente <a download>
+          // com um Blob grande. Entregar o File ao sistema é mais confiável e
+          // mantém o PNG original para salvar em Arquivos, Fotos ou Drive.
+          const arquivoNativo = new File([blobImagem], nomeUnico, {
+            type: 'image/png',
+            lastModified: Date.now()
+          });
+          const podeSalvarNativamente = !!(
+            navigator.share &&
+            navigator.canShare &&
+            navigator.canShare({ files: [arquivoNativo] })
+          );
+
+          if (podeSalvarNativamente) {
+            await navigator.share({
+              files: [arquivoNativo],
+              title: nomeUnico,
+              text: 'Salvar imagem PNG em alta definição'
+            });
+            showToast('✅ PNG entregue ao sistema. Escolha Fotos ou Arquivos para guardar.', 'success');
+          } else {
+            urlDownload = URL.createObjectURL(blobImagem);
+            link = document.createElement('a');
+            link.href = urlDownload;
+            link.download = nomeUnico;
+            link.target = '_blank';
+            link.style.position = 'fixed';
+            link.style.left = '-9999px';
+            document.body.appendChild(link);
+            link.dispatchEvent(new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            }));
+            setTimeout(function(){
+              if (link && link.parentNode) link.remove();
+              if (urlDownload) URL.revokeObjectURL(urlDownload);
+            }, 60000);
+            showToast('✅ PNG enviado para Downloads. Toque novamente para outra cópia.', 'success');
+          }
         } catch (erro) {
+          if (erro && erro.name === 'AbortError') {
+            showToast('Salvamento cancelado.', 'success');
+            return;
+          }
           console.warn('Falha no salvamento nativo:', erro);
           if (link && link.parentNode) link.remove();
           if (urlDownload) URL.revokeObjectURL(urlDownload);
           const destinoAlternativo = dataUrlImagem || url;
           const novaAba = window.open(destinoAlternativo, '_blank', 'noopener');
           if (!novaAba) window.location.href = destinoAlternativo;
-          showToast('ℹ️ A imagem foi aberta. Use o menu do navegador para salvar.', 'success');
+          showToast('ℹ️ A imagem foi aberta. No menu, escolha “Fazer download”.', 'success');
         } finally {
-          window.setTimeout(function(){
-            botao.disabled = false;
-            botao.textContent = textoAnterior;
-          }, 100);
+          botao.disabled = false;
+          botao.textContent = textoAnterior;
         }
       };
       const compartilhar = async function() {
