@@ -8861,7 +8861,8 @@ function abrirAlterarStatusProposta(id) {
             <button type="button" data-fs-fechar class="rounded-xl bg-gray-200 text-gray-800 font-bold px-4 py-3">Fechar</button>
           </div>
         </div>`;
-      const salvar = async function() {
+      let sequenciaDownloads = 0;
+      const salvar = function() {
         const botao = overlay.querySelector('[data-fs-salvar]');
         const textoAnterior = botao.textContent;
         botao.disabled = true;
@@ -8872,8 +8873,22 @@ function abrirAlterarStatusProposta(id) {
           // autorização do gesto e ignorarem o salvamento.
           const urlDownload = URL.createObjectURL(blobImagem);
           const link = document.createElement('a');
+          sequenciaDownloads += 1;
+          const instante = new Date();
+          const sufixoUnico = [
+            instante.getFullYear(),
+            String(instante.getMonth() + 1).padStart(2, '0'),
+            String(instante.getDate()).padStart(2, '0'),
+            String(instante.getHours()).padStart(2, '0'),
+            String(instante.getMinutes()).padStart(2, '0'),
+            String(instante.getSeconds()).padStart(2, '0'),
+            String(instante.getMilliseconds()).padStart(3, '0'),
+            sequenciaDownloads
+          ].join('');
+          const nomeUnico = String(nomeArquivo || 'IMAGEM.png')
+            .replace(/\.png$/i, '') + '_' + sufixoUnico + '.png';
           link.href = urlDownload;
-          link.download = nomeArquivo;
+          link.download = nomeUnico;
           link.rel = 'noopener';
           link.style.display = 'none';
           document.body.appendChild(link);
@@ -8881,7 +8896,7 @@ function abrirAlterarStatusProposta(id) {
           setTimeout(function(){
             if (link.parentNode) link.remove();
             URL.revokeObjectURL(urlDownload);
-          }, 5000);
+          }, 60000);
           showToast('✅ PNG salvo em Downloads. Ele ficará disponível para a galeria e o WhatsApp.', 'success');
         } catch (erro) {
           if (erro && erro.name === 'AbortError') return;
@@ -8890,8 +8905,10 @@ function abrirAlterarStatusProposta(id) {
           if (!novaAba) window.location.href = url;
           showToast('ℹ️ A imagem foi aberta. Use o menu do navegador para salvar.', 'success');
         } finally {
-          botao.disabled = false;
-          botao.textContent = textoAnterior;
+          setTimeout(function(){
+            botao.disabled = false;
+            botao.textContent = textoAnterior;
+          }, 350);
         }
       };
       const compartilhar = async function() {
