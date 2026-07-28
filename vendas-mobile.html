@@ -8735,6 +8735,9 @@ function abrirAlterarStatusProposta(id) {
         </section>
         <section class="fs-a4-totalizadores fs-a4-totalizadores-planos">
           <div><span>Total tabela</span><strong>${formatarMoedaBR(totais.normal)}</strong></div>
+          <div><span>Desc. promocional</span><strong class="fs-a4-vermelho">${formatarMoedaBR(Math.max(0, totais.normal - totais.promo))}</strong></div>
+          <div><span>Promoção atual</span><strong class="fs-a4-verde">${formatarMoedaBR(totais.promo)}</strong></div>
+          <div><span>Desconto adicional</span><strong class="fs-a4-azul">${formatarMoedaBR(totais.adicional)}</strong></div>
           <div><span>Desconto total</span><strong class="fs-a4-vermelho">${formatarMoedaBR(descontoTotal)}</strong></div>
           <div class="destaque"><span>Total final</span><strong>${formatarMoedaBR(totais.final)}</strong></div>
         </section>
@@ -8758,7 +8761,7 @@ function abrirAlterarStatusProposta(id) {
       palco.style.cssText = `position:fixed;left:-12000px;top:0;width:${largura}px;background:#eef3fb;z-index:-99999;`;
 
       const folha = document.createElement('article');
-      folha.className = `fs-a4-folha ${paisagem ? 'fs-a4-paisagem' : 'fs-a4-retrato'}`;
+      folha.className = `fs-a4-folha fs-a4-tema-amarelo ${paisagem ? 'fs-a4-paisagem' : 'fs-a4-retrato'}`;
       folha.style.width = largura + 'px';
       folha.style.minHeight = alturaMinima + 'px';
       folha.innerHTML = fsCabecalhoA4Exportacao(tipo, data);
@@ -8787,20 +8790,20 @@ function abrirAlterarStatusProposta(id) {
       const estilo = document.createElement('style');
       estilo.textContent = `
         .fs-a4-palco-exportacao,.fs-a4-palco-exportacao *{box-sizing:border-box}
-        .fs-a4-folha{font-family:Arial,Helvetica,sans-serif;color:#172033;background:#fff;padding:24px 28px 20px;overflow:hidden}
+        .fs-a4-folha{font-family:Arial,Helvetica,sans-serif;color:#172033;background:#fffdf0;padding:24px 28px 20px;overflow:hidden;border:2px solid #efd437}
         .fs-a4-cabecalho{margin-bottom:15px}
         .fs-a4-cabecalho-topo{display:flex;align-items:center;justify-content:space-between;gap:32px}
         .fs-a4-kicker{font-size:8px;font-weight:800;letter-spacing:1.2px;color:#2e54a7;margin-bottom:4px}
         .fs-a4-cabecalho h1{font-size:20px;line-height:1.05;margin:0;color:#172554}
         .fs-a4-cabecalho p{font-size:9px;color:#667085;margin:4px 0 0}
-        .fs-a4-logo{width:112px;height:38px;object-fit:contain;object-position:right center}
+        .fs-a4-logo{width:142px;height:52px;object-fit:contain;object-position:center;padding:5px 9px;margin-right:2px}
         .fs-a4-faixa{height:3px;margin:11px 0 9px;border-radius:99px;background:linear-gradient(90deg,#233c96 0 74%,#e62e45 74% 100%)}
-        .fs-a4-dados{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:8px 10px;background:#f5f7fb;border:1px solid #dce3f1;border-radius:8px}
+        .fs-a4-dados{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:8px 10px;background:#fffef7;border:1px solid #eadf9c;border-radius:8px}
         .fs-a4-dados div{min-width:0}.fs-a4-dados span{display:block;font-size:6.5px;text-transform:uppercase;letter-spacing:.5px;color:#7b8496;margin-bottom:2px}
         .fs-a4-dados strong{display:block;font-size:8.5px;color:#1f2937;white-space:normal;overflow-wrap:anywhere}
-        .fs-a4-corpo{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;border:0!important;border-radius:0!important;box-shadow:none!important}
-        .fs-a4-corpo>.bg-gradient-to-br{padding:0!important;border:0!important;border-radius:0!important;background:#fff!important}
-        .fs-a4-corpo .fs-diretoria-sheet{padding:0!important;border:0!important;border-radius:0!important;background:#fff!important}
+        .fs-a4-corpo{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fffdf0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+        .fs-a4-corpo>.bg-gradient-to-br{padding:0!important;border:0!important;border-radius:0!important;background:#fffdf0!important}
+        .fs-a4-corpo .fs-diretoria-sheet{padding:0!important;border:0!important;border-radius:0!important;background:#fffdf0!important}
         .fs-a4-corpo .fs-diretoria-resumo-grid{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:8px!important}
         .fs-a4-corpo .fs-diretoria-resumo-card{min-width:0!important;padding:10px!important;break-inside:avoid}
         .fs-a4-corpo .fs-tabela-diretoria-wrap{overflow:visible!important;width:100%!important}
@@ -8810,7 +8813,7 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-corpo .rounded-lg,.fs-a4-corpo .rounded-xl{break-inside:avoid}
         .fs-a4-secao{margin-top:10px}.fs-a4-titulo-secao{display:flex;align-items:center;gap:7px;margin-bottom:6px}
         .fs-a4-titulo-secao strong{font-size:13px}.fs-a4-titulo-secao em{margin-left:auto;font-size:8px;font-style:normal;color:#667085}
-        .fs-a4-tabela{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px;border:1px solid #d7deea}
+        .fs-a4-tabela{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px;border:1px solid #dfd8ad;background:#fff}
         .fs-a4-tabela th{padding:5px 4px;background:#eef2f8;color:#344054;text-transform:uppercase;font-size:6.5px;letter-spacing:.25px;border:1px solid #d7deea}
         .fs-a4-tabela td{height:31px;padding:4px;border:1px solid #e0e5ed;vertical-align:middle;line-height:1.15}
         .fs-a4-tabela tbody tr:nth-child(even){background:#fafbfc}.fs-a4-tabela tfoot td{font-weight:800;background:#eef2f8;text-align:right;padding:6px 4px}
@@ -8822,6 +8825,7 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-verde{color:#16864b;font-weight:700}.fs-a4-vermelho{color:#c43232;font-weight:700}.fs-a4-azul{color:#2458b8;font-weight:700}.fs-a4-roxo{color:#7936a8;font-weight:700}
         .fs-a4-vazio{text-align:center;color:#667085;padding:18px!important}
         .fs-a4-totalizadores{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+        .fs-a4-totalizadores-planos{grid-template-columns:repeat(6,1fr)}
         .fs-a4-totalizadores div{padding:7px 9px;border:1px solid #dce3f1;border-radius:7px;background:#f8fafc}
         .fs-a4-totalizadores span{display:block;font-size:7px;text-transform:uppercase;color:#667085;margin-bottom:2px}.fs-a4-totalizadores strong{font-size:12px}
         .fs-a4-totalizadores .destaque{background:#ecfdf3;border-color:#9be5bd}.fs-a4-totalizadores .destaque strong{color:#16864b}
@@ -8832,6 +8836,7 @@ function abrirAlterarStatusProposta(id) {
         .fs-a4-rodape{display:flex;justify-content:space-between;gap:20px;margin-top:13px;padding-top:7px;border-top:1px solid #dce3f1;color:#7b8496;font-size:6.5px}
         .fs-a4-rodape strong{color:#536078;font-weight:600}
         .fs-a4-paisagem{padding:20px 24px 16px}.fs-a4-paisagem .fs-a4-cabecalho{margin-bottom:12px}
+        .fs-a4-paisagem .fs-a4-logo{width:150px;height:50px}
       `;
       palco.appendChild(estilo);
       palco.appendChild(folha);
@@ -8905,24 +8910,20 @@ function abrirAlterarStatusProposta(id) {
       document.body.appendChild(overlay);
     }
 
-    // ========== BAIXAR IMAGEM EM FOLHA A4 ==========
-    async function baixarImagem8K(tipo) {
+    function fsParteSeguraNomeArquivo(valor, fallback) {
+      const seguro = String(valor || fallback || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .toUpperCase();
+      return seguro || String(fallback || 'ARQUIVO').toUpperCase();
+    }
+
+    async function fsGerarImagemA4Padrao(tipo) {
       let estruturaA4 = null;
       let canvasGerado = null;
-      const botoesDownload = Array.from(document.querySelectorAll(
-        '#btnBaixarImagemCliente8K, #btnBaixarImagemDiretoriaAlcadas8K, #btnBaixarImagemDiretoria8K, #btnBaixar8KModal'
-      ));
       try {
-        if (!currentProposalData) {
-          showToast('❌ Dados da proposta não encontrados', 'error');
-          return;
-        }
-        botoesDownload.forEach(function(btn) {
-          btn.disabled = true;
-          btn.dataset.fsTextoAnterior = btn.textContent;
-          btn.textContent = '⏳ Montando folha A4...';
-        });
-        showToast('📄 Montando folha A4...', 'success');
+        if (!currentProposalData) throw new Error('Dados da proposta não encontrados');
         estruturaA4 = fsCriarFolhaA4Exportacao(tipo, currentProposalData);
         if (document.fonts && document.fonts.ready) await document.fonts.ready;
         await Promise.all(Array.from(estruturaA4.folha.querySelectorAll('img')).map(function(img){
@@ -8936,7 +8937,9 @@ function abrirAlterarStatusProposta(id) {
 
         const altura = Math.max(estruturaA4.alturaMinima, Math.ceil(estruturaA4.folha.scrollHeight));
         estruturaA4.folha.style.height = altura + 'px';
-        const escala = tipo === 'diretoriaAlcadas' ? 2 : 2.4;
+        // Uma escala única evita que dois botões produzam imagens com qualidade
+        // e proporções diferentes. O limite também preserva a memória no celular.
+        const escala = tipo === 'diretoriaAlcadas' ? 2.8 : 3.2;
         canvasGerado = await html2canvas(estruturaA4.folha, {
           scale: escala,
           useCORS: true,
@@ -8957,21 +8960,48 @@ function abrirAlterarStatusProposta(id) {
             else reject(new Error('Falha ao converter a folha A4 em PNG'));
           }, 'image/png', 1);
         });
-        const clienteNome = String(currentProposalData.cliente_nome || 'cliente').trim() || 'cliente';
-        const label = tipo === 'cliente' ? 'visao_cliente' : (tipo === 'diretoriaAlcadas' ? 'planos_cotacoes' : 'crediario');
-        const nomeArquivo = `proposta_${label}_A4_${clienteNome.replace(/\s+/g,'_').toLowerCase()}_${Date.now()}.png`;
-        const url = URL.createObjectURL(blob);
-        fsAbrirImagemPronta(url, nomeArquivo, blob);
-        showToast('✅ Folha A4 pronta para salvar!', 'success');
-      } catch (error) {
-        console.error('Erro ao baixar imagem A4:', error);
-        showToast('❌ Não foi possível gerar a folha A4. Tente novamente.', 'error');
+        const cliente = fsParteSeguraNomeArquivo(currentProposalData.cliente_nome, 'CLIENTE');
+        const codigo = fsParteSeguraNomeArquivo(
+          currentProposalData.codigo_simulacao || currentProposalData.numero_simulacao || currentProposalData.codigo_proposta,
+          'SIMULACAO'
+        );
+        const label = tipo === 'cliente' ? 'PROPOSTA_COMERCIAL' :
+          (tipo === 'diretoriaAlcadas' ? 'PLANOS_E_COTACOES' : 'CREDIARIO');
+        return {
+          blob,
+          nomeArquivo: `${label}_${cliente}_${codigo}.png`
+        };
       } finally {
         if (estruturaA4 && estruturaA4.palco && estruturaA4.palco.parentNode) estruturaA4.palco.remove();
         if (canvasGerado) {
           canvasGerado.width = 1;
           canvasGerado.height = 1;
         }
+      }
+    }
+
+    // ========== BAIXAR IMAGEM EM FOLHA A4 ==========
+    async function baixarImagem8K(tipo) {
+      const botoesDownload = Array.from(document.querySelectorAll(
+        '#btnBaixarImagemCliente8K, #btnBaixarImagemDiretoriaAlcadas8K, #btnBaixarImagemDiretoria8K, #btnBaixar8KModal, #btnEnviarWhatsApp'
+      ));
+      try {
+        botoesDownload.forEach(function(btn) {
+          btn.disabled = true;
+          btn.dataset.fsTextoAnterior = btn.textContent;
+          btn.textContent = '⏳ Montando imagem...';
+        });
+        showToast('📄 Montando imagem padronizada...', 'success');
+        const arquivo = await fsGerarImagemA4Padrao(tipo);
+        const url = URL.createObjectURL(arquivo.blob);
+        fsAbrirImagemPronta(url, arquivo.nomeArquivo, arquivo.blob);
+        showToast('✅ Imagem pronta para salvar ou compartilhar!', 'success');
+        return arquivo;
+      } catch (error) {
+        console.error('Erro ao baixar imagem A4:', error);
+        showToast('❌ Não foi possível gerar a imagem. Tente novamente.', 'error');
+        return null;
+      } finally {
         botoesDownload.forEach(function(btn) {
           btn.disabled = false;
           if (btn.dataset.fsTextoAnterior) {
@@ -9152,7 +9182,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
             <div class="flex gap-3">
               <button id="btnEnviarWhatsApp" class="flex-1 ${tipo === 'cliente' ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-6 py-4 rounded-lg font-bold text-lg transition-colors flex items-center justify-center gap-2">
                 <span class="text-xl">${tipo === 'cliente' ? '📱' : '📤'}</span>
-                <span>${tipo === 'cliente' ? 'Enviar via WhatsApp' : 'Baixar imagem e abrir WhatsApp do Líder'}</span>
+                <span>${tipo === 'cliente' ? 'Gerar imagem e compartilhar' : 'Gerar imagem e compartilhar com o Líder'}</span>
               </button>
               <button id="btnBaixar8KModal" class="flex-1 bg-blue-600 text-white px-6 py-4 rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
                 <span class="text-xl">📥</span>
@@ -9163,7 +9193,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
               </button>
             </div>
             <div class="mt-3 text-center">
-              <p class="text-xs text-gray-500">💡 ${tipo === 'cliente' ? 'A proposta será formatada em tamanho A4 para melhor visualização' : 'A imagem será baixada e o WhatsApp da diretoria será aberto automaticamente'}</p>
+              <p class="text-xs text-gray-500">💡 Os dois botões usam o mesmo modelo e a mesma qualidade de imagem.</p>
             </div>
           </div>
         </div>
@@ -9192,13 +9222,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
           btnAcaoPrincipal.disabled = true;
           btnAcaoPrincipal.classList.add('opacity-70','cursor-not-allowed');
           try {
-            if (tipo === 'cliente') {
-              await fsExportarClienteParaWhatsApp();
-            } else {
-              const destino = await fsPerguntarDestinoWhats('análise');
-              if (!destino) return;
-              await enviarWhatsApp(tipo, destino);
-            }
+            await baixarImagem8K(tipo);
           } finally {
             btnAcaoPrincipal.disabled = false;
             btnAcaoPrincipal.classList.remove('opacity-70','cursor-not-allowed');
