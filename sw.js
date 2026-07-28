@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v28-cotacoes-vendas";
+const CACHE_NAME = "fs-central-v29-cotacoes-vendas";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -8,13 +8,13 @@ const APP_FILES = [
   "/parcelamentos-planos.webp",
   "/cotacoes-vendas.webp",
   "/orcamentos-card.webp",
-  "/manifest.webmanifest?v=28",
+  "/manifest.webmanifest?v=29",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=28",
-  "/draft-protection.js?v=28",
-  "/home-transition.js?v=28"
+  "/pwa-update.js?v=29",
+  "/draft-protection.js?v=29",
+  "/home-transition.js?v=29"
 ];
 
 self.addEventListener("install", (event) => {

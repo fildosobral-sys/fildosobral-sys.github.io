@@ -4159,6 +4159,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
         quantidade: 1,
         preco_normal: 0,
         preco_promo: 0,
+        preco_promo_informado: false,
         modalidade: '',
         parcelas: 1,
         valor_parcela: 0,
@@ -4346,12 +4347,26 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
         return;
       }
       
+      // Preço promocional vazio usa internamente o preço normal, sem marcar
+      // o produto como oferta e sem repetir o valor no campo da tela.
+      produtos.forEach(function(p) {
+        const normal = parseFloat(p.preco_normal) || 0;
+        const promo = parseFloat(p.preco_promo) || 0;
+        if (typeof p.preco_promo_informado !== 'boolean') {
+          p.preco_promo_informado = promo > 0 && Math.abs(promo - normal) > 0.005;
+        }
+        if (!p.preco_promo_informado) {
+          p.preco_promo = normal;
+        }
+      });
+
       atualizarValorPlanoExclusivo();
       atualizarCamposParcelamento();
       atualizarResumoGeralProposta();
 
       container.innerHTML = produtos.map((p, index) => {
         const isExpanded = p.expanded === true;
+        const isParcelado = p.modalidade === 'carne' || p.modalidade === 'cartao';
         const desc = calcularDesconto(p);
         
         return `
@@ -4416,7 +4431,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Preço Promocional (R$)</label>
-                <input type="text" id="input-preco-promo-${p.id}" value="${formatarMoeda(p.preco_promo)}" onfocus="limparMoeda(this)" onblur="aplicarMoeda(this, '${p.id}', 'preco_promo')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="R$ 0,00">
+                <input type="text" id="input-preco-promo-${p.id}" value="${p.preco_promo_informado ? formatarMoeda(p.preco_promo) : ''}" onfocus="limparMoeda(this)" onblur="aplicarMoeda(this, '${p.id}', 'preco_promo')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Em branco = preço normal">
               </div>
             </div>
 
@@ -4480,7 +4495,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
               </div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="grid grid-cols-1 ${isParcelado ? 'md:grid-cols-3' : ''} gap-4 mb-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Modalidade de Pagamento</label>
                 <select onchange="updateModalidade('${p.id}', this.value)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -4492,6 +4507,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
                 </select>
               </div>
 
+              ${isParcelado ? `
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Entrada</label>
                 <div class="flex gap-2">
@@ -4538,6 +4554,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
                   </label>
                 </div>
               </div>
+              ` : ''}
             </div>
 
 
@@ -5021,9 +5038,25 @@ function responderServicos(id, temServicos) {
     }
 
     function aplicarMoeda(input, id, campo) {
-      const valor = parseFloat(input.value.replace(',', '.')) || 0;
-      updateProduto(id, campo, valor);
-      input.value = formatarMoeda(valor);
+      const produto = produtos.find(function(p) { return p.id === id; });
+      if (!produto) return;
+
+      const texto = String(input.value || '').trim();
+      const valor = parseFloat(texto.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+
+      if (campo === 'preco_promo') {
+        produto.preco_promo_informado = texto !== '' && valor > 0;
+        produto.preco_promo = produto.preco_promo_informado
+          ? valor
+          : (parseFloat(produto.preco_normal) || 0);
+      } else {
+        produto[campo] = valor;
+        if (campo === 'preco_normal' && !produto.preco_promo_informado) {
+          produto.preco_promo = valor;
+        }
+      }
+
+      renderProdutos();
     }
 
     // Funções para Plano Exclusivo
@@ -8409,13 +8442,27 @@ function abrirAlterarStatusProposta(id) {
         wrapper.style.position = 'fixed';
         wrapper.style.left = '-100000px';
         wrapper.style.top = '0';
-        wrapper.style.width = (tipo === 'cliente' ? '297mm' : '360mm');
+        const larguraCliente = tipo === 'cliente'
+          ? Math.ceil(Math.max(target.getBoundingClientRect().width, target.scrollWidth, 320))
+          : 0;
+        wrapper.style.width = (tipo === 'cliente' ? `${larguraCliente}px` : '360mm');
         wrapper.style.background = '#ffffff';
-        wrapper.style.padding = (tipo === 'cliente' ? '20mm' : '8mm 10mm');
+        wrapper.style.padding = (tipo === 'cliente' ? '0' : '8mm 10mm');
         wrapper.style.zIndex = '-1';
-        wrapper.innerHTML = target.innerHTML;
+        const cloneConteudo = target.cloneNode(true);
+        cloneConteudo.removeAttribute('id');
+        if (tipo === 'cliente') {
+          cloneConteudo.style.width = `${larguraCliente}px`;
+          cloneConteudo.style.maxWidth = 'none';
+          cloneConteudo.style.margin = '0';
+          cloneConteudo.style.transform = 'none';
+        }
+        wrapper.appendChild(cloneConteudo);
 
         document.body.appendChild(wrapper);
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
 
         // Na exportação, transforma as anotações em texto estático.
         // Isso evita que navegadores móveis ignorem o valor visual do textarea
@@ -8463,9 +8510,11 @@ function abrirAlterarStatusProposta(id) {
           }
         });
 
-        const width = 7680;
-        const height = 4320;
-        const scale = Math.max(2, Math.min(8, width / Math.max(1, wrapper.scrollWidth)));
+        // Na visão do cliente preserva exatamente a largura da prévia.
+        // Limitar a escala evita estouro de memória em Android/iPhone.
+        const scale = tipo === 'cliente'
+          ? Math.max(2, Math.min(4, 2400 / Math.max(1, wrapper.scrollWidth)))
+          : Math.max(2, Math.min(8, 7680 / Math.max(1, wrapper.scrollWidth)));
 
         const canvas = await html2canvas(wrapper, {
           scale: scale,
@@ -8475,8 +8524,8 @@ function abrirAlterarStatusProposta(id) {
           logging: false,
           width: wrapper.scrollWidth,
           height: wrapper.scrollHeight,
-          windowWidth: Math.max(wrapper.scrollWidth + 200, 2200),
-          windowHeight: Math.max(wrapper.scrollHeight + 200, 2200),
+          windowWidth: tipo === 'cliente' ? wrapper.scrollWidth : Math.max(wrapper.scrollWidth + 200, 2200),
+          windowHeight: tipo === 'cliente' ? wrapper.scrollHeight : Math.max(wrapper.scrollHeight + 200, 2200),
           scrollX: 0,
           scrollY: 0
         });
@@ -8488,12 +8537,23 @@ function abrirAlterarStatusProposta(id) {
         const label = tipo === 'cliente' ? 'visao_cliente' : (tipo === 'diretoriaAlcadas' ? 'planos_cotacoes' : 'crediario');
         const nomeArquivo = `proposta_${label}_8k_${clienteNome.replace(/\s+/g,'_').toLowerCase()}_${stamp}.png`;
 
+        const blob = await new Promise(function(resolve, reject) {
+          canvas.toBlob(function(resultado) {
+            if (resultado) resolve(resultado);
+            else reject(new Error('Falha ao converter a imagem para PNG'));
+          }, 'image/png', 1.0);
+        });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = canvas.toDataURL('image/png', 1.0);
+        link.href = url;
         link.download = nomeArquivo;
+        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        setTimeout(function() {
+          URL.revokeObjectURL(url);
+          if (link.parentNode) link.parentNode.removeChild(link);
+        }, 1500);
 
         showToast('✅ Imagem 8K baixada com sucesso!', 'success');
       } catch (error) {
@@ -15989,6 +16049,15 @@ window.fsEnviarAnaliseLista = async function(id){
         var economiaParcela = Math.max(totalParcelaNormal - totalParcela, 0);
         var parcelasRef = itens.find(function(r){ return r.modalidade !== 'avista' && r.modalidade !== 'pix'; });
         var parcelasLabel = parcelasRef ? (parcelasRef.parcelas + 'x') : '—';
+        if (!parcelasRef) {
+          bloco.innerHTML = '<h3 class="text-base font-bold text-gray-800 mb-3 text-center">💰 Resumo da Simulação</h3>' +
+            '<div class="bg-gray-50 p-4 rounded-lg"><div class="grid grid-cols-3 gap-3 text-center">' +
+              '<div><p class="text-xs text-gray-500">Total Normal</p><p class="text-sm font-semibold text-gray-400 line-through">' + formatarMoedaBR(totalNormal) + '</p></div>' +
+              '<div><p class="text-xs text-gray-500">Valor Final</p><p class="text-lg font-bold text-green-600">' + formatarMoedaBR(totalFinal) + '</p></div>' +
+              '<div><p class="text-xs text-gray-500">Economia</p><p class="text-sm font-semibold text-red-600">' + formatarMoedaBR(economia) + '</p></div>' +
+            '</div></div>';
+          return;
+        }
         bloco.innerHTML = '<h3 class="text-base font-bold text-gray-800 mb-3 text-center">💰 Resumo da Simulação</h3>' +
           '<div class="bg-white p-4 rounded-lg shadow-lg mb-3 border-2 border-green-400">' +
             (totalEntrada > 0 ? '<div class="text-center mb-2"><span class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">💵 ENTRADA: ' + formatarMoedaBR(totalEntrada) + '</span></div>' : '') +
@@ -17297,7 +17366,7 @@ html body a.fs-back-home.fs-back-home[aria-label]{
   }
 }
 </style>
-<script src="./draft-protection.js?v=28"></script>
-<script src="./home-transition.js?v=28"></script>
+<script src="./draft-protection.js?v=29"></script>
+<script src="./home-transition.js?v=29"></script>
 </body>
 </html>
