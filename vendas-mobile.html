@@ -7543,13 +7543,53 @@ Demonstrativo das Solicitações de Clientes</p>
       infoDiv.classList.add('hidden');
     }
 
+    function fsProdutosDaProposta(proposta) {
+      const raw = proposta && proposta.produtos;
+
+      if (Array.isArray(raw)) return raw;
+
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw || '[]');
+          if (Array.isArray(parsed)) return parsed;
+          if (parsed && typeof parsed === 'object') return Object.values(parsed);
+        } catch (e) {
+          console.warn('[FS] Produtos inválidos na simulação:', proposta && (proposta.codigo_proposta || proposta.__offlineId), e);
+        }
+      }
+
+      if (raw && typeof raw === 'object') return Object.values(raw);
+      return [];
+    }
+
+    function fsDataIsoProposta(proposta) {
+      const candidatos = [
+        proposta && proposta.data_proposta,
+        proposta && proposta.created_at,
+        proposta && proposta.updated_at
+      ];
+
+      for (const valorOriginal of candidatos) {
+        const valor = String(valorOriginal || '').trim();
+        if (!valor) continue;
+
+        const iso = valor.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+        const br = valor.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+        if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+      }
+
+      return '';
+    }
+
     function filtrarPropostasPorData(propostas) {
       if (!filtroDataInicio && !filtroDataFim) {
         return propostas;
       }
 
       return propostas.filter(p => {
-        const dataProposta = p.data_proposta;
+        const dataProposta = fsDataIsoProposta(p);
         
         if (!dataProposta) return false;
 
@@ -7800,10 +7840,11 @@ Demonstrativo das Solicitações de Clientes</p>
 
       emptyState.classList.add('hidden');
       container.innerHTML = propostasFiltradas.map(p => {
-        const produtosArray = JSON.parse(p.produtos || '[]');
-        const totalPromo = produtosArray.reduce((sum, prod) => sum + (parseFloat(prod.preco_promo) || 0) * (prod.quantidade || 1), 0);
-        
-        return `
+        try {
+          const produtosArray = fsProdutosDaProposta(p);
+          const totalPromo = produtosArray.reduce((sum, prod) => sum + (parseFloat(prod.preco_promo) || 0) * (prod.quantidade || 1), 0);
+
+          return `
           <div class="bg-white p-5 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200">
             <div class="flex justify-between items-start">
               <div class="flex-1">
@@ -7857,6 +7898,10 @@ Demonstrativo das Solicitações de Clientes</p>
             </div>
           </div>
         `;
+        } catch (e) {
+          console.warn('[FS] Não foi possível montar um cartão de simulação:', p && (p.codigo_proposta || p.__offlineId), e);
+          return '';
+        }
       }).join('');
     }
 
@@ -7877,7 +7922,7 @@ function updateContador(count) {
       if (!proposta) return;
 
       currentProposalId = id;
-      produtos = JSON.parse(proposta.produtos || '[]');
+      produtos = fsProdutosDaProposta(proposta);
       propostaFoiSalva = true;
 
       document.getElementById('inputVendedorNome').value = proposta.vendedor_nome || '';
