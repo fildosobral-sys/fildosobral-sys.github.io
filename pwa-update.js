@@ -1,7 +1,7 @@
 (function(){
   if(!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
 
-  var VERSION = '33';
+  var VERSION = '34';
   var path = location.pathname.replace(/\/+$/, '/');
   var isCentral = path === '/' || /\/index\.html$/i.test(location.pathname);
   if(!isCentral) return;

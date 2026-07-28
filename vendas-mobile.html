@@ -5905,23 +5905,24 @@ async function salvarProposta() {
         }
 
         allProposals = lista;
+        // A gravação já terminou com sucesso. Atualizações visuais auxiliares
+        // não podem transformar um salvamento concluído em erro.
+        resultado.isOk = true;
 
         if (typeof atualizarBadgeCodigo === 'function') {
-          atualizarBadgeCodigo(proposta.codigo_proposta);
+          try { atualizarBadgeCodigo(proposta.codigo_proposta); } catch (e) { console.warn(e); }
         }
         if (typeof renderListaPropostas === 'function') {
-          renderListaPropostas(allProposals);
+          try { renderListaPropostas(allProposals); } catch (e) { console.warn(e); }
         }
         if (typeof updateContador === 'function') {
-          updateContador(allProposals.length);
+          try { updateContador(allProposals.length); } catch (e) { console.warn(e); }
         }
 
         // garante sincronismo entre telas (minhas simulações / relatórios)
         if (typeof fsRefreshLista === 'function') {
-          fsRefreshLista();
+          try { await fsRefreshLista(); } catch (e) { console.warn(e); }
         }
-
-        resultado.isOk = true;
       } catch (erro) {
         console.error('Erro ao salvar simulação offline:', erro);
       }
@@ -8609,25 +8610,28 @@ function abrirAlterarStatusProposta(id) {
         showToast('🖼️ Gerando imagem 8K...', 'success');
 
         const wrapper = document.createElement('div');
+        wrapper.className = 'fs-export-wrapper';
         wrapper.style.position = 'fixed';
         wrapper.style.left = '-100000px';
         wrapper.style.top = '0';
-        const larguraCliente = tipo === 'cliente'
-          ? Math.ceil(Math.max(target.getBoundingClientRect().width, 320))
-          : 0;
-        wrapper.style.width = (tipo === 'cliente' ? `${larguraCliente}px` : '360mm');
+        const larguraCliente = Math.ceil(Math.max(target.getBoundingClientRect().width, 320));
+        // A tabela completa não precisa de um canvas 8K real no celular.
+        // Uma base entre 960 e 1280 px preserva todas as colunas e evita
+        // estouro de memória no html2canvas.
+        const larguraTabela = Math.min(1280, Math.max(960, target.scrollWidth || 0));
+        const larguraExportacao = tipo === 'cliente' ? larguraCliente : larguraTabela;
+        wrapper.style.width = `${larguraExportacao}px`;
         wrapper.style.background = '#ffffff';
-        wrapper.style.padding = (tipo === 'cliente' ? '0' : '8mm 10mm');
+        wrapper.style.padding = (tipo === 'cliente' ? '0' : '24px 32px');
+        wrapper.style.boxSizing = 'border-box';
         wrapper.style.zIndex = '-1';
         const cloneConteudo = target.cloneNode(true);
         cloneConteudo.removeAttribute('id');
-        if (tipo === 'cliente') {
-          cloneConteudo.style.width = `${larguraCliente}px`;
-          cloneConteudo.style.maxWidth = 'none';
-          cloneConteudo.style.margin = '0';
-          cloneConteudo.style.transform = 'none';
-          cloneConteudo.style.boxSizing = 'border-box';
-        }
+        cloneConteudo.style.width = tipo === 'cliente' ? `${larguraCliente}px` : '100%';
+        cloneConteudo.style.maxWidth = 'none';
+        cloneConteudo.style.margin = '0';
+        cloneConteudo.style.transform = 'none';
+        cloneConteudo.style.boxSizing = 'border-box';
         wrapper.appendChild(cloneConteudo);
 
         document.body.appendChild(wrapper);
@@ -8708,7 +8712,7 @@ function abrirAlterarStatusProposta(id) {
         // Limitar a escala evita estouro de memória em Android/iPhone.
         const scale = tipo === 'cliente'
           ? Math.max(2, Math.min(4, 2400 / Math.max(1, wrapper.scrollWidth)))
-          : Math.max(2, Math.min(8, 7680 / Math.max(1, wrapper.scrollWidth)));
+          : Math.max(2, Math.min(3, 3200 / Math.max(1, wrapper.scrollWidth)));
 
         const canvas = await html2canvas(wrapper, {
           scale: scale,
@@ -8716,10 +8720,10 @@ function abrirAlterarStatusProposta(id) {
           allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
-          width: tipo === 'cliente' ? larguraCliente : wrapper.scrollWidth,
+          width: wrapper.scrollWidth,
           height: wrapper.scrollHeight,
-          windowWidth: tipo === 'cliente' ? larguraCliente : Math.max(wrapper.scrollWidth + 200, 2200),
-          windowHeight: tipo === 'cliente' ? wrapper.scrollHeight : Math.max(wrapper.scrollHeight + 200, 2200),
+          windowWidth: wrapper.scrollWidth,
+          windowHeight: wrapper.scrollHeight,
           scrollX: 0,
           scrollY: 0
         });
@@ -8752,6 +8756,9 @@ function abrirAlterarStatusProposta(id) {
         showToast('✅ Imagem 8K baixada com sucesso!', 'success');
       } catch (error) {
         console.error('Erro ao baixar imagem 8K:', error);
+        document.querySelectorAll('.fs-export-wrapper').forEach(function(el) {
+          try { el.remove(); } catch (_) {}
+        });
         document.body.classList.remove('export-mode');
         showToast('❌ Não foi possível gerar a imagem 8K.', 'error');
       }
