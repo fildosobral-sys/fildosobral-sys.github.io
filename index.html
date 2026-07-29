@@ -9622,4 +9622,3734 @@ img{
   btnRegistrarAtualizacao.addEventListener('click', registrarAtualizacao);
   btnNotificarTodos.addEventListener('click', notificarTodos);
   btnTrocarUsuario.addEventListener('click', trocarUsuario);
-  btnS
+  btnSairAcesso.addEventListener('click', sairAcesso);
+  document.addEventListener('click', function(e){ if (!menuDropdown.contains(e.target) && !menuBtn.contains(e.target)) menuDropdown.classList.remove('open'); if (!datePanel.contains(e.target) && e.target !== btnDate) datePanel.classList.remove('open'); if (!timePanel.contains(e.target) && e.target !== btnTime) timePanel.classList.remove('open'); });
+
+  const hpModal = document.getElementById('hp12cModal');
+  const hpClose = document.getElementById('hp12cClose');
+  const hpBackSystem = document.getElementById('hp12cBackSystem');
+  const hpDisplay = document.getElementById('hp12cDisplay');
+  const hpMini = document.getElementById('hp12cMini');
+  const hpModeBadge = document.getElementById('hpModeBadge');
+  const hpStackBadge = document.getElementById('hpStackBadge');
+  const hpCopyDisplay = document.getElementById('hpCopyDisplay');
+  const hpResetFinance = document.getElementById('hpResetFinance');
+  const hpStoMode = document.getElementById('hpStoMode');
+  const hpRclMode = document.getElementById('hpRclMode');
+  const hpShowGuide = document.getElementById('hpShowGuide');
+  const hpKeys = document.getElementById('hp12cKeys');
+  const hpGuidePanel = document.getElementById('hpGuidePanel');
+  const btnCardCalc = document.getElementById('btnCardCalc');
+  let hpLandscapeLocked = false;
+
+  const hpState = {
+    input:'0',
+    editing:true,
+    justEntered:false,
+    shift:null,
+    stack:[0,0,0,0], // T, Z, Y, X
+    fin:{n:null,i:null,pv:null,pmt:null,fv:null}
+  };
+
+  function fmtCalc(v){
+    if(v === null || v === undefined || Number.isNaN(v)) return 'Erro';
+    const abs = Math.abs(v);
+    if((abs >= 1e10) || (abs > 0 && abs < 1e-7)) return Number(v).toExponential(6).replace('e+','e');
+    return Number(v).toLocaleString('pt-BR',{maximumFractionDigits:10});
+  }
+  function displayRaw(){ return String(hpState.input).replace('.',','); }
+  function currentValue(){ return Number(String(hpState.input).replace(',','.')) || 0; }
+  function syncXFromInput(){ hpState.stack[3] = currentValue(); }
+  function updateStackVisual(){
+    const ids = ['stack-t','stack-z','stack-y','stack-x'];
+    hpState.stack.forEach(function(v,idx){
+      const el = document.getElementById(ids[idx]);
+      if(el) el.textContent = fmtCalc(v);
+    });
+    hpStackBadge.textContent = 'T/Z/Y/X';
+  }
+  function setDisplay(v, mini){
+    hpState.input = String(v);
+    hpState.editing = false;
+    syncXFromInput();
+    hpDisplay.textContent = fmtCalc(Number(v));
+    if(mini !== undefined) hpMini.textContent = mini;
+    updateStackVisual();
+    renderRegs();
+  }
+  function refreshDisplay(mini){
+    syncXFromInput();
+    hpDisplay.textContent = hpState.editing ? displayRaw() : fmtCalc(currentValue());
+    if(mini !== undefined) hpMini.textContent = mini;
+    updateStackVisual();
+  }
+  function stackLift(){ hpState.stack = [hpState.stack[1], hpState.stack[2], hpState.stack[3], hpState.stack[3]]; }
+  function stackDrop(result){ hpState.stack = [hpState.stack[0], hpState.stack[0], hpState.stack[1], result]; }
+  function clearCalc(){
+    hpState.input='0'; hpState.stack=[0,0,0,0]; hpState.editing=true; hpState.justEntered=false; hpState.shift=null;
+    refreshDisplay('HP12C pronta. Visual clássico ativo: NÚMERO → ENTER → NÚMERO → OPERAÇÃO.');
+  }
+  function clearEntry(){
+    hpState.input='0'; hpState.editing=true; syncXFromInput(); refreshDisplay('Entrada atual apagada.');
+  }
+  function appendDigit(d){
+    if(!hpState.editing || hpState.justEntered){ hpState.input=''; hpState.editing=true; hpState.justEntered=false; }
+    hpState.input = hpState.input === '0' ? String(d) : hpState.input + String(d);
+    refreshDisplay();
+  }
+  function appendDot(){
+    if(!hpState.editing || hpState.justEntered){ hpState.input='0'; hpState.editing=true; hpState.justEntered=false; }
+    if(!String(hpState.input).includes('.')) hpState.input += '.';
+    refreshDisplay();
+  }
+  function toggleSign(){ hpState.input = String(currentValue() * -1); hpState.editing=true; refreshDisplay('Sinal invertido.'); }
+  function enterPress(){
+    syncXFromInput();
+    stackLift();
+    hpState.input = String(hpState.stack[3]);
+    hpState.editing = false;
+    hpState.justEntered = true;
+    refreshDisplay('ENTER executado: X duplicado em Y.');
+  }
+  function swapXY(){
+    syncXFromInput();
+    const y = hpState.stack[2];
+    hpState.stack[2] = hpState.stack[3];
+    hpState.stack[3] = y;
+    hpState.input = String(hpState.stack[3]);
+    hpState.editing = false;
+    refreshDisplay('X e Y trocados.');
+  }
+  function calcBinaryRPN(op){
+    syncXFromInput();
+    const x = hpState.stack[3], y = hpState.stack[2];
+    let out = 0;
+    if(op==='plus') out = y + x;
+    if(op==='minus') out = y - x;
+    if(op==='multiply') out = y * x;
+    if(op==='divide') out = x === 0 ? NaN : y / x;
+    if(Number.isNaN(out)) return setDisplay(0,'Operação inválida.');
+    hpState.stackDrop(out);
+    hpState.input = String(out);
+    hpState.editing = false;
+    hpState.justEntered = false;
+    refreshDisplay('RPN aplicada com X e Y.');
+  }
+
+  function renderRegs(){
+    ['n','i','pv','pmt','fv'].forEach(function(k){
+      const el = document.getElementById('reg-' + k);
+      if(el) el.textContent = hpState.fin[k] === null ? '—' : fmtCalc(hpState.fin[k]);
+    });
+    document.querySelectorAll('[data-store]').forEach(function(btn){
+      btn.classList.toggle('pending', hpState.memAction === 'store');
+    });
+    document.querySelectorAll('[data-recall]').forEach(function(btn){
+      btn.classList.toggle('pending', hpState.memAction === 'recall');
+    });
+    if(hpStoMode) hpStoMode.classList.toggle('pending', hpState.memAction === 'store');
+    if(hpRclMode) hpRclMode.classList.toggle('pending', hpState.memAction === 'recall');
+  }
+
+  function setMemAction(type){
+    hpState.memAction = type;
+    renderRegs();
+    if(type === 'store') hpMini.textContent = 'STO ativado. Toque no registro n, i, PV, PMT ou FV.';
+    else if(type === 'recall') hpMini.textContent = 'RCL ativado. Toque no registro para recuperar.';
+  }
+
+  function clearMemAction(){ hpState.memAction = null; renderRegs(); }
+
+  function storeFin(key){ hpState.fin[key] = currentValue(); renderRegs(); hpMini.textContent = 'Registro ' + key.toUpperCase() + ' armazenado.'; clearMemAction(); }
+  function recallFin(key){ const v = hpState.fin[key]; if(v === null){ hpMini.textContent = 'Registro ' + key.toUpperCase() + ' vazio.'; clearMemAction(); return; } setDisplay(v, 'Registro ' + key.toUpperCase() + ' recuperado.'); clearMemAction(); }
+
+  function safePow(base, exp){ return Math.pow(base, exp); }
+  function solveFinance(target){
+    const n = hpState.fin.n, i = hpState.fin.i, pv = hpState.fin.pv, pmt = hpState.fin.pmt, fv = hpState.fin.fv;
+    const r = (i ?? 0) / 100;
+    let result = null;
+
+    try{
+      if(target === 'fv'){
+        if(n === null || pv === null || pmt === null) throw new Error('Preencha n, PV e PMT.');
+        result = r === 0 ? -(pv + pmt*n) : -(pv*safePow(1+r,n) + pmt*((safePow(1+r,n)-1)/r));
+      }else if(target === 'pv'){
+        if(n === null || fv === null || pmt === null) throw new Error('Preencha n, FV e PMT.');
+        result = r === 0 ? -(fv + pmt*n) : -(fv + pmt*((safePow(1+r,n)-1)/r)) / safePow(1+r,n);
+      }else if(target === 'pmt'){
+        if(n === null || pv === null || fv === null) throw new Error('Preencha n, PV e FV.');
+        result = r === 0 ? -(pv + fv) / n : -(fv + pv*safePow(1+r,n)) * r / (safePow(1+r,n)-1);
+      }else if(target === 'n'){
+        if(i === null || pv === null || pmt === null || fv === null) throw new Error('Preencha i, PV, PMT e FV.');
+        if(r === 0){ result = -(pv + fv)/pmt; }
+        else{
+          const num = pmt - fv*r;
+          const den = pmt + pv*r;
+          if(num <= 0 || den <= 0) throw new Error('Combinação inválida para n.');
+          result = Math.log(num/den) / Math.log(1+r);
+        }
+      }else if(target === 'i'){
+        if(n === null || pv === null || pmt === null || fv === null) throw new Error('Preencha n, PV, PMT e FV.');
+        let guess = 0.01;
+        for(let iter=0; iter<80; iter++){
+          const a = safePow(1+guess,n);
+          const f = pv*a + (guess === 0 ? pmt*n : pmt*((a-1)/guess)) + fv;
+          const eps = 1e-6;
+          const g2 = guess + eps;
+          const a2 = safePow(1+g2,n);
+          const f2 = pv*a2 + pmt*((a2-1)/g2) + fv;
+          const der = (f2 - f) / eps;
+          if(Math.abs(der) < 1e-10) break;
+          const next = guess - f/der;
+          if(!Number.isFinite(next) || next <= -0.999999) break;
+          if(Math.abs(next - guess) < 1e-10){ guess = next; break; }
+          guess = next;
+        }
+        result = guess * 100;
+      }
+      if(result === null || !Number.isFinite(result)) throw new Error('Não foi possível calcular.');
+      hpState.fin[target] = result;
+      setDisplay(result, 'SOL ' + target.toUpperCase() + ' concluído.');
+    }catch(err){ setDisplay(0, err.message || 'Erro no cálculo financeiro.'); return; }
+    renderRegs();
+  }
+  async function tryLandscape(){
+    try{
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement){
+        await document.documentElement.requestFullscreen();
+      }
+    }catch(e){}
+    try{
+      if (screen.orientation && screen.orientation.lock){
+        await screen.orientation.lock('landscape');
+        hpLandscapeLocked = true;
+      }
+    }catch(e){ hpLandscapeLocked = false; }
+  }
+
+  async function releaseLandscape(){
+    try{
+      if (hpLandscapeLocked && screen.orientation && screen.orientation.unlock){
+        screen.orientation.unlock();
+      }
+    }catch(e){}
+    hpLandscapeLocked = false;
+    try{
+      if (document.fullscreenElement && document.exitFullscreen){
+        await document.exitFullscreen();
+      }
+    }catch(e){}
+  }
+
+  const HP12C_WEB_URL = 'https://simulado.estacio.br/img/Hp/';
+  let hpPreviousBodyOverflow = '';
+
+  function abrirHP12C(){
+    btnCalc && btnCalc.classList.add('fs-calc-live');
+    setTimeout(function(){ btnCalc && btnCalc.classList.remove('fs-calc-live'); }, 1400);
+    const link = document.createElement('a');
+    link.href = HP12C_WEB_URL;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer external';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  async function fecharHP12C(){
+    if(!hpModal) return;
+    hpModal.classList.remove('open');
+    hpModal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('fs-hp-open');
+    document.body.style.overflow = hpPreviousBodyOverflow;
+    await releaseLandscape();
+  }
+function showGuide(){ try{ var p=document.getElementById('hpGuidePanel'); if(p) p.classList.toggle('open'); }catch(e){} }
+
+  hpCopyDisplay && hpCopyDisplay.addEventListener('click', async function(){
+    try{
+      await navigator.clipboard.writeText(hpDisplay.textContent);
+      hpMini.textContent = 'Visor copiado.';
+    }catch(e){
+      hpMini.textContent = 'Não foi possível copiar o visor.';
+    }
+  });
+  hpResetFinance && hpResetFinance.addEventListener('click', function(){
+    hpState.fin = {n:null,i:null,pv:null,pmt:null,fv:null};
+    clearMemAction();
+    renderRegs();
+    hpMini.textContent = 'Registros financeiros zerados.';
+  });
+  hpShowGuide && hpShowGuide.addEventListener('click', showGuide);
+
+  btnCardCalc && btnCardCalc.addEventListener('click', function(e){
+    e.preventDefault();
+    abrirHP12C();
+  });
+  hpClose && hpClose.addEventListener('click', fecharHP12C);
+  hpBackSystem && hpBackSystem.addEventListener('click', function(){
+    abrirHP12C();
+  });
+  hpModal && hpModal.addEventListener('click', function(e){
+    if(e.target === hpModal) fecharHP12C();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && hpModal && hpModal.classList.contains('open')) fecharHP12C();
+  });
+  window.addEventListener('keydown', function(e){
+    if(e.key.toLowerCase() === 'h' && (e.ctrlKey || e.metaKey)){
+      e.preventDefault();
+      abrirHP12C();
+    }
+  });
+  renderRegs();
+  clearCalc();
+})();
+</script>
+<div class="fs-access-backdrop" id="fsAccessBackdrop"></div>
+<div aria-labelledby="fsAccessTitle" aria-modal="true" class="fs-access-modal" id="fsAccessModal" role="dialog">
+<h3 id="fsAccessTitle">Identificação de acesso</h3>
+<p>Informe os dados do colaborador para entrar no sistema.</p>
+<label for="fsAccessFilial">Filial</label>
+<input autocomplete="off" id="fsAccessFilial" placeholder="FILIAL 28"/>
+<label for="fsAccessNome">Nome completo</label>
+<input autocomplete="off" id="fsAccessNome" placeholder="NOME COMPLETO"/>
+<label for="fsAccessCargo">Cargo / função</label>
+<input autocomplete="off" id="fsAccessCargo" placeholder="VENDEDOR(A)"/>
+<label for="fsAccessWhats">WhatsApp</label>
+<input autocomplete="off" id="fsAccessWhats" inputmode="numeric" placeholder="88999999999"/>
+<label for="fsAccessGenero">Perfil visual</label>
+<select id="fsAccessGenero">
+<option value="AUTOMATICO">Automático pelo nome</option>
+<option value="FEMININO">Feminino</option>
+<option value="MASCULINO">Masculino</option>
+<option value="NEUTRO">Neutro</option>
+</select>
+<div class="fs-access-actions">
+<button class="fs-access-cancel" id="fsAccessCancel" type="button">Cancelar</button>
+<button class="fs-access-ok" id="fsAccessOk" type="button">Entrar</button>
+</div>
+</div>
+<script id="fs-pwa-ux-patch">
+(function(){
+  function setStandaloneState(){
+    var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    document.documentElement.classList.toggle('fs-standalone', !!standalone);
+    document.body.classList.toggle('fs-standalone', !!standalone);
+  }
+
+  window.addEventListener('DOMContentLoaded', setStandaloneState);
+  window.addEventListener('focus', setStandaloneState);
+  window.matchMedia('(display-mode: standalone)').addEventListener?.('change', setStandaloneState);
+
+  window.addEventListener('load', function(){
+    var logo = document.querySelector('.logo-badge.logo-image');
+    if(logo){
+      logo.setAttribute('src', 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjA0IiBoZWlnaHQ9IjQ0IiB2aWV3Qm94PSIwIDAgMjA0IDQ0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZyBpZD0iR3JvdXAgMTkiPgo8ZyBpZD0iR3JvdXAgMTM0MyI+CjxwYXRoIGlkPSJWZWN0b3IiIGQ9Ik0zOS42NjM1IDIuMDQ4NzhINDAuODc1OEM0NC45ODU0IDEuMjcyNDQgNDkuMTU2MSAwLjg3MTc1NCA1My4zMzcxIDAuODUxNTkzQzczLjAwMjEgMC44NTE1OTMgODIuNDE0OCAxMC41NTIxIDc0LjMwNTkgMjIuNDE5OUM3MC43ODg0IDI3LjU3MDYgNjQuNTM5IDMyLjMwOTcgNTYuOTk1MiAzNi4wMjQzVjQyLjM5ODJIMzguNDExM0MzMy42Mzc1IDQzLjQzMTcgMjguNzcxMiA0My45Njg0IDIzLjg4ODggNDRDNC4yMjE0NiA0NCAtNS4yMDc3IDM0LjMxMTMgMi45MiAyMi40MTk5QzYuNzg2ODcgMTYuNzY1MiAxMy45NTMxIDExLjYwMjYgMjIuNTI4NyA3Ljc1MDhWMi4wNDg3OEgzOS42NjM1WiIgZmlsbD0iI0VEMUMyNCIvPgo8cGF0aCBpZD0iVmVjdG9yXzIiIGQ9Ik0zNi40MzkgMzMuNDc0M0w1NS4yMjkzIDEzLjQ0NjJDNTcuMjMxOSAxMS4yODYxIDU4LjI2MzcgOS40NDI5NyA1OC4yNjM3IDcuODkwODlDNTguMjYzNyA2Ljg1MjIyIDU3Ljg3NDUgNS44NTE0MSA1Ny4xMTQ3IDQuODkwODJDNTYuMzU5NCAzLjkyNzc0IDU1LjM0NzQgMy4yMDIxNCA1NC4xOTc1IDIuNzk5MjlDNTIuNzkwNSAyLjI4ODI0IDUwLjQ2MiAyLjAxMzc5IDQ3LjE5NzggMi4wMTM3OUg0MC44ODA0QzQwLjQ3NTUgMi4wODYzNCA0MC4wNzE0IDIuMTY1MjEgMzkuNjY4IDIuMjUwMzhDMzMuNzc0MyAzLjQzMDYzIDI4LjAyNzggNS4yNjQzNSAyMi41MzMzIDcuNzE4MTdWMTAuOTI2NEg0Mi44NDA4TDIzLjg0NjQgMzEuMTAxMkMyMS45NzA1IDMzLjEwMjggMjEuMDMyNSAzNC44MyAyMS4wMzI1IDM2LjI2MTRDMjEuMDMyNSAzOC4xMDY5IDIxLjk3MDUgMzkuNjM3NiAyMy43OTI1IDQwLjgzNDhDMjUuMzE1MiA0MS44NTY5IDI3LjgzODQgNDIuMzY3MiAzMS4zNjIxIDQyLjM2NTZIMzguNDE1OEMzOC44MzMyIDQyLjI3ODEgMzkuMjQ4MyA0Mi4xODU4IDM5LjY2NTcgNDIuMDkxMkM0NS42NTQ5IDQwLjczMjYgNTEuNDcgMzguNjg2MSA1Ni45OTc0IDM1Ljk5MTdWMzMuNDc0M0gzNi40MzlaIiBmaWxsPSJ3aGl0ZSIvPgo8L2c+CjxnIGlkPSJHcm91cCA5Ij4KPHBhdGggaWQ9IlZlY3Rvcl8zIiBkPSJNMTA5Ljc3NCAxNi41ODAzQzEwOS45NjYgMTYuMzc0NSAxMTAuMTU2IDE2LjE2ODYgMTEwLjMxNiAxNS45NjA0QzExMS4zMjcgMTQuNzY1NiAxMTEuODI0IDEzLjczNCAxMTEuODI0IDEyLjgzNUMxMTEuODEgMTIuMDk0MiAxMTEuNTM1IDExLjM4MjcgMTExLjA0NyAxMC44Mjg2QzExMC44MzQgMTAuNTUzMyAxMTAuNTg5IDEwLjMwNTQgMTEwLjMxNiAxMC4wOTA0QzEwOS45NDQgOS44MDYxOCAxMDkuNTMgOS41ODI2MyAxMDkuMDg5IDkuNDI3OTZDMTA4LjEzOSA5LjA3MzA2IDEwNi41NiA4Ljg5NTYxIDEwNC4zNTMgOC44OTU2MUg4Ny42OTYxVjE0Ljg5MUgxMDEuNDIxTDg4LjU4NzIgMjguNTE2N0M4Ny4zMTE2IDI5Ljg3MjQgODYuNjgzMSAzMS4wMjQ2IDg2LjY4MzEgMzIuMDExM0M4Ni42ODMxIDMzLjI1MSA4Ny4yOTk4IDM0LjI4NSA4OC41NDI3IDM1LjA4N0M4OS41NjUxIDM1Ljc4MDMgOTEuMjc0NiAzNi4xMTg2IDkzLjY1OTQgMzYuMTE4NkgxMTAuOTgyVjMwLjEwOUg5Ny4wOTAxTDEwOS43NzQgMTYuNTgwM1oiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGlkPSJWZWN0b3JfNCIgZD0iTTE0MC41NzggMjQuOTU2OEMxNDEuNDM0IDI0LjgwNTEgMTQyLjI1NiAyNC40OTk4IDE0My4wMDUgMjQuMDU1M0MxNDQuNTQxIDIzLjE0MjEgMTQ1LjI5OCAyMS44NTk3IDE0NS4yOTggMjAuMjIyNEMxNDUuMjk4IDE5LjAzOTUgMTQ0Ljg3NiAxNy43NTk1IDE0NC4wNDYgMTYuMzczQzE0My4xMzEgMTQuOTMxMSAxNDEuOTcxIDEzLjY2MzIgMTQwLjYyIDEyLjYyNzZDMTM3LjE0MiA5LjkxMzg2IDEzMi45MDMgOC41NDE1OSAxMjcuNzkxIDguNTI5NzZDMTIzLjI1OCA4LjUyOTc2IDExOS4zNDkgOS42NTEyNCAxMTYuMDA3IDExLjkwNkMxMTQuMTI2IDEzLjEzMTkgMTEyLjUzOCAxNC43NjQ0IDExMS4zNTkgMTYuNjg1M0MxMTEuMzA1IDE2Ljc2NSAxMTEuMjU2IDE2Ljg0OCAxMTEuMjExIDE2LjkzMzdDMTEwLjIyNyAxOC42MjY5IDEwOS43MDggMjAuNTU0NCAxMDkuNzA4IDIyLjUxNzVDMTA5LjcwOCAyNC40ODA1IDExMC4yMjcgMjYuNDA4IDExMS4yMTEgMjguMTAxMkMxMTIuMTkyIDI5Ljc5NTIgMTEzLjY1MyAzMS4zMjg0IDExNS41OTcgMzIuNzE3MkMxMTkuMTE0IDM1LjIzNyAxMjMuMTk3IDM2LjUwMjggMTI3Ljg5MSAzNi41MDI4QzEzMC4zMjcgMzYuNDk0MSAxMzIuNzQ1IDM2LjA4NTggMTM1LjA1MSAzNS4yOTM4QzEzNy4zMDQgMzQuNTU2MyAxMzkuMzk4IDMzLjM5NDYgMTQxLjIyMyAzMS44NzAyQzE0Mi42OTUgMzAuNjIyMiAxNDMuODgyIDI5LjA2NjYgMTQ0LjcgMjcuMzEwOUgxMzYuMDYxQzEzNS44MDMgMjkuNDIxNCAxMzEuNjA2IDMwLjM4NjcgMTI3Ljg5MSAzMC4zNjU0QzEyNS44NTEgMzAuMzg2NyAxMjMuODM3IDI5Ljg5OTEgMTIyLjAyOSAyOC45NDU4QzEyMC4yNzUgMjcuOTk5NCAxMTkuMDQ2IDI2LjczMzYgMTE4LjM0NSAyNS4xNjAzSDEzNi4zNTRDMTM4LjMyNyAyNS4xNjAzIDEzOS43NDUgMjUuMTAxMSAxNDAuNTc1IDI0Ljk2ODZMMTQwLjU3OCAyNC45NTY4Wk0xMTguMzE5IDE5LjQxMzNDMTE5LjE3NiAxNy44MjkxIDEyMC40OTIgMTYuNTQ3NyAxMjIuMDkyIDE1Ljc0MTNDMTIzLjc1NyAxNC44ODcyIDEyNS42NDUgMTQuNDU4OSAxMjcuODUxIDE0LjQ0NDdDMTI5Ljg1NCAxNC40MDkxIDEzMS44MzMgMTQuODc0OSAxMzMuNjEzIDE1LjgwMDRDMTM1LjMwOSAxNi43MDQyIDEzNi40ODEgMTcuOTEzMiAxMzcuMTg1IDE5LjQxMzNIMTE4LjMxOVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGlkPSJWZWN0b3JfNSIgZD0iTTIwMi4wNTYgOC42MjY4MkMxOTcuODkxIDguNjI2ODIgMTk0LjU4MyA5LjUzNjE0IDE5Mi4xMyAxMS4zNTQ4QzE4OS41IDEzLjMzMjggMTg4LjE4NSAxNi4yNDM3IDE4OC4xODMgMjAuMDg3NlYzNi4xMDNIMTk2LjI5N1YyMS43NjI3QzE5Ni4yOTcgMTkuMTgxNSAxOTYuODM2IDE3LjQwOTMgMTk3LjkwMyAxNi40MjI3QzE5OC45NyAxNS40MzYxIDIwMS4wMDUgMTQuODczIDIwNCAxNC43NDA1VjguNzAyNTNDMjAzLjA5NSA4LjY1NzU3IDIwMi40MzYgOC42MjY4MiAyMDIuMDU2IDguNjI2ODJaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBpZD0iVmVjdG9yXzYiIGQ9Ik0xNzIuOTUgMTIuNTk3MUMxNzAgOS44ODU2NCAxNjYuMTY2IDguNTI5OTMgMTYxLjQ0OCA4LjUyOTkzQzE1OS4yNDIgOC41MjA2OSAxNTcuMDUxIDguODk0NDUgMTU0Ljk3MSA5LjYzNDg0QzE1My4wNTEgMTAuMjc4MiAxNTEuMjg0IDExLjMxNzYgMTQ5Ljc4NCAxMi42ODdDMTQ3LjYwNSAxNC43NjY3IDE0Ni41MzggMTcuNDM1NSAxNDYuNTM4IDIwLjczMTNWMzYuMTI5MUgxNTQuNjM1VjIyLjUwODJDMTU0LjYzNSAxOS44MzkzIDE1NS4wNzQgMTcuOTc5NyAxNTUuOTY1IDE2Ljg4ODlDMTU2LjU5MyAxNi4xNjQxIDE1Ny4zODkgMTUuNjA3MyAxNTguMjgyIDE1LjI2ODJDMTU5LjI4OSAxNC44NTUxIDE2MC4zNjcgMTQuNjQzNyAxNjEuNDU1IDE0LjY0NkMxNjIuNTM5IDE0LjY0MjMgMTYzLjYxMyAxNC44NTc5IDE2NC42MTMgMTUuMjgwMUMxNjUuNSAxNS42MTk2IDE2Ni4yODUgMTYuMTgzNCAxNjYuODkzIDE2LjkxNzNDMTY3Ljc1NiAxOC4xMDAzIDE2OC4xOCAyMC4xMDQzIDE2OC4xOCAyMi45MzY0VjM2LjEyMkgxNzYuMjkxVjIxLjEzNTlDMTc2LjI5MSAxOS4wNzA0IDE3Ni4wNDMgMTcuNDE4OSAxNzUuNTYyIDE2LjE4MTVDMTc1LjA4MSAxNC45NDQxIDE3NC4yMjggMTMuNzM1MSAxNzIuOTUgMTIuNTk3MVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGlkPSJWZWN0b3JfNyIgZD0iTTE4Ni4zMTUgOC44OTU2MUgxNzguMTg5VjM2LjEyMUgxODYuMzE1VjguODk1NjFaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBpZD0iVmVjdG9yXzgiIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMTg2Ljk1NyAzLjU3OTczQzE4Ni45NTcgNS41NTc2OSAxODQuODI4IDcuMTYxODMgMTgyLjIwMSA3LjE2MTgzQzE3OS41NzUgNy4xNjE4MyAxNzcuNDQxIDUuNTU3NjkgMTc3LjQ0MSAzLjU3OTczQzE3Ny40NDEgMS42MDE3NyAxNzkuNTc1IDAgMTgyLjIwNCAwQzE4NC44MzMgMCAxODYuOTU5IDEuNjA0MTQgMTg2Ljk1OSAzLjU3OTczIiBmaWxsPSJ3aGl0ZSIvPgo8L2c+CjwvZz4KPC9zdmc+Cg==');
+    }
+  });
+})();
+</script>
+<script id="fs-download-menu">
+function fsDownloadHTML(){
+  const html = document.documentElement.outerHTML;
+  const blob = new Blob([html],{type:"text/html"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  let name = "sistema.html";
+  if(location.href.toLowerCase().includes("vendas")) name="vendas-mobile.html";
+  if(location.href.toLowerCase().includes("crediario")) name="crediario-mobile.html";
+  if(location.href.toLowerCase().includes("index")) name="index.html";
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+let deferredPrompt = null;
+function fsIsIOS(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+}
+function fsIsStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function fsToggleInstallButtons(show){
+  ['btnInstallApp','btnInstallAppMenu'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(!el) return;
+    if(show) el.classList.add('show'); else el.classList.remove('show');
+    el.style.display = show ? 'inline-flex' : 'none';
+  });
+}
+function fsInstallInstructions(){
+  if(fsIsIOS()){
+    alert("No iPhone/iPad: toque em Compartilhar no navegador e depois em 'Adicionar à Tela de Início'.");
+    return;
+  }
+  alert("Para instalar: use a opção 'Instalar aplicativo' ou 'Adicionar à tela inicial' no menu do navegador.");
+}
+function fsInstallApp(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.finally(function(){
+      deferredPrompt = null;
+      fsToggleInstallButtons(false);
+    });
+    return;
+  }
+  fsInstallInstructions();
+}
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferredPrompt = e;
+  fsToggleInstallButtons(true);
+});
+window.addEventListener('appinstalled', function(){
+  deferredPrompt = null;
+  fsToggleInstallButtons(false);
+});
+window.addEventListener('DOMContentLoaded', function(){
+  var standalone = fsIsStandalone();
+  fsToggleInstallButtons(!standalone && !fsIsIOS());
+  ['btnInstallApp','btnInstallAppMenu'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('click', fsInstallApp);
+  });
+  if(fsIsIOS() && !standalone){
+    fsToggleInstallButtons(true);
+  }
+});
+</script>
+<script id="fs-index-stable-auth">
+(function(){
+  function upperLive(v){ return String(v||'').toUpperCase(); }
+  function upperSave(v){ return String(v||'').toUpperCase().trim(); }
+  function onlyDigits(v){ return String(v||'').replace(/\D/g,''); }
+  function normalizarFilial(v){
+    var numero = onlyDigits(v);
+    return numero ? 'FILIAL ' + numero : upperSave(v).replace(/\s+/g, ' ');
+  }
+  function filialOk(v){ return /^FILIAL\s+\d+$/i.test(normalizarFilial(v)); }
+
+  function getUser(){
+    return {
+      filial: upperSave(localStorage.getItem('fs_filial') || ''),
+      nome: upperSave(localStorage.getItem('fs_nome') || ''),
+      cargo: upperSave(localStorage.getItem('fs_cargo') || ''),
+      whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || ''),
+      genero: upperSave(localStorage.getItem('fs_genero') || 'AUTOMATICO')
+    };
+  }
+
+  function hasSavedUser(u){
+    return !!(u && u.filial && u.nome && u.cargo);
+  }
+
+  function saveUser(u){
+    localStorage.setItem('fs_filial', upperSave(u.filial||''));
+    localStorage.setItem('fs_nome', upperSave(u.nome||''));
+    localStorage.setItem('fs_cargo', upperSave(u.cargo||''));
+    localStorage.setItem('fs_whatsapp', onlyDigits(u.whatsapp||''));
+    localStorage.setItem('fs_genero', upperSave(u.genero||'AUTOMATICO'));
+    localStorage.setItem('fsAuthGlobal', 'ok-@fildO1060');
+    localStorage.setItem('fs_access_persisted', '1');
+    sessionStorage.setItem('fs_access_done', '1');
+  }
+
+  function clearUser(){
+    localStorage.removeItem('fs_filial');
+    localStorage.removeItem('fs_nome');
+    localStorage.removeItem('fs_cargo');
+    localStorage.removeItem('fs_whatsapp');
+    localStorage.removeItem('fs_genero');
+    localStorage.removeItem('fs_access_persisted');
+    sessionStorage.removeItem('fs_access_done');
+  }
+
+  function resetBadge(){
+    var menuUserName = document.getElementById('menuUserName');
+    var menuRole = document.getElementById('menuRole');
+    if(menuUserName) menuUserName.textContent = 'Fildo';
+    if(menuRole) menuRole.textContent = 'Menu';
+  }
+
+  function syncBadge(){
+    var u = getUser();
+    var menuUserName = document.getElementById('menuUserName');
+    var menuRole = document.getElementById('menuRole');
+    if(u.nome){
+      if(menuUserName) menuUserName.textContent = u.nome;
+      if(menuRole) menuRole.textContent = u.cargo || 'USUÁRIO';
+    }else{
+      resetBadge();
+    }
+  }
+
+  function applyPermissionVisibility(){
+    var btnShare = document.getElementById('btnSharePanel');
+    if(btnShare){
+      btnShare.style.display = 'inline-flex';
+      btnShare.style.visibility = 'visible';
+      btnShare.style.opacity = '1';
+    }
+    syncBadge();
+  }
+
+  function unlockInterface(){
+    document.documentElement.classList.remove('fs-auth-lock');
+    var screen = document.getElementById('fsUnauthorizedScreen');
+    if(screen) screen.classList.remove('show');
+  }
+
+  function closeAccessModal(){
+    var backdrop = document.getElementById('fsAccessBackdrop');
+    var modal = document.getElementById('fsAccessModal');
+    if(backdrop) backdrop.classList.remove('open');
+    if(modal) modal.classList.remove('open');
+  }
+
+  function showUnauthorized(message){
+    closeAccessModal();
+    document.documentElement.classList.add('fs-auth-lock');
+    var screen = document.getElementById('fsUnauthorizedScreen');
+    if(screen){
+      var p = screen.querySelector('p');
+      if(p && message) p.textContent = message;
+      screen.classList.add('show');
+    }
+    setTimeout(function(){
+      try{ window.close(); }catch(e){}
+      try{ if(window.history.length > 1) window.history.back(); }catch(e){}
+    }, 900);
+  }
+
+  function openModal(){
+    return new Promise(function(resolve){
+      var backdrop = document.getElementById('fsAccessBackdrop');
+      var modal = document.getElementById('fsAccessModal');
+      var filial = document.getElementById('fsAccessFilial');
+      var nome = document.getElementById('fsAccessNome');
+      var cargo = document.getElementById('fsAccessCargo');
+      var whats = document.getElementById('fsAccessWhats');
+      var genero = document.getElementById('fsAccessGenero');
+      var ok = document.getElementById('fsAccessOk');
+      var cancel = document.getElementById('fsAccessCancel');
+
+      var current = getUser();
+      [filial,nome,cargo].forEach(function(el){
+        el.oninput = function(){
+          var pos = el.selectionStart;
+          el.value = upperLive(el.value);
+          try{ el.setSelectionRange(pos,pos); }catch(e){}
+        };
+      });
+      filial.value = current.filial || '';
+      nome.value = current.nome || '';
+      cargo.value = current.cargo || '';
+      whats.value = current.whatsapp || '';
+      if(genero) genero.value = current.genero || 'AUTOMATICO';
+      whats.oninput = function(){ whats.value = onlyDigits(whats.value); };
+
+      function close(result){
+        backdrop.classList.remove('open');
+        modal.classList.remove('open');
+        ok.onclick = cancel.onclick = backdrop.onclick = null;
+        resolve(result);
+      }
+
+      ok.onclick = function(){
+        var payload = {
+          filial: normalizarFilial(filial.value),
+          nome: upperSave(nome.value),
+          cargo: upperSave(cargo.value),
+          whatsapp: onlyDigits(whats.value),
+          genero: upperSave(genero && genero.value || 'AUTOMATICO')
+        };
+        if(!filialOk(payload.filial)){ alert('USE O PADRÃO: FILIAL 28'); filial.focus(); return; }
+        if(!payload.nome){ nome.focus(); return; }
+        if(!payload.cargo){ cargo.focus(); return; }
+        close(payload);
+      };
+
+      cancel.onclick = function(){ close(null); };
+      backdrop.onclick = function(){ close(null); };
+      backdrop.classList.add('open');
+      modal.classList.add('open');
+      setTimeout(function(){ filial.focus(); }, 60);
+    });
+  }
+
+  window.fsConfirmarAcesso = async function(force){
+    var actual = getUser();
+
+    if(!force && hasSavedUser(actual)){
+      saveUser(actual);
+      applyPermissionVisibility();
+      unlockInterface();
+      return true;
+    }
+
+    var data = await openModal();
+
+    if(!data){
+      clearUser();
+      resetBadge();
+      showUnauthorized('Sistema não autorizado. Solicite acesso ao responsável.');
+      return false;
+    }
+
+    saveUser(data);
+    applyPermissionVisibility();
+    unlockInterface();
+    return true;
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var logo = document.querySelector('.logo-badge.logo-image');
+    if(logo){
+      logo.decoding = 'sync';
+      logo.loading = 'eager';
+    }
+
+    resetBadge();
+
+    setTimeout(async function(){
+      var u = getUser();
+      if(hasSavedUser(u)){
+        saveUser(u);
+        applyPermissionVisibility();
+        unlockInterface();
+        return;
+      }
+      await window.fsConfirmarAcesso(true);
+    }, 120);
+
+    document.querySelectorAll('.card').forEach(function(card){
+      var link = card.querySelector('.card-action[href]');
+      if(!link) return;
+      card.classList.add('card-clickable');
+
+      if(card.id === 'cardDashboardBI'){
+        return;
+      }
+
+      function isMobileViewport(){
+        return window.matchMedia('(max-width: 768px)').matches;
+      }
+
+      function go(){
+        if(isMobileViewport()){
+          if(card.classList.contains('fs-mobile-opening')) return;
+          card.classList.add('fs-mobile-opening');
+          card.classList.add('fs-card-press');
+          setTimeout(function(){
+            window.location.href = link.getAttribute('href');
+          }, 600);
+          return;
+        }
+        card.classList.add('fs-card-press');
+        setTimeout(function(){ window.location.href = link.getAttribute('href'); }, 120);
+      }
+
+      card.onclick = function(e){
+        e.preventDefault();
+        if(e.target.closest('a,button,input,select,textarea,label')) return;
+        go();
+      };
+      link.onclick = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        go();
+      };
+    });
+
+    var btnTrocar = document.getElementById('btnTrocarUsuario');
+    if(btnTrocar){
+      btnTrocar.onclick = async function(){
+        clearUser();
+        resetBadge();
+        document.documentElement.classList.add('fs-auth-lock');
+        await window.fsConfirmarAcesso(true);
+      };
+    }
+
+    var btnSair = document.getElementById('btnSairAcesso');
+    if(btnSair){
+      btnSair.onclick = function(){
+        clearUser();
+        resetBadge();
+        showUnauthorized('Sistema não autorizado. Solicite acesso ao responsável.');
+      };
+    }
+  });
+})();
+</script>
+<script id="fs-final-runtime">
+(function(){
+  function hideSplash(){
+    var splash = document.getElementById('fsSplash');
+    if(!splash) return;
+    splash.classList.add('hide');
+    document.body.classList.add('fs-app-ready');
+    setTimeout(function(){ splash.style.display='none'; }, 180);
+  }
+  window.addEventListener('load', function(){ setTimeout(hideSplash, 120); });
+  setTimeout(hideSplash, 1000);
+
+})();
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
+
+  const cards = Array.from(document.querySelectorAll(
+    '.card, .module-card, .feature-card, .dashboard-card, .section-card, article[class*="card"]'
+  ));
+
+  if (!cards.length) return;
+
+  const clearFocus = () => cards.forEach(card => card.classList.remove('is-focus'));
+
+  const applyFocus = () => {
+    if (!isMobileViewport()) {
+      clearFocus();
+      return;
+    }
+    const viewportCenter = window.innerHeight / 2;
+
+    cards.forEach(card => {
+      const rect = card.getBoundingClientRect();
+      const cardCenter = rect.top + rect.height / 2;
+      const distance = Math.abs(viewportCenter - cardCenter);
+
+      const triggerRange = Math.min(160, rect.height * 0.45);
+
+      if (distance <= triggerRange) {
+        card.classList.add("is-focus");
+      } else {
+        card.classList.remove("is-focus");
+      }
+    });
+  };
+
+  let ticking = false;
+
+  const onScroll = () => {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        applyFocus();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  };
+
+  applyFocus();
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", () => { if (!isMobileViewport()) clearFocus(); applyFocus(); });
+});
+</script>
+<script id="fs-scroll-focus-level-up-js">
+document.addEventListener("DOMContentLoaded", () => {
+  const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
+
+  const cards = Array.from(document.querySelectorAll(
+    '.card, .module-card, .feature-card, .dashboard-card, .section-card, article[class*="card"]'
+  ));
+  if (!cards.length) return;
+
+  const clearFocus = () => cards.forEach(card => card.classList.remove('is-focus'));
+
+  const applyFocus = () => {
+    if (!isMobileViewport()) {
+      clearFocus();
+      return;
+    }
+    const viewportCenter = window.innerHeight / 2;
+    let bestCard = null;
+    let bestDistance = Infinity;
+
+    cards.forEach(card => {
+      const rect = card.getBoundingClientRect();
+      const cardCenter = rect.top + rect.height / 2;
+      const distance = Math.abs(viewportCenter - cardCenter);
+
+      card.classList.remove("is-focus");
+
+      if (rect.bottom > 40 && rect.top < window.innerHeight - 40 && distance < bestDistance) {
+        bestDistance = distance;
+        bestCard = card;
+      }
+    });
+
+    if (bestCard) bestCard.classList.add("is-focus");
+  };
+
+  let ticking = false;
+  const onScroll = () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        applyFocus();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  };
+
+  applyFocus();
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", () => { if (!isMobileViewport()) clearFocus(); applyFocus(); }, { passive: true });
+});
+</script>
+<script id="fs-save-access-data">
+(function(){
+  const KEY = 'fs_access_data_v1';
+
+  function qs(root, sel){
+    try { return root.querySelector(sel); } catch(e){ return null; }
+  }
+
+  function qsa(root, sel){
+    try { return Array.from(root.querySelectorAll(sel)); } catch(e){ return []; }
+  }
+
+  function normalizeText(s){
+    return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  }
+
+  function findAccessModal(){
+    const candidates = [
+      ...qsa(document, '.modal, .dialog, [role="dialog"]'),
+      ...qsa(document, 'form'),
+      ...qsa(document, 'section, div')
+    ];
+    for(const el of candidates){
+      const txt = normalizeText(el.innerText || '');
+      if(txt.includes('identificacao de acesso') || (txt.includes('filial') && txt.includes('nome completo') && txt.includes('whatsapp'))){
+        return el;
+      }
+    }
+    return null;
+  }
+
+  function getFields(scope){
+    const inputs = qsa(scope || document, 'input, select, textarea');
+    let filial=null, nome=null, cargo=null, whatsapp=null;
+    inputs.forEach(inp => {
+      const ph = normalizeText(inp.placeholder || '');
+      const nm = normalizeText(inp.name || '');
+      const id = normalizeText(inp.id || '');
+      const aria = normalizeText(inp.getAttribute('aria-label') || '');
+      const labelText = normalizeText(
+        (inp.closest('label')?.innerText) ||
+        (document.querySelector(`label[for="${inp.id}"]`)?.innerText) || ''
+      );
+      const all = [ph,nm,id,aria,labelText].join(' ');
+      if(!filial && all.match(/filial/)) filial = inp;
+      else if(!nome && all.match(/nome/)) nome = inp;
+      else if(!cargo && all.match(/cargo|funcao|função/)) cargo = inp;
+      else if(!whatsapp && all.match(/whats|telefone|celular/)) whatsapp = inp;
+    });
+    return {filial, nome, cargo, whatsapp};
+  }
+
+  function loadSaved(){
+    try{
+      return JSON.parse(localStorage.getItem(KEY) || 'null');
+    }catch(e){
+      return null;
+    }
+  }
+
+  function saveData(data){
+    try{
+      localStorage.setItem(KEY, JSON.stringify(data));
+      localStorage.setItem(KEY + '_enabled', '1');
+    }catch(e){}
+  }
+
+  function isEnabled(){
+    try { return localStorage.getItem(KEY + '_enabled') !== '0'; } catch(e){ return true; }
+  }
+
+  function fillIfSaved(scope){
+    const saved = loadSaved();
+    if(!saved || !isEnabled()) return false;
+    const {filial, nome, cargo, whatsapp} = getFields(scope);
+    if(filial && saved.filial) filial.value = saved.filial;
+    if(nome && saved.nome) nome.value = saved.nome;
+    if(cargo && saved.cargo) cargo.value = saved.cargo;
+    if(whatsapp && saved.whatsapp) whatsapp.value = saved.whatsapp;
+    [filial,nome,cargo,whatsapp].forEach(el => {
+      if(el){
+        el.dispatchEvent(new Event('input', {bubbles:true}));
+        el.dispatchEvent(new Event('change', {bubbles:true}));
+      }
+    });
+    return true;
+  }
+
+  function addSaveOption(scope){
+    if(!scope || qs(scope, '#fs-save-access-wrap')) return;
+
+    const {filial, nome, cargo, whatsapp} = getFields(scope);
+    if(!(filial || nome || cargo || whatsapp)) return;
+
+    const row = document.createElement('label');
+    row.id = 'fs-save-access-wrap';
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.gap = '10px';
+    row.style.margin = '12px 0 4px';
+    row.style.fontSize = '14px';
+    row.style.color = '#334155';
+    row.style.userSelect = 'none';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = isEnabled();
+    cb.style.width = '18px';
+    cb.style.height = '18px';
+    cb.addEventListener('change', () => {
+      try { localStorage.setItem(KEY + '_enabled', cb.checked ? '1' : '0'); } catch(e){}
+      if(cb.checked){
+        saveCurrent(scope);
+      }
+    });
+
+    const span = document.createElement('span');
+    span.textContent = 'Manter meus dados salvos neste aparelho';
+
+    row.appendChild(cb);
+    row.appendChild(span);
+
+    // place before action buttons if possible
+    const actions = qsa(scope, 'button, .btn').find(el => /entrar|cancelar|confirmar|continuar/i.test(el.innerText||''));
+    if(actions && actions.parentElement){
+      actions.parentElement.parentElement.insertBefore(row, actions.parentElement);
+    } else {
+      scope.appendChild(row);
+    }
+
+    // save on field changes
+    [filial, nome, cargo, whatsapp].forEach(el => {
+      if(el){
+        el.addEventListener('input', () => { if(cb.checked) saveCurrent(scope); });
+        el.addEventListener('change', () => { if(cb.checked) saveCurrent(scope); });
+      }
+    });
+  }
+
+  function saveCurrent(scope){
+    const {filial, nome, cargo, whatsapp} = getFields(scope);
+    const data = {
+      filial: filial?.value || '',
+      nome: nome?.value || '',
+      cargo: cargo?.value || '',
+      whatsapp: whatsapp?.value || '',
+    };
+    saveData(data);
+  }
+
+  function tryAutoConfirm(scope){
+    if(!scope || !isEnabled()) return;
+    const saved = loadSaved();
+    if(!saved) return;
+
+    const {filial, nome, cargo, whatsapp} = getFields(scope);
+    const hasAll = [filial?.value, nome?.value, cargo?.value, whatsapp?.value].every(v => (v || '').trim() !== '');
+    if(!hasAll) return;
+
+    // only auto-confirm after a small delay and only when modal appears
+    const okBtn = qsa(scope, 'button, .btn, a').find(el => /entrar|confirmar|continuar/i.test((el.innerText || '').trim()));
+    if(okBtn){
+      setTimeout(() => {
+        try { okBtn.click(); } catch(e){}
+      }, 180);
+    }
+  }
+
+  function initAccessPersistence(){
+    const scope = findAccessModal();
+    if(!scope) return;
+    addSaveOption(scope);
+    fillIfSaved(scope);
+  }
+
+  // watch for modal openings
+  const obs = new MutationObserver(() => {
+    const scope = findAccessModal();
+    if(scope){
+      addSaveOption(scope);
+      const filled = fillIfSaved(scope);
+      if(filled) tryAutoConfirm(scope);
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initAccessPersistence();
+    obs.observe(document.documentElement, {childList:true, subtree:true});
+  });
+})();
+</script>
+<script id="fs-mobile-pageshow-reset">
+window.addEventListener('pageshow', function(){
+  document.querySelectorAll('.fs-mobile-opening').forEach(function(card){
+    card.classList.remove('fs-mobile-opening');
+    card.classList.remove('fs-card-press');
+  });
+});
+</script>
+<div aria-hidden="true" id="fsBiOverlay">
+<div aria-label="Dashboard BI Executivo" aria-modal="true" id="fsBiModal" role="dialog">
+<div class="fs-bi-toolbar">
+<div class="fs-bi-brand">
+<div class="fs-bi-brand-icon">📊</div>
+<div>
+<h2 class="fs-bi-title">Dashboard BI Executivo</h2>
+<p class="fs-bi-sub">Visão gerencial de vendas, crediário, conversão e resultados operacionais.</p>
+</div>
+</div>
+<div class="fs-bi-actions">
+<button class="fs-bi-btn" id="fsBiExpand" type="button">⤢ Expandir</button>
+<button class="fs-bi-btn fs-bi-btn-primary" id="fsBiClose" type="button">✕ Fechar</button>
+</div>
+</div>
+<div class="fs-bi-months">
+<span>Mês</span>
+<button class="fs-m active" type="button">jan</button>
+<button class="fs-m" type="button">fev</button>
+<button class="fs-m" type="button">mar</button>
+<button class="fs-m" type="button">abr</button>
+<button class="fs-m" type="button">mai</button>
+<button class="fs-m" type="button">jun</button>
+<button class="fs-m" type="button">jul</button>
+<button class="fs-m" type="button">ago</button>
+<button class="fs-m" type="button">set</button>
+<button class="fs-m" type="button">out</button>
+<button class="fs-m" type="button">nov</button>
+<button class="fs-m" type="button">dez</button>
+</div>
+<div class="fs-bi-topcards">
+<div class="fs-bi-topcard is-orange">
+<small>Simulações</small>
+<strong id="biTopSims">0</strong>
+<span>Total de simulações geradas</span>
+</div>
+<div class="fs-bi-topcard is-blue">
+<small>Vendas</small>
+<strong id="biTopVendas">0</strong>
+<span>Registros salvos</span>
+</div>
+<div class="fs-bi-topcard is-green">
+<small>Conversão</small>
+<strong id="biTopConv">0%</strong>
+<span>Crediário ÷ vendas</span>
+</div>
+<div class="fs-bi-stack">
+<div class="fs-bi-topcard mini is-sky">
+<small>Crediário</small>
+<strong id="biTopCred">0</strong>
+</div>
+<div class="fs-bi-topcard mini is-indigo">
+<small>% Aprovação</small>
+<strong id="biTopAprov">0%</strong>
+</div>
+</div>
+<div class="fs-bi-meta">
+<div class="fs-gauge">
+<div class="fs-gauge-ring" id="biGaugeRing"></div>
+<div class="fs-gauge-center">
+<small>Meta por vendedor</small>
+<strong id="biGaugeValue">0%</strong>
+</div>
+</div>
+<div class="fs-bi-meta-list" id="biTopVendedores"></div>
+</div>
+</div>
+<div class="fs-bi-main-grid">
+<section class="fs-bi-panel">
+<div class="fs-bi-panel-head orange"><h3>Simulações por mês</h3></div>
+<div class="fs-panel-body two-cols">
+<div>
+<div class="fs-y-axis"><span>alto</span><span>médio</span><span>baixo</span></div>
+<div class="fs-bars-vertical" id="biSimBars"></div>
+</div>
+<div class="fs-donut-card">
+<div class="fs-donut big" id="biDonutSim"><div class="fs-donut-center-text" id="biDonutSimText">0%</div></div>
+<div class="fs-side-legend">
+<div><span class="dot orange"></span> Conversão simulação</div>
+<div><span class="dot gray"></span> Restante</div>
+</div>
+</div>
+</div>
+</section>
+<section class="fs-bi-panel">
+<div class="fs-bi-panel-head blue"><h3>Vendas por mês</h3></div>
+<div class="fs-panel-body three-cols">
+<div class="fs-bars-vertical revenue" id="biVendaBars"></div>
+<div class="fs-equipe-box">
+<h4>Equipe vendas</h4>
+<div id="biEquipeTags"></div>
+</div>
+<div class="fs-mini-line-wrap">
+<svg aria-hidden="true" id="biMiniLine" preserveaspectratio="none" viewbox="0 0 180 110"></svg>
+</div>
+</div>
+</section>
+<section class="fs-bi-panel">
+<div class="fs-bi-panel-head indigo"><h3>Margem por vendedor</h3></div>
+<div class="fs-hbars" id="biFornecedorBars"></div>
+</section>
+<section class="fs-bi-panel">
+<div class="fs-bi-panel-head indigo"><h3>Análise por equipe de vendas</h3></div>
+<table class="fs-bi-table">
+<thead>
+<tr><th>Equipe / Vendedor</th><th>Receita</th><th>Crediário</th><th>% Contrib.</th></tr>
+</thead>
+<tbody id="biEquipeTable"></tbody>
+</table>
+</section>
+<section class="fs-bi-panel">
+<div class="fs-bi-panel-head indigo"><h3>Receita por linha de produto</h3></div>
+<div class="fs-donut medium" id="biDonutProduto"><div class="fs-donut-center-text small" id="biProdutoText">0</div></div>
+<div class="fs-side-legend" id="biProdutoLegend"></div>
+</section>
+</div>
+</div>
+</div>
+<script id="fs-bi-modal-script">
+(function(){
+  function byId(id){ return document.getElementById(id); }
+  function safeJSON(key){
+    try { return JSON.parse(localStorage.getItem(key) || '[]'); }
+    catch(e){ return []; }
+  }
+  function getNum(item, keys){
+    for (const k of keys){
+      const v = item && item[k];
+      if (v !== undefined && v !== null && v !== ''){
+        const n = Number(String(v).replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',', '.'));
+        if (!Number.isNaN(n)) return n;
+      }
+    }
+    return 0;
+  }
+  function sellerName(item, idx){
+    return item && (item.vendedor || item.nomeVendedor || item.consultor || item.usuario) || ('Registro ' + (idx+1));
+  }
+  function productName(item, idx){
+    return item && (item.produto || item.categoria || item.linha || item.modalidade) || ('Item ' + (idx+1));
+  }
+  function statusName(item){
+    return String((item && (item.status || item.situacao || item.resultado)) || '').toLowerCase();
+  }
+  function money(v){
+    return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(Number(v||0));
+  }
+  function monthBuckets(arr){
+    const buckets = new Array(12).fill(0);
+    arr.forEach((item, idx)=>{
+      let m = idx % 12;
+      const raw = item && (item.data || item.date || item.createdAt || item.timestamp) || '';
+      if (raw){
+        const d = new Date(raw);
+        if (!isNaN(d)) m = d.getMonth();
+      }
+      buckets[m] += 1;
+    });
+    return buckets;
+  }
+  function renderVerticalBars(targetId, values, colorClass){
+    const el = byId(targetId);
+    const max = Math.max.apply(null, values.concat([1]));
+    el.innerHTML = values.map((v, i) => {
+      const h = Math.max((v/max)*180, 16);
+      const month = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][i];
+      return '<div class="vbar-wrap"><div class="vbar '+colorClass+'" style="height:'+h+'px"></div><small>'+month+'</small></div>';
+    }).join('');
+  }
+  function renderMiniLine(values){
+    const svg = byId('biMiniLine');
+    const w = 180, h = 110;
+    const max = Math.max.apply(null, values.concat([1]));
+    const pts = values.map((v,i)=>{
+      const x = (i/(values.length-1))*w;
+      const y = h - ((v/max)*80 + 12);
+      return [x,y];
+    });
+    const path = pts.map((p,i)=> (i===0?'M':'L') + p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+    svg.innerHTML = '<path d="'+path+'" fill="none" stroke="#3b82f6" stroke-width="3"></path>' +
+      pts.map((p,i)=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(i===pts.length-1?5:3)+'" fill="'+(i===pts.length-1?'#22c55e':'#2563eb')+'"></circle>').join('');
+  }
+  function renderHBars(mapObj){
+    const entries = Object.entries(mapObj).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const max = entries.length ? entries[0][1] : 1;
+    byId('biFornecedorBars').innerHTML = entries.map(([k,v])=>{
+      const w = Math.max((v/max)*100, 10);
+      return '<div class="fs-hbar-row"><label>'+k+'</label><div class="track"><div class="fill" style="width:'+w+'%"></div></div><b>'+v+'</b></div>';
+    }).join('') || '<div class="fs-empty">Sem dados ainda.</div>';
+  }
+  function renderTable(vendas, cred){
+    const sellerMap = {};
+    vendas.forEach((item, idx)=>{
+      const s = sellerName(item, idx);
+      sellerMap[s] = sellerMap[s] || { receita:0, cred:0 };
+      sellerMap[s].receita += getNum(item, ['valor','valorVenda','valor_total','total','valor_final']);
+    });
+    cred.forEach((item, idx)=>{
+      const s = sellerName(item, idx);
+      sellerMap[s] = sellerMap[s] || { receita:0, cred:0 };
+      sellerMap[s].cred += 1;
+    });
+    const rows = Object.entries(sellerMap).sort((a,b)=> (b[1].receita+b[1].cred) - (a[1].receita+a[1].cred)).slice(0,6);
+    const total = rows.reduce((a,[r])=> a + r.receita, 0) || 1;
+    byId('biEquipeTable').innerHTML = rows.map(([name, r])=>{
+      return '<tr><td>'+name+'</td><td>'+money(r.receita)+'</td><td>'+r.cred+'</td><td>'+((r.receita/total)*100).toFixed(1)+'%</td></tr>';
+    }).join('') || '<tr><td colspan="4">Sem dados suficientes.</td></tr>';
+    byId('biEquipeTags').innerHTML = rows.slice(0,4).map(([name])=>'<span class="fs-tag">'+name+'</span>').join('');
+    byId('biTopVendedores').innerHTML = rows.slice(0,5).map(([name], i)=>'<div>'+(i+1)+'. '+name+'</div>').join('');
+  }
+  function renderProdutos(vendas){
+    const prodMap = {};
+    vendas.forEach((item, idx)=>{
+      const p = productName(item, idx);
+      prodMap[p] = (prodMap[p] || 0) + (getNum(item, ['valor','valorVenda','valor_total','total','valor_final']) || 1);
+    });
+    const entries = Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const total = entries.reduce((a,[v])=>a+v,0) || 1;
+    const colors = ['#1d4ed8','#60a5fa','#f59e0b','#cbd5e1'];
+    let start = 0;
+    const parts = entries.map(([v],i)=>{
+      const pct = (v/total)*100;
+      const seg = colors[i]+' '+start.toFixed(1)+'% '+(start+pct).toFixed(1)+'%';
+      start += pct;
+      return seg;
+    }).join(', ');
+    byId('biDonutProduto').style.background = 'conic-gradient(' + (parts || '#cbd5e1 0 100%') + ')';
+    byId('biProdutoText').textContent = money(total);
+    byId('biProdutoLegend').innerHTML = entries.map(([k,v],i)=>'<div><span class="dot" style="background:'+colors[i]+'"></span> '+k+': '+money(v)+'</div>').join('') || '<div>Sem produtos.</div>';
+  }
+  function buildBI(){
+    const vendas = safeJSON('FS_VENDAS');
+    const cred = safeJSON('FS_CREDIARIO');
+    const sims = safeJSON('FS_SIMULACOES');
+
+    const aprov = cred.filter(c => statusName(c).indexOf('aprov') !== -1);
+    const conv = vendas.length ? ((cred.length / vendas.length) * 100) : 0;
+    const aprovPct = cred.length ? ((aprov.length / cred.length) * 100) : 0;
+
+    byId('biTopSims').textContent = sims.length || 0;
+    byId('biTopVendas').textContent = vendas.length || 0;
+    byId('biTopConv').textContent = conv.toFixed(1) + '%';
+    byId('biTopCred').textContent = cred.length || 0;
+    byId('biTopAprov').textContent = aprovPct.toFixed(1) + '%';
+
+    const gaugePct = Math.max(Math.min(conv, 100), 0);
+    byId('biGaugeValue').textContent = gaugePct.toFixed(0) + '%';
+    byId('biGaugeRing').style.background = 'conic-gradient(#22c55e 0 '+gaugePct+'%, #e5e7eb '+gaugePct+'% 100%)';
+
+    renderVerticalBars('biSimBars', monthBuckets(sims.length ? sims : cred), 'orange');
+    renderVerticalBars('biVendaBars', monthBuckets(vendas), 'blue');
+    renderMiniLine(monthBuckets(vendas));
+
+    const totalSims = sims.length || cred.length || 0;
+    const totalConv = vendas.length || 0;
+    const simPct = totalSims ? Math.min((totalConv/totalSims)*100, 100) : 0;
+    byId('biDonutSim').style.background = 'conic-gradient(#f97316 0 '+simPct+'%, #e5e7eb '+simPct+'% 100%)';
+    byId('biDonutSimText').textContent = simPct.toFixed(0) + '%';
+
+    const sellerMap = {};
+    vendas.forEach((item, idx)=>{
+      const key = sellerName(item, idx);
+      sellerMap[key] = (sellerMap[key] || 0) + (getNum(item, ['valor','valorVenda','valor_total','total','valor_final']) || 1);
+    });
+    renderHBars(sellerMap);
+    renderTable(vendas, cred);
+    renderProdutos(vendas);
+  }
+  function openBI(){
+    buildBI();
+    document.body.classList.remove('fs-bi-force-landscape');
+    document.body.classList.remove('fs-bi-expanded-mobile');
+    byId('fsBiOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeBI(){
+    byId('fsBiOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+    document.body.classList.remove('fs-bi-force-landscape');
+    document.body.classList.remove('fs-bi-expanded-mobile');
+    if (document.fullscreenElement) { document.exitFullscreen().catch(()=>{}); }
+  }
+  async function expandBI(){
+    const modal = byId('fsBiModal');
+    const mobile = window.matchMedia('(max-width: 900px)').matches;
+    if(mobile){
+      document.body.classList.add('fs-bi-expanded-mobile');
+      setTimeout(function(){
+        try{ modal.scrollTo({top:0,left:0,behavior:'smooth'}); }catch(e){ modal.scrollTop = 0; modal.scrollLeft = 0; }
+      }, 50);
+      return;
+    }
+    if (!document.fullscreenElement && modal.requestFullscreen){
+      modal.requestFullscreen().catch(()=>{});
+    } else if (document.fullscreenElement){
+      document.exitFullscreen().catch(()=>{});
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    const card = byId('cardDashboardBI');
+    const close = byId('fsBiClose');
+    const overlay = byId('fsBiOverlay');
+    const link = card ? card.querySelector('.card-action') : null;
+    const expand = byId('fsBiExpand');
+
+    function isMobileViewport(){
+      return window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function openBIDelayed(cardEl){
+      if(isMobileViewport()){
+        if(cardEl && cardEl.classList.contains('fs-mobile-opening')) return;
+        if(cardEl){
+          cardEl.classList.add('fs-mobile-opening');
+          cardEl.classList.add('fs-card-press');
+        }
+        setTimeout(function(){
+          if(cardEl){
+            cardEl.classList.remove('fs-mobile-opening');
+            cardEl.classList.remove('fs-card-press');
+          }
+          openBI();
+        }, 600);
+        return;
+      }
+      openBI();
+    }
+
+    if(card){
+      card.addEventListener('click', function(e){
+        if (e.target.closest('.fs-open-calc')) return;
+        e.preventDefault();
+        openBIDelayed(card);
+      });
+    }
+    if(link){
+      link.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        openBIDelayed(card || null);
+      });
+    }
+    if(close) close.addEventListener('click', closeBI);
+    if(expand) expand.addEventListener('click', expandBI);
+    if(overlay){
+      overlay.addEventListener('click', function(e){
+        if(e.target === overlay) closeBI();
+      });
+    }
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape') closeBI();
+    });
+  });
+})();
+</script>
+<script id="fs-safe-performance-boot">
+(function(){
+  try{
+    document.querySelectorAll('img').forEach(function(img){
+      if(!img.getAttribute('loading')) img.setAttribute('loading','lazy');
+      if(!img.getAttribute('decoding')) img.setAttribute('decoding','async');
+      if(img.getAttribute('fetchpriority') === 'high') img.setAttribute('fetchpriority','low');
+    });
+  }catch(e){}
+})();
+</script>
+<script id="fs-zenir-footer-nav-script">
+(function(){
+  const navHome = document.getElementById('fsNavHome');
+  const navMy = document.getElementById('fsNavMy');
+  const navNew = document.getElementById('fsNavNew');
+  const navOptions = document.getElementById('fsNavOptions');
+  const backdrop = document.getElementById('fsOptionsBackdrop');
+  const sheet = document.getElementById('fsOptionsSheet');
+  const closeBtn = document.getElementById('fsOptionsClose');
+  const mirrors = {
+    date: document.getElementById('fsDateLabelMirror'),
+    time: document.getElementById('fsTimeLabelMirror'),
+    role: document.getElementById('fsOptionsRole'),
+    user: document.getElementById('fsOptionsUser')
+  };
+
+  const legacy = {
+    share: document.getElementById('btnSharePanel'),
+    install: document.getElementById('btnInstallAppMenu') || document.getElementById('btnInstallApp'),
+    trocar: document.getElementById('btnTrocarUsuario'),
+    sair: document.getElementById('btnSairAcesso'),
+    calc: document.getElementById('btnCalc'),
+    support: document.getElementById('btnSupport'),
+    date: document.getElementById('btnDate'),
+    time: document.getElementById('btnTime'),
+    dateLabel: document.getElementById('dateLabel'),
+    timeLabel: document.getElementById('timeLabel'),
+    role: document.getElementById('menuRole'),
+    user: document.getElementById('menuUserName'),
+    menuBtn: document.getElementById('menuBtn')
+  };
+
+  function setActive(btn){
+    document.querySelectorAll('.fs-nav-item').forEach(el => el.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+  }
+  function openOptions(){
+    if(!sheet || !backdrop) return;
+    sheet.classList.add('open');
+    backdrop.classList.add('open');
+    sheet.setAttribute('aria-hidden','false');
+    setActive(navOptions);
+    syncMirrors();
+  }
+  function closeOptions(setHome){
+    if(!sheet || !backdrop) return;
+    sheet.classList.remove('open');
+    backdrop.classList.remove('open');
+    sheet.setAttribute('aria-hidden','true');
+    if(setHome !== false) setActive(navHome);
+  }
+  function syncMirrors(){
+    if(mirrors.date && legacy.dateLabel) mirrors.date.textContent = legacy.dateLabel.textContent;
+    if(mirrors.time && legacy.timeLabel) mirrors.time.textContent = legacy.timeLabel.textContent;
+    if(mirrors.role && legacy.role) mirrors.role.textContent = legacy.role.textContent;
+    if(mirrors.user && legacy.user) mirrors.user.textContent = legacy.user.textContent;
+  }
+  function forward(newId, oldEl, after){
+    const el = document.getElementById(newId);
+    if(!el || !oldEl) return;
+    el.addEventListener('click', function(){
+      closeOptions(false);
+      oldEl.click();
+      syncMirrors();
+      if(after) after();
+    });
+  }
+  if(navHome) navHome.addEventListener('click', function(){ closeOptions(false);  setActive(navHome); });
+  if(navMy) navMy.addEventListener('click', function(){ closeOptions(false); const sec = document.querySelector('.section'); if(sec) sec.scrollIntoView({behavior:'smooth', block:'start'}); setActive(navMy); setTimeout(() => setActive(navHome), 900); });
+  if(navNew) navNew.addEventListener('click', function(){ closeOptions(false); const firstCard = document.querySelector('.grid .card a[href], .grid .card'); if(firstCard){ if(firstCard.tagName === 'A'){ firstCard.click(); } else { firstCard.scrollIntoView({behavior:'smooth', block:'center'}); } } setActive(navNew); setTimeout(() => setActive(navHome), 900); });
+  if(navOptions) navOptions.addEventListener('click', openOptions);
+  if(closeBtn) closeBtn.addEventListener('click', closeOptions);
+  if(backdrop) backdrop.addEventListener('click', closeOptions);
+
+  forward('btnSharePanelFooter', legacy.share, openOptions);
+  forward('btnInstallAppFooter', legacy.install, openOptions);
+  forward('btnTrocarUsuarioFooter', legacy.trocar, openOptions);
+  forward('btnSairAcessoFooter', legacy.sair, openOptions);
+  forward('btnCalcFooter', legacy.calc, openOptions);
+  forward('btnSupportFooter', legacy.support, openOptions);
+  forward('btnDateFooter', legacy.date, openOptions);
+  forward('btnTimeFooter', legacy.time, openOptions);
+  const profile = document.getElementById('fsOptionsProfile');
+  if(profile && legacy.menuBtn){
+    profile.addEventListener('click', function(){ closeOptions(false); legacy.menuBtn.click(); syncMirrors(); });
+  }
+
+  const obs = new MutationObserver(syncMirrors);
+  if(legacy.dateLabel) obs.observe(legacy.dateLabel, {childList:true, subtree:true, characterData:true});
+  if(legacy.timeLabel) obs.observe(legacy.timeLabel, {childList:true, subtree:true, characterData:true});
+  if(legacy.role) obs.observe(legacy.role, {childList:true, subtree:true, characterData:true});
+  if(legacy.user) obs.observe(legacy.user, {childList:true, subtree:true, characterData:true});
+  syncMirrors();
+})();
+</script>
+<script id="fs-exact-home-script">
+(function(){
+  const root = document.querySelector('.fs-exact-home');
+  if(!root) return;
+  const track = root.querySelector('.info-rotator-track');
+  const nome = ((localStorage.getItem('fs_nome') || '').trim() || 'Colaborador').toUpperCase();
+  const hora = new Date().getHours();
+  let saudacao = 'Bom dia';
+  if(hora >= 12 && hora < 18) saudacao = 'Boa tarde';
+  if(hora >= 18) saudacao = 'Boa noite';
+  const mensagens = [
+    `👋 ${saudacao}, ${nome}!`,
+    '💬 Hoje é dia de foco, disciplina e venda 🚀',
+    '🔥 Atendimento forte gera resultado'
+  ];
+  if(track){
+    track.innerHTML = mensagens.map((m,i)=>`<div class="info-item${i===0?' active':''}">${m}</div>`).join('');
+    const items = Array.from(track.querySelectorAll('.info-item'));
+    let idx = 0;
+    setInterval(()=>{items[idx].classList.remove('active'); idx=(idx+1)%items.length; items[idx].classList.add('active');},2800);
+  }
+  const filialBar = root.querySelector('#fsFilialBar');
+  function syncFilialBar(){
+    if(!filialBar) return;
+    const filial = ((localStorage.getItem('fs_filial') || '').trim() || 'FILIAL 28').toUpperCase();
+    filialBar.textContent = `🏢 ${filial}`;
+  }
+  syncFilialBar();
+  setInterval(syncFilialBar, 1500);
+  window.addEventListener('storage', syncFilialBar);
+
+  const carousel = root.querySelector('#carousel');
+  const slides = Array.from(root.querySelectorAll('.carousel-link'));
+  const dotsWrap = root.querySelector('#dots');
+  if(carousel && slides.length && dotsWrap){
+    let current = 0, startX = 0, dist = 0, autoPlay;
+    dotsWrap.innerHTML = '';
+    slides.forEach((_,i)=>{ const b=document.createElement('button'); b.className='dot'+(i===0?' active':''); b.type='button'; b.addEventListener('click',()=>{goTo(i); restartAuto();}); dotsWrap.appendChild(b); });
+    const left = document.createElement('button'); left.className='carousel-arrow left'; left.type='button'; left.innerHTML='‹';
+    const right = document.createElement('button'); right.className='carousel-arrow right'; right.type='button'; right.innerHTML='›';
+    left.addEventListener('click',()=>{goTo((current-1+slides.length)%slides.length); restartAuto();});
+    right.addEventListener('click',()=>{goTo((current+1)%slides.length); restartAuto();});
+    carousel.appendChild(left); carousel.appendChild(right);
+    function goTo(i){ current=i; slides.forEach((s,idx)=>s.classList.toggle('active', idx===i)); dotsWrap.querySelectorAll('.dot').forEach((d,idx)=>d.classList.toggle('active', idx===i)); }
+    function restartAuto(){ clearInterval(autoPlay); autoPlay = setInterval(()=>goTo((current+1)%slides.length), 3600); }
+    restartAuto();
+    carousel.addEventListener('touchstart',e=>{startX=e.touches[0].clientX; dist=0; clearInterval(autoPlay);},{passive:true});
+    carousel.addEventListener('touchmove',e=>{dist=e.touches[0].clientX-startX;},{passive:true});
+    carousel.addEventListener('touchend',()=>{ if(Math.abs(dist)>=38){ goTo(dist<0 ? (current+1)%slides.length : (current-1+slides.length)%slides.length); } restartAuto(); },{passive:true});
+  }
+  const wa = root.querySelector('#fsHomeWhatsapp');
+  if(wa){ wa.addEventListener('click', ()=>{ const userWhats = (localStorage.getItem('fs_whatsapp') || '').replace(/\D/g,''); const numero = userWhats || '5588999999999'; const texto = encodeURIComponent('Olá! Preciso de ajuda com a plataforma FS Soluções.'); window.open(`https://wa.me/${numero}?text=${texto}`, '_blank'); }); }
+})();
+</script>
+</div>
+<script id="fs-contingencia-ios-script">
+function abrirSobreSistema(){
+  document.getElementById('fsAboutBackdrop')?.classList.add('open');
+  document.getElementById('fsAboutModal')?.classList.add('open');
+}
+function fecharSobreSistema(){
+  document.getElementById('fsAboutBackdrop')?.classList.remove('open');
+  document.getElementById('fsAboutModal')?.classList.remove('open');
+}
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('fsAboutBackdrop')?.addEventListener('click', fecharSobreSistema);
+
+  const sobreFooterInicial = document.getElementById('btnSobrePlataformaFooter');
+  if (sobreFooterInicial) {
+    sobreFooterInicial.addEventListener('click', function(){
+      document.getElementById('fsOptionsBackdrop')?.classList.remove('open');
+      document.getElementById('fsOptionsSheet')?.classList.remove('open');
+      abrirSobreSistema();
+    });
+  }
+
+  const badge = document.getElementById('fsOfflineBadge');
+  function syncOfflineBadge(){
+    if(!badge) return;
+    if(navigator.onLine) badge.classList.remove('show');
+    else badge.classList.add('show');
+  }
+  window.addEventListener('online', syncOfflineBadge);
+  window.addEventListener('offline', syncOfflineBadge);
+  syncOfflineBadge();
+});
+</script>
+<script id="fs-no-delay-hard-patch">
+document.addEventListener('DOMContentLoaded', function(){
+  const firstImg =
+    document.querySelector('.carousel-link img') ||
+    document.querySelector('.fs-ios-slide img') ||
+    document.querySelector('.fs-top-card img');
+
+  if (firstImg) {
+    firstImg.loading = 'eager';
+    firstImg.decoding = 'sync';
+    if (firstImg.dataset && firstImg.dataset.src && !firstImg.src) {
+      firstImg.src = firstImg.dataset.src;
+    }
+    firstImg.style.opacity = '1';
+    firstImg.style.visibility = 'visible';
+    firstImg.style.display = 'block';
+  }
+
+  const shells = document.querySelectorAll('.carousel, .fs-ios-carousel, .fs-top-cards-carousel');
+  shells.forEach(function(el){
+    el.style.visibility = 'visible';
+    el.style.opacity = '1';
+    el.style.display = 'block';
+  });
+
+  const tracks = document.querySelectorAll('.carousel-track, .fs-ios-track, .fs-top-cards-track');
+  tracks.forEach(function(el){
+    el.style.visibility = 'visible';
+    el.style.opacity = '1';
+  });
+});
+</script>
+<script id="fs-red-banner-font-js">
+document.addEventListener('DOMContentLoaded', function(){
+  const nodes = Array.from(document.querySelectorAll('div, span, p, a'));
+  nodes.forEach(function(n){
+    const t = (n.textContent || '').trim();
+    if (t.includes('Sistema de contingência') && t.includes('Vendas offline')) {
+      n.style.fontSize = '50%';
+      n.style.lineHeight = '1.1';
+    }
+  });
+});
+</script>
+<script id="fs-instant-banner-show">
+(function(){
+  const reveal = function(){
+    const wrap = document.querySelector('.carousel, .fs-ios-carousel, .fs-top-cards-carousel');
+    if (wrap) {
+      wrap.style.opacity = '1';
+      wrap.style.visibility = 'visible';
+      wrap.style.display = 'block';
+    }
+    const first = document.querySelector('.carousel img, .fs-ios-slide img, .fs-top-card img');
+    if (first) {
+      first.style.opacity = '1';
+      first.style.visibility = 'visible';
+      first.style.display = 'block';
+    }
+  };
+  reveal();
+  document.addEventListener('DOMContentLoaded', reveal);
+  window.addEventListener('load', reveal);
+})();
+</script>
+<script id="fs-ticker-strip-script">
+document.addEventListener('DOMContentLoaded', function(){
+  const candidates = [
+    document.querySelector('.top-alert'),
+    document.querySelector('.alert-strip'),
+    document.querySelector('.contingency-strip'),
+    document.querySelector('.marquee-strip'),
+    document.querySelector('.red-strip'),
+    document.querySelector('body > div:first-of-type')
+  ].filter(Boolean);
+
+  const strip = candidates[0];
+  if (!strip) return;
+
+  // evita recriar
+  if (strip.querySelector('.fs-ticker-inner')) return;
+
+  const message = 'CENTRAL INTELIGENTE DE VENDAS • COTAÇÕES • PLANOS • PARCELAMENTOS • ORÇAMENTOS';
+  strip.innerHTML = `
+    <div class="fs-ticker-inner">
+      <span class="fs-ticker-item">${message}</span>
+      <span class="fs-ticker-item">${message}</span>
+      <span class="fs-ticker-item">${message}</span>
+      <span class="fs-ticker-item">${message}</span>
+    </div>
+  `;
+});
+</script>
+<script id="fs-budget-evolution-script">
+document.addEventListener('DOMContentLoaded', function(){
+  const myBtn = document.getElementById('fsNavMy');
+  const newBtn = document.getElementById('fsNavNew');
+  const homeBtn = document.getElementById('fsNavHome');
+  const optionsBtn = document.getElementById('fsNavOptions');
+  const backdrop = document.getElementById('fsBudgetBackdrop');
+  const mySheet = document.getElementById('fsMyBudgetsSheet');
+  const createSheet = document.getElementById('fsCreateBudgetSheet');
+
+  function hideInternalSheets(){
+    [mySheet, createSheet, backdrop].forEach(function(el){
+      if (el) el.classList.remove('show', 'open', 'active');
+    });
+  }
+
+  hideInternalSheets();
+
+  if (myBtn) {
+    myBtn.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      hideInternalSheets();
+      window.location.href = 'orcamentos.html#history';
+    };
+  }
+
+  if (newBtn) {
+    newBtn.onclick = function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      hideInternalSheets();
+      window.location.href = 'orcamentos.html';
+    };
+  }
+
+  if (homeBtn) {
+    homeBtn.addEventListener('click', hideInternalSheets, true);
+  }
+  if (optionsBtn) {
+    optionsBtn.addEventListener('click', hideInternalSheets, true);
+  }
+});
+</script>
+<script id="fs-orcamentos-integracao-final">
+document.addEventListener('DOMContentLoaded', function(){
+  const byId = (id) => document.getElementById(id);
+
+  const shareMenu = byId('btnShareMenu');
+  const shareFooter = byId('btnSharePanelFooter');
+  const shareHeader = byId('btnSharePanel');
+
+  const installMenu = byId('btnInstallAppMenu');
+  const installFooter = byId('btnInstallAppFooter');
+  const installHeader = byId('btnInstallApp');
+
+  const trocarMenu = byId('btnTrocarUsuario');
+  const trocarFooter = byId('btnTrocarUsuarioFooter');
+
+  const sobreMenu = byId('btnSobrePlataforma');
+  const sobreFooter = byId('btnSobrePlataformaFooter');
+
+  const sairMenu = byId('btnSairAcesso');
+  const sairFooter = byId('btnSairAcessoFooter');
+
+  const suporteMenu = byId('btnSupportMenu');
+  const suporteFooter = byId('btnSupportFooter');
+
+  const calcMenu = byId('btnCalcMenu');
+  const calcFooter = byId('btnCalcFooter');
+
+  const menuDropdown = byId('menuDropdown');
+  const optionsBackdrop = byId('fsOptionsBackdrop');
+  const optionsSheet = byId('fsOptionsSheet');
+
+  const closePanelsSoft = function(){
+    if(menuDropdown) menuDropdown.classList.remove('open');
+    if(optionsBackdrop) optionsBackdrop.classList.remove('open');
+    if(optionsSheet) optionsSheet.classList.remove('open');
+  };
+
+  const triggerClick = function(el){
+    if(!el) return;
+    el.click();
+  };
+
+  if (shareMenu) shareMenu.addEventListener('click', function(){ closePanelsSoft(); triggerClick(shareHeader || shareFooter); });
+  if (shareFooter) shareFooter.addEventListener('click', function(){ closePanelsSoft(); triggerClick(shareHeader); });
+
+  if (installMenu) installMenu.addEventListener('click', function(){ closePanelsSoft(); triggerClick(installHeader || installFooter); });
+  if (installFooter) installFooter.addEventListener('click', function(){ closePanelsSoft(); triggerClick(installHeader); });
+
+  if (trocarFooter) trocarFooter.addEventListener('click', function(){ closePanelsSoft(); triggerClick(trocarMenu); });
+
+  const openAbout = function(){
+    closePanelsSoft();
+    if (typeof abrirSobreSistema === 'function') abrirSobreSistema();
+  };
+  if (sobreMenu) sobreMenu.addEventListener('click', openAbout);
+  if (sobreFooter) sobreFooter.addEventListener('click', openAbout);
+
+  if (sairFooter) sairFooter.addEventListener('click', function(){ closePanelsSoft(); triggerClick(sairMenu); });
+
+  if (suporteMenu) suporteMenu.addEventListener('click', function(){ closePanelsSoft(); triggerClick(suporteFooter || byId('btnSupport')); });
+  if (calcMenu) calcMenu.addEventListener('click', function(){ closePanelsSoft(); triggerClick(calcFooter || byId('btnCalc')); });
+
+  const fsOptionsTitle = document.querySelector('.fs-options-head h3');
+  if (fsOptionsTitle && fsOptionsTitle.textContent.trim() === 'Mais opções') {
+    fsOptionsTitle.textContent = 'Mais opções';
+  }
+});
+</script>
+<script id="fs-app-premium-js">
+document.addEventListener('DOMContentLoaded', function(){
+  // Melhorar abertura dos painéis, levando para o topo do conteúdo
+  const panels = [
+    document.getElementById('sharePanel'),
+    document.getElementById('fsOptionsSheet')
+  ].filter(Boolean);
+
+  panels.forEach(function(panel){
+    const obs = new MutationObserver(function(){
+      const open = panel.classList.contains('open') || panel.style.display === 'block';
+      if(open) {
+        requestAnimationFrame(function(){ panel.scrollTop = 0; });
+      }
+    });
+    obs.observe(panel, { attributes:true, attributeFilter:['class','style'] });
+  });
+
+  // Deixar botões laterais do banner mais suaves mesmo se inline style tentar sobrescrever
+  document.querySelectorAll('.carousel-btn, .slider-btn, .fs-ios-carousel button, button[class*="next"], button[class*="prev"]').forEach(function(btn){
+    btn.style.background = 'rgba(255,255,255,.20)';
+    btn.style.opacity = '.46';
+    btn.style.backdropFilter = 'blur(10px)';
+    btn.style.webkitBackdropFilter = 'blur(10px)';
+  });
+});
+</script>
+<script id="fs-safe-panel-fix-js">
+document.addEventListener('DOMContentLoaded', function(){
+  const optionsSheet = document.getElementById('fsOptionsSheet');
+  const backdrop = document.getElementById('fsOptionsBackdrop');
+  if (optionsSheet) optionsSheet.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+});
+</script>
+<script id="fs-open-deploy-orc-js">
+document.addEventListener('DOMContentLoaded', function(){
+  function goCreate(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    window.location.href = 'orcamentos.html';
+  }
+  function goHistory(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    window.location.href = 'orcamentos.html#history';
+  }
+
+  const newBtn = document.getElementById('fsNavNew');
+  const myBtn = document.getElementById('fsNavMy');
+  const quickAccess = document.getElementById('fsBudgetQuickAccess');
+  const goCreateBtn = document.getElementById('fsGoCreateBudget');
+
+  if (newBtn) newBtn.addEventListener('click', goCreate, true);
+  if (myBtn) myBtn.addEventListener('click', goHistory, true);
+  if (quickAccess) quickAccess.addEventListener('click', goCreate, true);
+  if (goCreateBtn) goCreateBtn.addEventListener('click', goCreate, true);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.body.classList.remove('fs-hp-open', 'modal-open', 'lock-scroll');
+  document.documentElement.classList.remove('modal-open', 'lock-scroll');
+
+  document.body.style.overflowY = 'auto';
+  document.documentElement.style.overflowY = 'auto';
+});
+</script>
+<script id="fs-clean-deploy-cache-reset">
+(function(){
+  // A central integrada mantém o service worker ativo; a troca de versão é feita pelo CACHE_NAME.
+  return;
+  if (location.protocol === 'file:') return;
+  window.addEventListener('load', async function(){
+    try{
+      if (!sessionStorage.getItem('fs_cache_reset_done')) {
+        sessionStorage.setItem('fs_cache_reset_done', '1');
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const reg of regs) {
+            await reg.unregister();
+          }
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          for (const key of keys) {
+            await caches.delete(key);
+          }
+        }
+        setTimeout(function(){ location.reload(); }, 300);
+      }
+    }catch(e){
+      console.warn('FS cache reset falhou:', e);
+    }
+  });
+})();
+</script>
+<script id="fs-platform-switcher-patch">
+(function(){
+  const STORAGE_KEY = 'fs_plataforma_escolhida';
+  const CURRENT = 'mobile';
+  const TARGET = CURRENT === 'mobile' ? 'index-desktop.html' : 'index-mobile.html';
+  const LABEL = CURRENT === 'mobile' ? '🖥️ Mudar para Desktop' : '📱 Mudar para Mobile';
+
+  function byId(id){ return document.getElementById(id); }
+
+  function closeMenuIfOpen(){
+    const menu = byId('menuDropdown');
+    if (menu) menu.classList.remove('open');
+  }
+
+  function injectButton(){
+    const menu = byId('menuDropdown');
+    if (!menu || byId('btnMudarPlataforma')) return;
+    const btn = document.createElement('button');
+    btn.className = 'menu-item';
+    btn.id = 'btnMudarPlataforma';
+    btn.type = 'button';
+    btn.textContent = LABEL;
+    menu.insertBefore(btn, menu.lastElementChild || null);
+    btn.addEventListener('click', function(){
+      localStorage.setItem(STORAGE_KEY, CURRENT === 'mobile' ? 'desktop' : 'mobile');
+      closeMenuIfOpen();
+      location.replace(TARGET);
+    });
+  }
+
+  function patchExit(){
+    const sair = byId('btnSairAcesso');
+    if (!sair || sair.dataset.fsPlatformPatched === '1') return;
+    sair.dataset.fsPlatformPatched = '1';
+    sair.addEventListener('click', function(){
+      localStorage.removeItem(STORAGE_KEY);
+    }, true);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    injectButton();
+    patchExit();
+    history.replaceState(null, '', location.href);
+    window.addEventListener('pageshow', function(event){
+      if (event.persisted) history.replaceState(null, '', location.href);
+    });
+  });
+})();
+</script>
+<script id="fs-ajuste-visual-usuario-js">
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    // 1) Garantir que o carrossel principal fique com cantos retos
+    var selectors = [
+      '.header-wrap','.hero-slider','.hero-banner','.carousel','.swiper','.banner-slider','.banner-wrap'
+    ];
+    selectors.forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
+        el.style.borderRadius = '0px';
+        el.style.overflow = 'hidden';
+      });
+    });
+
+    // 2) Tentar restaurar emojis/ícones no menu opções
+    document.querySelectorAll('.menu-item').forEach(function(item){
+      var txt = (item.textContent || '').trim().toLowerCase();
+      if (item.dataset.iconInjected === '1') return;
+
+      function prependIcon(icon){
+        var span = document.createElement('span');
+        span.className = 'fs-injected-menu-icon';
+        span.textContent = icon + ' ';
+        span.style.marginRight = '10px';
+        span.style.display = 'inline-flex';
+        span.style.alignItems = 'center';
+        span.style.fontSize = '20px';
+        item.insertBefore(span, item.firstChild);
+        item.dataset.iconInjected = '1';
+      }
+
+      if (txt.includes('compartilhamento')) prependIcon('📤');
+      else if (txt.includes('instalar')) prependIcon('📲');
+      else if (txt.includes('trocar usuário')) prependIcon('👤');
+      else if (txt.includes('regulamento')) prependIcon('📘');
+      else if (txt.includes('sair')) prependIcon('🚪');
+    });
+
+    // 3) Garantir clique limpo de orçamentos
+    var btn = document.getElementById('fsNavNew');
+    if (btn){
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        window.location.href = 'orcamentos.html';
+      }, true);
+    }
+  }catch(e){}
+});
+</script>
+<script id="fs-final-user-fix-js">
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    /* 1) Injetar ícones no menu Opções */
+    const iconMap = [
+      ['compart', '🔗'],
+      ['instalar', '📲'],
+      ['trocar usuário', '👤'],
+      ['regulamento', '📄'],
+      ['sair', '🚪']
+    ];
+
+    document.querySelectorAll('.menu-item').forEach(function(item){
+      if (item.dataset.fsIosDone === '1') return;
+      const txt = (item.textContent || '').trim();
+      const low = txt.toLowerCase();
+
+      let icon = '•';
+      for (const [key, value] of iconMap){
+        if (low.includes(key)){ icon = value; break; }
+      }
+
+      item.innerHTML = '';
+
+      const iconEl = document.createElement('span');
+      iconEl.className = 'fs-ios-menu-icon';
+      iconEl.textContent = icon;
+
+      const labelEl = document.createElement('span');
+      labelEl.className = 'fs-ios-menu-label';
+      labelEl.textContent = txt;
+
+      const chevronEl = document.createElement('span');
+      chevronEl.className = 'fs-ios-menu-chevron';
+      chevronEl.textContent = '›';
+
+      item.appendChild(iconEl);
+      item.appendChild(labelEl);
+      item.appendChild(chevronEl);
+      item.dataset.fsIosDone = '1';
+    });
+
+    /* 2) Reduzir lentidão: remover delays pesados em cliques */
+    document.querySelectorAll('button, a, .menu-item, .fs-nav-item').forEach(function(el){
+      el.style.transitionDelay = '0s';
+      el.style.animationDelay = '0s';
+    });
+
+    /* 3) Desabilitar tilt/mousemove pesado do carrossel no mobile */
+    const carousel = document.querySelector('.fs-home-carousel');
+    if (carousel){
+      const clean = function(){
+        carousel.querySelectorAll('img').forEach(function(img){
+          img.style.transform = 'none';
+          img.style.filter = 'none';
+        });
+      };
+      clean();
+      carousel.addEventListener('touchmove', function(e){ e.stopPropagation(); }, {passive:true});
+      carousel.addEventListener('mousemove', clean, {passive:true});
+      carousel.addEventListener('mouseleave', clean, {passive:true});
+    }
+
+    /* 4) Lazy loading inteligente */
+    document.querySelectorAll('img').forEach(function(img, i){
+      if (!img.hasAttribute('loading')) img.setAttribute('loading', i < 2 ? 'eager' : 'lazy');
+      img.setAttribute('decoding', 'async');
+      if (i > 1) img.setAttribute('fetchpriority', 'low');
+    });
+
+  }catch(e){}
+});
+</script>
+<script id="fs-delay-centralizado-fix-js">
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    /* Força o carrossel/grade do topo a aparecer já na entrada */
+    const topBlocks = document.querySelectorAll('.fs-home-carousel, .hero-slider, .hero-banner, .banner-slider, .banner-wrap, .carousel, .swiper, .hidden-until-ready, .await-ready, .is-loading, .loading-hidden, .preload-hidden');
+    topBlocks.forEach(function(el){
+      el.style.opacity = '1';
+      el.style.visibility = 'visible';
+      el.style.display = el.classList.contains('swiper') ? 'block' : (el.style.display || 'block');
+      el.style.animation = 'none';
+      el.style.transition = 'none';
+      el.classList.remove('hidden-until-ready','await-ready','is-loading','loading-hidden','preload-hidden');
+    });
+
+    /* Tenta remover delays comuns de autoplay/init */
+    document.querySelectorAll('[data-delay], [data-autoplay-delay], [data-start-delay]').forEach(function(el){
+      el.setAttribute('data-delay', '0');
+      el.setAttribute('data-autoplay-delay', '0');
+      el.setAttribute('data-start-delay', '0');
+    });
+
+    /* Centraliza os cards principais pelo próprio JS, sem mexer na altura */
+    document.querySelectorAll('.fs-home-section .card, .negociacoes .card, .section .card').forEach(function(card){
+      card.style.marginLeft = 'auto';
+      card.style.marginRight = 'auto';
+    });
+
+    /* Se houver init tardio, reaplica logo no começo */
+    setTimeout(function(){
+      topBlocks.forEach(function(el){
+        el.style.opacity = '1';
+        el.style.visibility = 'visible';
+      });
+    }, 50);
+  }catch(e){}
+});
+</script>
+<script id="fs-card-zoom-effect-js">
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    const cards = document.querySelectorAll('.fs-home-section .card, .negociacoes .card, .section .card');
+    cards.forEach(function(card){
+      card.addEventListener('touchstart', function(){
+        card.classList.add('fs-card-pressed');
+      }, {passive:true});
+
+      const clear = function(){ card.classList.remove('fs-card-pressed'); };
+      card.addEventListener('touchend', clear, {passive:true});
+      card.addEventListener('touchcancel', clear, {passive:true});
+      card.addEventListener('mouseleave', clear, {passive:true});
+    });
+  }catch(e){}
+});
+</script>
+<script id="fs-categorias-premium-3d-js">
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    const scroller = document.querySelector('.fs-categorias-fixed-scroll');
+    if(!scroller) return;
+    const cards = Array.from(scroller.querySelectorAll('.fs-cat-fixed'));
+
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+    function updateCenterHighlight(){
+      const sRect = scroller.getBoundingClientRect();
+      const sCenter = sRect.left + sRect.width / 2;
+      let best = null;
+      let bestDist = Infinity;
+
+      cards.forEach(card => {
+        const r = card.getBoundingClientRect();
+        const c = r.left + r.width / 2;
+        const dist = Math.abs(c - sCenter);
+        if(dist < bestDist){
+          bestDist = dist;
+          best = card;
+        }
+      });
+
+      cards.forEach(card => card.classList.remove('fs-card-center'));
+      if(best) best.classList.add('fs-card-center');
+    }
+
+    function resetCard(card){
+      card.style.transform = '';
+      const box = card.querySelector('.fs-cat-fixed-box');
+      const caption = card.querySelector('.fs-cat-fixed-caption');
+      if(box) box.style.transform = '';
+      if(caption) caption.style.transform = '';
+    }
+
+    function applyTilt(card, clientX, clientY){
+      const rect = card.getBoundingClientRect();
+      const px = (clientX - rect.left) / rect.width;
+      const py = (clientY - rect.top) / rect.height;
+
+      const rotY = clamp((px - 0.5) * 10, -5, 5);
+      const rotX = clamp((0.5 - py) * 10, -5, 5);
+
+      const box = card.querySelector('.fs-cat-fixed-box');
+      const caption = card.querySelector('.fs-cat-fixed-caption');
+
+      card.style.transform = `translateY(-2px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.01)`;
+      if(box) box.style.transform = `translateZ(10px)`;
+      if(caption) caption.style.transform = `translateZ(16px)`;
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('mousemove', function(e){
+        applyTilt(card, e.clientX, e.clientY);
+      }, {passive:true});
+
+      card.addEventListener('mouseleave', function(){
+        resetCard(card);
+      }, {passive:true});
+
+      card.addEventListener('touchstart', function(e){
+        card.classList.add('fs-card-pressed', 'fs-micro-vibe');
+        const t = e.touches && e.touches[0];
+        if(t) applyTilt(card, t.clientX, t.clientY);
+      }, {passive:true});
+
+      card.addEventListener('touchmove', function(e){
+        const t = e.touches && e.touches[0];
+        if(t) applyTilt(card, t.clientX, t.clientY);
+      }, {passive:true});
+
+      const clear = function(){
+        card.classList.remove('fs-card-pressed');
+        setTimeout(() => card.classList.remove('fs-micro-vibe'), 180);
+        resetCard(card);
+        updateCenterHighlight();
+      };
+      card.addEventListener('touchend', clear, {passive:true});
+      card.addEventListener('touchcancel', clear, {passive:true});
+    });
+
+    scroller.addEventListener('scroll', function(){
+      window.requestAnimationFrame(updateCenterHighlight);
+    }, {passive:true});
+
+    window.addEventListener('resize', updateCenterHighlight, {passive:true});
+    updateCenterHighlight();
+  }catch(e){}
+});
+</script>
+<script id="fs-cards-principais-3d-js">
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    const cards = Array.from(document.querySelectorAll('.fs-home-section .card, .negociacoes .card, .section .card'));
+
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+    function resetCard(card){
+      card.style.transform = '';
+      const img = card.querySelector('img');
+      const body = card.querySelector('.card-body');
+      const title = card.querySelector('.card-title, .title');
+      if (img) img.style.transform = '';
+      if (body) body.style.transform = '';
+      if (title) title.style.transform = '';
+    }
+
+    function applyTilt(card, clientX, clientY){
+      const rect = card.getBoundingClientRect();
+      const px = (clientX - rect.left) / rect.width;
+      const py = (clientY - rect.top) / rect.height;
+
+      const rotY = clamp((px - 0.5) * 10, -5, 5);
+      const rotX = clamp((0.5 - py) * 10, -5, 5);
+
+      const img = card.querySelector('img');
+      const body = card.querySelector('.card-body');
+      const title = card.querySelector('.card-title, .title');
+
+      card.style.transform = `translateY(-2px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.008)`;
+      if (img) img.style.transform = 'translateZ(10px) scale(1.03)';
+      if (body) body.style.transform = 'translateZ(12px)';
+      if (title) title.style.transform = 'translateZ(18px)';
+    }
+
+    function updateCenterHighlight(){
+      const viewportCenter = window.innerWidth / 2;
+      let best = null;
+      let bestDist = Infinity;
+
+      cards.forEach(card => {
+        const r = card.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) return;
+        const c = r.left + r.width / 2;
+        const dist = Math.abs(c - viewportCenter);
+        if(dist < bestDist){
+          bestDist = dist;
+          best = card;
+        }
+      });
+
+      cards.forEach(card => card.classList.remove('fs-main-center'));
+      if(best) best.classList.add('fs-main-center');
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('mousemove', function(e){
+        applyTilt(card, e.clientX, e.clientY);
+      }, {passive:true});
+
+      card.addEventListener('mouseleave', function(){
+        resetCard(card);
+      }, {passive:true});
+
+      card.addEventListener('touchstart', function(e){
+        card.classList.add('fs-main-pressed', 'fs-main-vibe');
+        const t = e.touches && e.touches[0];
+        if (t) applyTilt(card, t.clientX, t.clientY);
+      }, {passive:true});
+
+      card.addEventListener('touchmove', function(e){
+        const t = e.touches && e.touches[0];
+        if (t) applyTilt(card, t.clientX, t.clientY);
+      }, {passive:true});
+
+      const clear = function(){
+        card.classList.remove('fs-main-pressed');
+        setTimeout(() => card.classList.remove('fs-main-vibe'), 180);
+        resetCard(card);
+        updateCenterHighlight();
+      };
+      card.addEventListener('touchend', clear, {passive:true});
+      card.addEventListener('touchcancel', clear, {passive:true});
+    });
+
+    window.addEventListener('scroll', function(){
+      window.requestAnimationFrame(updateCenterHighlight);
+    }, {passive:true});
+    window.addEventListener('resize', updateCenterHighlight, {passive:true});
+    updateCenterHighlight();
+  }catch(e){}
+});
+</script>
+<script id="fs-cards-principais-highlight-fixado-js">
+document.addEventListener('DOMContentLoaded', function(){
+  try{
+    const cards = Array.from(document.querySelectorAll('.fs-home-section .card, .negociacoes .card, .section .card'));
+
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+    function resetCard(card){
+      if (!card.classList.contains('fs-main-center') && !card.classList.contains('fs-main-pressed')) {
+        card.style.transform = '';
+        const img = card.querySelector('img');
+        const body = card.querySelector('.card-body');
+        const title = card.querySelector('.card-title, .title');
+        if (img) img.style.transform = '';
+        if (body) body.style.transform = '';
+        if (title) title.style.transform = '';
+      }
+    }
+
+    function applyTilt(card, clientX, clientY){
+      const rect = card.getBoundingClientRect();
+      const px = (clientX - rect.left) / rect.width;
+      const py = (clientY - rect.top) / rect.height;
+
+      const rotY = clamp((px - 0.5) * 10, -4, 4);
+      const rotX = clamp((0.5 - py) * 10, -4, 4);
+
+      const img = card.querySelector('img');
+      const body = card.querySelector('.card-body');
+      const title = card.querySelector('.card-title, .title');
+
+      card.style.transform = `translateY(-2px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.008)`;
+      if (img) img.style.transform = 'translateZ(10px) scale(1.03)';
+      if (body) body.style.transform = 'translateZ(12px)';
+      if (title) title.style.transform = 'translateZ(18px)';
+    }
+
+    function updateCenterHighlight(){
+      const viewportCenterY = window.innerHeight / 2;
+      let best = null;
+      let bestDist = Infinity;
+
+      cards.forEach(card => {
+        const r = card.getBoundingClientRect();
+        if (r.bottom < 40 || r.top > window.innerHeight - 40) return;
+        const cY = r.top + r.height / 2;
+        const dist = Math.abs(cY - viewportCenterY);
+        if (dist < bestDist){
+          bestDist = dist;
+          best = card;
+        }
+      });
+
+      cards.forEach(card => {
+        if (card !== best) {
+          card.classList.remove('fs-main-center');
+          if (!card.classList.contains('fs-main-pressed')) resetCard(card);
+        }
+      });
+
+      if (best) {
+        best.classList.add('fs-main-center');
+        best.style.transform = '';
+      }
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('mousemove', function(e){
+        applyTilt(card, e.clientX, e.clientY);
+      }, {passive:true});
+
+      card.addEventListener('mouseleave', function(){
+        if (!card.classList.contains('fs-main-center')) resetCard(card);
+        else card.style.transform = '';
+      }, {passive:true});
+
+      card.addEventListener('touchstart', function(e){
+        card.classList.add('fs-main-pressed');
+        const t = e.touches && e.touches[0];
+        if (t) applyTilt(card, t.clientX, t.clientY);
+      }, {passive:true});
+
+      card.addEventListener('touchmove', function(e){
+        const t = e.touches && e.touches[0];
+        if (t) applyTilt(card, t.clientX, t.clientY);
+      }, {passive:true});
+
+      const clear = function(){
+        card.classList.remove('fs-main-pressed');
+        if (card.classList.contains('fs-main-center')) {
+          card.style.transform = '';
+        } else {
+          resetCard(card);
+        }
+        updateCenterHighlight();
+      };
+      card.addEventListener('touchend', clear, {passive:true});
+      card.addEventListener('touchcancel', clear, {passive:true});
+    });
+
+    let ticking = false;
+    function onScrollOrResize(){
+      if (!ticking){
+        requestAnimationFrame(function(){
+          updateCenterHighlight();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }
+
+    window.addEventListener('scroll', onScrollOrResize, {passive:true});
+    window.addEventListener('resize', onScrollOrResize, {passive:true});
+
+    updateCenterHighlight();
+  }catch(e){}
+});
+</script>
+<script id="fs-banner-pro-upgrade-v2-js">
+document.addEventListener('DOMContentLoaded', function(){
+  const root = document.querySelector('.fs-exact-home');
+  if(!root) return;
+  const carousel = root.querySelector('#carousel');
+  const slides = Array.from(root.querySelectorAll('.carousel-link'));
+  const dotsWrap = root.querySelector('#dots');
+  if(!carousel || slides.length < 2 || !dotsWrap) return;
+
+  const oldArrows = carousel.querySelectorAll('.carousel-arrow');
+  oldArrows.forEach(el => el.remove());
+  let current = Math.max(0, slides.findIndex(s => s.classList.contains('active')));
+  if(current < 0) current = 0;
+  let autoplay = null;
+  let startX = 0;
+  let startY = 0;
+  let deltaX = 0;
+  let isDragging = false;
+  let locked = false;
+  let resumeTimer = null;
+
+  function paint(){
+    slides.forEach((slide, idx) => {
+      slide.classList.toggle('active', idx === current);
+      slide.setAttribute('aria-hidden', idx === current ? 'false' : 'true');
+    });
+    dotsWrap.querySelectorAll('.dot').forEach((dot, idx) => dot.classList.toggle('active', idx === current));
+  }
+
+  function goTo(index, direction = 0){
+    if(locked) return;
+    locked = true;
+    current = (index + slides.length) % slides.length;
+    slides.forEach((slide, idx) => {
+      slide.style.transform = idx === current ? 'translate3d(0,0,0) scale(1)' : `translate3d(${direction < 0 ? '-10px' : direction > 0 ? '10px' : '0px'},0,0) scale(1.01)`;
+    });
+    paint();
+    setTimeout(()=>{locked = false;}, 420);
+  }
+
+  function next(){ goTo(current + 1, 1); }
+  function prev(){ goTo(current - 1, -1); }
+
+  function stopAuto(){
+    if(autoplay){ clearInterval(autoplay); autoplay = null; }
+    if(resumeTimer){ clearTimeout(resumeTimer); resumeTimer = null; }
+  }
+
+  function startAuto(delay = 4200){
+    stopAuto();
+    autoplay = setInterval(next, delay);
+  }
+
+  function softResume(){
+    if(resumeTimer) clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(()=>startAuto(4200), 1400);
+  }
+
+  dotsWrap.innerHTML = '';
+  slides.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'dot' + (i === current ? ' active' : '');
+    dot.setAttribute('aria-label', 'Ir para banner ' + (i + 1));
+    dot.addEventListener('click', () => { goTo(i, i > current ? 1 : -1); softResume(); });
+    dotsWrap.appendChild(dot);
+  });
+
+  const left = document.createElement('button');
+  left.className = 'carousel-arrow left';
+  left.type = 'button';
+  left.setAttribute('aria-label', 'Anterior');
+  left.innerHTML = '&#8249;';
+  left.addEventListener('click', () => { prev(); softResume(); });
+  const right = document.createElement('button');
+  right.className = 'carousel-arrow right';
+  right.type = 'button';
+  right.setAttribute('aria-label', 'Próximo');
+  right.innerHTML = '&#8250;';
+  right.addEventListener('click', () => { next(); softResume(); });
+  carousel.appendChild(left);
+  carousel.appendChild(right);
+
+  paint();
+  startAuto();
+
+  carousel.addEventListener('touchstart', (e) => {
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    startX = t.clientX;
+    startY = t.clientY;
+    deltaX = 0;
+    isDragging = true;
+    stopAuto();
+  }, {passive:true});
+
+  carousel.addEventListener('touchmove', (e) => {
+    if(!isDragging) return;
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    deltaX = t.clientX - startX;
+    const deltaY = Math.abs(t.clientY - startY);
+    if(Math.abs(deltaX) > deltaY){
+      const active = slides[current]?.querySelector('img');
+      if(active){
+        const move = Math.max(-16, Math.min(16, deltaX * 0.12));
+        active.style.transform = `scale(1.02) translate3d(${move}px,0,0)`;
+      }
+    }
+  }, {passive:true});
+
+  carousel.addEventListener('touchend', () => {
+    const active = slides[current]?.querySelector('img');
+    if(active) active.style.transform = 'scale(1.028) translate3d(0,0,0)';
+    if(Math.abs(deltaX) >= 42){
+      deltaX < 0 ? next() : prev();
+    }
+    isDragging = false;
+    deltaX = 0;
+    softResume();
+  }, {passive:true});
+
+  carousel.addEventListener('mouseenter', stopAuto);
+  carousel.addEventListener('mouseleave', () => startAuto());
+
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden) stopAuto();
+    else startAuto();
+  });
+});
+</script>
+<script id="fs-pro-image-safety">
+(function(){
+  function makeFallback(label){
+    var map={
+      'Móveis':['🛋️','#667eea','MÓVEIS'],
+      'Eletrodomésticos':['🧊','#7c5cff','ELETRO'],
+      "TV's e Áudio":['📺','#4f8cff','TV + ÁUDIO'],
+      'Smartphones':['📱','#00a3c4','SMARTPHONES'],
+      'Eletroportáteis':['☕','#ff9c3d','ELETROPORTÁTEIS'],
+      'Informática':['💻','#4f7cff','INFORMÁTICA'],
+      'Bicicletas':['🚲','#22c55e','BICICLETAS'],
+      'Utilidades do lar':['🍽️','#f59e0b','UTILIDADES'],
+      'Cama e Mesa':['🛏️','#8b5cf6','CAMA E MESA'],
+      'Dashboard':['📊','#5176ff','DASHBOARD']
+    };
+    var c=map[label]||['✨','#667eea',(label||'FS SOLUÇÕES').toUpperCase()];
+    var svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520"><rect width="800" height="520" rx="34" fill="#eef4ff"/><rect x="34" y="34" width="732" height="452" rx="30" fill="#ffffff"/><circle cx="400" cy="220" r="110" fill="#fff"/><circle cx="400" cy="220" r="102" fill="none" stroke="${c[1]}" stroke-opacity=".18" stroke-width="10"/><text x="400" y="246" text-anchor="middle" font-size="118">${c[0]}</text><rect x="196" y="372" width="408" height="54" rx="27" fill="${c[1]}" fill-opacity=".10"/><text x="400" y="406" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="800" fill="#334155">${c[2]}</text></svg>`;
+    return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+  }
+  document.querySelectorAll('img').forEach(function(img){
+    if(!img.getAttribute('onerror')){
+      img.onerror=function(){ this.onerror=null; this.src=makeFallback(this.alt || 'FS Soluções'); };
+    }
+  });
+})();
+</script>
+<script id="fs-ajustes-chatgpt-script-20260322">
+(function(){
+  var cards = document.querySelectorAll('.card');
+  cards.forEach(function(card){
+    var link = card.querySelector('a[href]');
+    if(!link) return;
+    card.classList.add('card-clickable');
+    card.addEventListener('click', function(ev){
+      var tag = (ev.target && ev.target.tagName ? ev.target.tagName.toLowerCase() : '');
+      if(tag === 'input' || tag === 'button' || tag === 'textarea' || tag === 'select') return;
+      var href = link.getAttribute('href');
+      if(!href) return;
+      if(href.charAt(0) === '#'){
+        var el = document.querySelector(href);
+        if(el && typeof el.click === 'function') { el.click(); return; }
+        location.hash = href;
+        return;
+      }
+      window.location.href = href;
+    }, {passive:true});
+  });
+})();
+</script>
+<style id="fs-menu-source-of-truth-final">
+/* === FONTE ÚNICA FINAL: MENU OPÇÕES === */
+html.fs-options-open,
+body.fs-options-open{
+  overflow:hidden !important;
+}
+
+#fsBottomNav,
+.fs-bottom-nav{
+  position:fixed !important;
+  left:50% !important;
+  transform:translateX(-50%) !important;
+  bottom:8px !important;
+  width:calc(100% - 16px) !important;
+  max-width:430px !important;
+  display:grid !important;
+  grid-template-columns:repeat(3,1fr) !important;
+  align-items:center !important;
+  border-radius:26px !important;
+  background:rgba(255,255,255,.94) !important;
+  border:1px solid rgba(255,255,255,.64) !important;
+  backdrop-filter:blur(18px) saturate(1.15) !important;
+  -webkit-backdrop-filter:blur(18px) saturate(1.15) !important;
+  box-shadow:0 16px 36px rgba(15,23,42,.12) !important;
+  padding:8px 8px calc(8px + env(safe-area-inset-bottom)) !important;
+  z-index:1200 !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+
+#fsBottomNav .fs-nav-item,
+.fs-bottom-nav .fs-nav-item{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+#fsOptionsBackdrop,
+.fs-options-backdrop{
+  position:fixed !important;
+  inset:0 !important;
+  background:rgba(15,23,42,.18) !important;
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+  z-index:1300 !important;
+}
+
+#fsOptionsBackdrop.open,
+.fs-options-backdrop.open{
+  opacity:1 !important;
+  visibility:visible !important;
+  pointer-events:auto !important;
+}
+
+#fsOptionsSheet,
+.fs-options-sheet{
+  position:fixed !important;
+  left:50% !important;
+  right:auto !important;
+  top:auto !important;
+  bottom:calc(92px + env(safe-area-inset-bottom, 0px)) !important;
+  width:calc(100% - 16px) !important;
+  max-width:430px !important;
+  max-height:min(72vh, 620px) !important;
+  overflow:auto !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+  transform:translateX(-50%) translateY(calc(100% + 40px)) !important;
+  border-radius:28px !important;
+  background:#f3f4f7 !important;
+  box-shadow:0 -18px 42px rgba(15,23,42,.18) !important;
+  padding:18px 0 calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+  z-index:1400 !important;
+}
+
+#fsOptionsSheet.open,
+.fs-options-sheet.open{
+  opacity:1 !important;
+  pointer-events:auto !important;
+  transform:translateX(-50%) translateY(0) !important;
+}
+
+#fsOptionsSheet .fs-options-head,
+.fs-options-sheet .fs-options-head{
+  padding:0 18px 14px !important;
+  border-bottom:1px solid #e5e7eb !important;
+}
+
+#fsOptionsSheet .fs-options-profile,
+.fs-options-sheet .fs-options-profile{
+  margin:14px 12px 12px !important;
+}
+</style>
+<script id="fs-menu-source-of-truth-final-js">
+document.addEventListener('DOMContentLoaded', function(){
+  const navHome = document.getElementById('fsNavHome');
+  const navNew = document.getElementById('fsNavNew');
+  const navOptions = document.getElementById('fsNavOptions');
+  const sheet = document.getElementById('fsOptionsSheet');
+  const backdrop = document.getElementById('fsOptionsBackdrop');
+  const closeBtn = document.getElementById('fsOptionsClose');
+  const menuUser = document.getElementById('menuUserName');
+  const optionsUser = document.getElementById('fsOptionsUser');
+
+  if(!navOptions || !sheet) return;
+
+  function syncUser(){
+    if(menuUser && optionsUser && menuUser.textContent.trim()){
+      optionsUser.textContent = menuUser.textContent.trim();
+    }
+  }
+
+  function setActive(el){
+    document.querySelectorAll('.fs-nav-item').forEach(btn => btn.classList.remove('active'));
+    if(el) el.classList.add('active');
+  }
+
+  function openOptions(e){
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    syncUser();
+    sheet.classList.add('open');
+    if(backdrop) backdrop.classList.add('open');
+    document.documentElement.classList.add('fs-options-open');
+    document.body.classList.add('fs-options-open');
+    setActive(navOptions);
+  }
+
+  function closeOptions(goHome){
+    sheet.classList.remove('open');
+    if(backdrop) backdrop.classList.remove('open');
+    document.documentElement.classList.remove('fs-options-open');
+    document.body.classList.remove('fs-options-open');
+    if(goHome !== false && navHome) setActive(navHome);
+  }
+
+  navOptions.onclick = openOptions;
+  navOptions.addEventListener('click', openOptions, true);
+
+  if(navHome){
+    navHome.addEventListener('click', function(){ closeOptions(false); setActive(navHome); }, true);
+  }
+  if(navNew){
+    navNew.addEventListener('click', function(){ closeOptions(false); }, true);
+  }
+  if(closeBtn){
+    closeBtn.addEventListener('click', function(){ closeOptions(); }, true);
+  }
+  if(backdrop){
+    backdrop.addEventListener('click', function(){ closeOptions(); }, true);
+  }
+
+  syncUser();
+});
+</script>
+<style id="fs-menu-clean-final-patch">
+/* limpa o cabeçalho inútil do painel */
+#fsOptionsSheet .fs-options-head,
+.fs-options-sheet .fs-options-head{
+  display:none !important;
+}
+
+/* aproxima o card de perfil do topo */
+#fsOptionsSheet .fs-options-profile,
+.fs-options-sheet .fs-options-profile{
+  margin-top: 12px !important;
+  grid-template-columns:86px minmax(0,1fr) !important;
+}
+
+/* O cartão do usuário é apenas informativo: não exibe seta de navegação. */
+#fsOptionsSheet .fs-options-profile .fs-options-chevron,
+.fs-options-sheet .fs-options-profile .fs-options-chevron{
+  display:none !important;
+}
+
+/* garante emojis e alinhamento premium nos itens */
+#fsOptionsSheet .fs-options-item,
+.fs-options-sheet .fs-options-item{
+  display:grid !important;
+  grid-template-columns: 28px 1fr 14px !important;
+  align-items:center !important;
+  gap:12px !important;
+}
+
+#fsOptionsSheet .fs-options-item > span:first-child,
+.fs-options-sheet .fs-options-item > span:first-child{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  font-size:22px !important;
+  line-height:1 !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+
+#fsOptionsSheet .fs-options-item > span:nth-child(2),
+.fs-options-sheet .fs-options-item > span:nth-child(2){
+  display:block !important;
+}
+
+#fsOptionsSheet .fs-options-item > b,
+.fs-options-sheet .fs-options-item > b{
+  justify-self:end !important;
+}
+</style>
+<script id="fs-menu-emoji-patch-final">
+document.addEventListener('DOMContentLoaded', function(){
+  const map = [
+    ['compart', '🔗'],
+    ['instalar', '📲'],
+    ['trocar usuário', '👤'],
+    ['regulamento', '📦'],
+    ['sair', '🚪'],
+    ['calculadora', '🧮'],
+    ['suporte', '💬'],
+    ['data', '📅'],
+    ['hora', '⏰']
+  ];
+
+  document.querySelectorAll('#fsOptionsSheet .fs-options-item, .fs-options-sheet .fs-options-item').forEach(function(item){
+    const spans = item.querySelectorAll('span');
+    if (spans.length < 2) return;
+    const label = (spans[1].textContent || '').trim().toLowerCase();
+    let icon = spans[0].textContent.trim();
+    for (const [key, value] of map){
+      if (label.includes(key)){ icon = value; break; }
+    }
+    spans[0].textContent = icon;
+  });
+});
+</script>
+<style id="fs-share-panel-pro-mobile">
+/* === FS SHARE PANEL PRO MOBILE === */
+#shareModal .share-body{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:16px !important;
+  padding-bottom:18px !important;
+}
+
+#shareModal .kpis{
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:14px !important;
+}
+
+#shareModal .kpi{
+  background:linear-gradient(180deg,#ffffff 0%,#fbfbff 100%) !important;
+  border:1px solid rgba(91,95,255,.08) !important;
+  border-radius:24px !important;
+  padding:18px 18px 16px !important;
+  box-shadow:0 10px 24px rgba(15,23,42,.06) !important;
+}
+
+#shareModal .kpi .small{
+  display:block !important;
+  font-size:13px !important;
+  color:#6b7280 !important;
+  margin-bottom:8px !important;
+}
+
+#shareModal .kpi strong{
+  font-size:28px !important;
+  line-height:1 !important;
+  color:#1f2937 !important;
+}
+
+#shareModal .panel-card{
+  background:linear-gradient(180deg,#ffffff 0%,#fdfdff 100%) !important;
+  border:1px solid rgba(91,95,255,.08) !important;
+  border-radius:28px !important;
+  padding:18px !important;
+  box-shadow:0 14px 30px rgba(15,23,42,.06) !important;
+}
+
+#shareModal .panel-card > h4{
+  font-size:17px !important;
+  line-height:1.15 !important;
+  margin:0 0 14px !important;
+  color:#1f2937 !important;
+  letter-spacing:-.2px !important;
+}
+
+#shareModal .panel-grid{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:12px !important;
+}
+
+#shareModal .fs-field{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:7px !important;
+}
+
+#shareModal .fs-field-label{
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+  letter-spacing:.02em !important;
+  color:#667085 !important;
+  text-transform:uppercase !important;
+  padding-left:4px !important;
+}
+
+#shareModal .fs-field-box{
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  background:#f7f8fc !important;
+  border:1px solid #e7eaf4 !important;
+  border-radius:18px !important;
+  min-height:54px !important;
+  padding:0 14px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8) !important;
+}
+
+#shareModal .fs-field-icon{
+  width:24px !important;
+  display:inline-flex !important;
+  justify-content:center !important;
+  font-size:18px !important;
+  line-height:1 !important;
+}
+
+#shareModal .panel-input{
+  border:none !important;
+  background:transparent !important;
+  height:52px !important;
+  padding:0 !important;
+  border-radius:0 !important;
+  font-size:16px !important;
+  color:#1f2937 !important;
+  box-shadow:none !important;
+}
+
+#shareModal .panel-input::placeholder{
+  color:#9aa3b2 !important;
+}
+
+#shareModal .actions{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:10px !important;
+  margin-top:14px !important;
+}
+
+#shareModal .btn-primary,
+#shareModal .btn-secondary{
+  width:100% !important;
+  min-height:54px !important;
+  border-radius:18px !important;
+  font-size:15px !important;
+  font-weight:800 !important;
+  letter-spacing:-.2px !important;
+}
+
+#shareModal .btn-primary{
+  box-shadow:0 14px 28px rgba(91,95,255,.22) !important;
+}
+
+#shareModal .form-note{
+  margin-top:14px !important;
+  border-radius:18px !important;
+  padding:14px 15px !important;
+  background:#eef5ff !important;
+  border:1px solid #cfe0ff !important;
+  color:#3557a6 !important;
+  font-size:13px !important;
+  line-height:1.35 !important;
+}
+
+#shareModal .table-wrap{
+  border-radius:22px !important;
+  background:#f8f9fd !important;
+  border:1px solid #e6e9f2 !important;
+  padding:8px !important;
+  overflow:auto !important;
+}
+
+#shareModal #usersTable{
+  width:100% !important;
+  border-collapse:separate !important;
+  border-spacing:0 10px !important;
+}
+
+#shareModal #usersTable thead th{
+  position:sticky !important;
+  top:0 !important;
+  background:#f8f9fd !important;
+  z-index:1 !important;
+  font-size:11px !important;
+  color:#6b7280 !important;
+  text-transform:uppercase !important;
+  letter-spacing:.05em !important;
+  padding:8px 10px !important;
+}
+
+#shareModal #usersTable tbody tr{
+  background:#ffffff !important;
+  box-shadow:0 8px 18px rgba(15,23,42,.05) !important;
+}
+
+#shareModal #usersTable tbody td{
+  padding:14px 10px !important;
+  vertical-align:middle !important;
+  border-top:1px solid #eef1f6 !important;
+  border-bottom:1px solid #eef1f6 !important;
+}
+
+#shareModal #usersTable tbody td:first-child{
+  border-left:1px solid #eef1f6 !important;
+  border-top-left-radius:16px !important;
+  border-bottom-left-radius:16px !important;
+}
+
+#shareModal #usersTable tbody td:last-child{
+  border-right:1px solid #eef1f6 !important;
+  border-top-right-radius:16px !important;
+  border-bottom-right-radius:16px !important;
+}
+
+#shareModal .small{
+  color:#6b7280 !important;
+  font-size:13px !important;
+  line-height:1.35 !important;
+}
+
+@media (max-width: 768px){
+  #shareModal .share-head{
+    padding-bottom:14px !important;
+  }
+  #shareModal .share-head h3{
+    font-size:20px !important;
+    letter-spacing:-.3px !important;
+  }
+  #shareModal .share-head .share-close{
+    min-width:104px !important;
+    border-radius:20px !important;
+  }
+}
+
+@media (max-width: 640px){
+  #shareModal .kpis{
+    grid-template-columns:1fr 1fr !important;
+  }
+
+  #shareModal #usersTable,
+  #shareModal #usersTable thead,
+  #shareModal #usersTable tbody,
+  #shareModal #usersTable tr,
+  #shareModal #usersTable th,
+  #shareModal #usersTable td{
+    display:block !important;
+    width:100% !important;
+  }
+
+  #shareModal #usersTable thead{
+    display:none !important;
+  }
+
+  #shareModal #usersTable tbody{
+    display:grid !important;
+    gap:12px !important;
+  }
+
+  #shareModal #usersTable tbody tr{
+    border-radius:18px !important;
+    overflow:hidden !important;
+    background:#fff !important;
+    border:1px solid #eef1f6 !important;
+    box-shadow:0 10px 22px rgba(15,23,42,.06) !important;
+  }
+
+  #shareModal #usersTable tbody td{
+    position:relative !important;
+    padding:10px 14px 10px 118px !important;
+    min-height:42px !important;
+    border:none !important;
+    border-bottom:1px solid #f0f2f7 !important;
+    border-radius:0 !important;
+    background:#fff !important;
+  }
+
+  #shareModal #usersTable tbody td:last-child{
+    border-bottom:none !important;
+  }
+
+  #shareModal #usersTable tbody td::before{
+    content:attr(data-label) !important;
+    position:absolute !important;
+    left:14px !important;
+    top:10px !important;
+    width:92px !important;
+    font-size:11px !important;
+    font-weight:800 !important;
+    color:#667085 !important;
+    text-transform:uppercase !important;
+    letter-spacing:.05em !important;
+  }
+}
+</style>
+<script id="fs-share-panel-pro-mobile-js">
+document.addEventListener('DOMContentLoaded', function(){
+  const shareModal = document.getElementById('shareModal');
+  if(!shareModal) return;
+
+  const firstCard = Array.from(shareModal.querySelectorAll('.panel-card')).find(card => {
+    const h = card.querySelector('h4');
+    return h && /Compartilhar acesso/i.test(h.textContent || '');
+  });
+
+  const fieldMap = [
+    { id:'filial', label:'Filial', icon:'🏬' },
+    { id:'nome', label:'Nome completo', icon:'👤' },
+    { id:'cargo', label:'Cargo / função', icon:'💼' },
+    { id:'whats', label:'WhatsApp', icon:'📱' },
+    { id:'genero', label:'Perfil visual', icon:'🎨' }
+  ];
+
+  fieldMap.forEach(function(field){
+    const input = document.getElementById(field.id);
+    if(!input || input.dataset.fsEnhanced === '1') return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'fs-field';
+
+    const label = document.createElement('div');
+    label.className = 'fs-field-label';
+    label.innerHTML = '<span>' + field.icon + '</span><span>' + field.label + '</span>';
+
+    const box = document.createElement('div');
+    box.className = 'fs-field-box';
+
+    const icon = document.createElement('span');
+    icon.className = 'fs-field-icon';
+    icon.textContent = field.icon;
+
+    input.parentNode.insertBefore(wrapper, input);
+    box.appendChild(icon);
+    box.appendChild(input);
+    wrapper.appendChild(label);
+    wrapper.appendChild(box);
+    input.dataset.fsEnhanced = '1';
+  });
+
+  if(firstCard){
+    const title = firstCard.querySelector('h4');
+    if(title && !title.dataset.fsStyled){
+      title.textContent = '🔗 Novo acesso';
+      title.dataset.fsStyled = '1';
+    }
+  }
+
+  const usersTable = document.getElementById('usersTable');
+  function applyLabels(){
+    if(!usersTable) return;
+    const headers = Array.from(usersTable.querySelectorAll('thead th')).map(th => (th.textContent || '').trim());
+    usersTable.querySelectorAll('tbody tr').forEach(function(tr){
+      tr.querySelectorAll('td').forEach(function(td, idx){
+        if(headers[idx]) td.setAttribute('data-label', headers[idx]);
+      });
+    });
+  }
+
+  applyLabels();
+
+  if(usersTable){
+    const obs = new MutationObserver(applyLabels);
+    obs.observe(usersTable.querySelector('tbody') || usersTable, {childList:true, subtree:true});
+  }
+
+  const updateCard = Array.from(shareModal.querySelectorAll('.panel-card')).find(card => {
+    const h = card.querySelector('h4');
+    return h && /Notificar atualização/i.test(h.textContent || '');
+  });
+  if(updateCard){
+    const h = updateCard.querySelector('h4');
+    if(h) h.textContent = '📣 Notificar atualização';
+  }
+
+  const usersCard = Array.from(shareModal.querySelectorAll('.panel-card')).find(card => {
+    const h = card.querySelector('h4');
+    return h && /Usuários cadastrados/i.test(h.textContent || '');
+  });
+  if(usersCard){
+    const h = usersCard.querySelector('h4');
+    if(h) h.textContent = '👥 Usuários cadastrados';
+  }
+});
+</script>
+<script>
+document.addEventListener('click', function(e){
+  const card = e.target.closest('#cardFormulariosFS.fs-card-link');
+  if(!card) return;
+  const isAction = e.target.closest('a, button');
+  if(isAction) return;
+  const href = card.getAttribute('data-href');
+  if(href) window.location.href = href;
+}, {passive:true});
+</script>
+<style id="fs-ajuste-compacto-v2">
+/* Cabeçalho mais compacto, preservando as proporções dos banners. */
+.fs-author-signature{
+  margin:6px auto 78px !important;
+  padding:2px 12px !important;
+  text-align:center !important;
+  color:#94a3b8 !important;
+  font-size:10px !important;
+  font-weight:500 !important;
+  letter-spacing:.35px !important;
+  opacity:.78 !important;
+}
+.fs-author-signature strong{
+  color:#64748b !important;
+  font-weight:700 !important;
+}
+.fs-exact-home #carousel{
+  aspect-ratio:auto !important;
+  height:160px !important;
+  min-height:160px !important;
+  max-height:160px !important;
+}
+.fs-exact-home .carousel-link,
+.fs-exact-home .carousel-link.active{
+  transform:none !important;
+  transition:opacity .18s ease, visibility .18s ease !important;
+}
+.fs-exact-home .carousel img{
+  object-fit:contain !important;
+  object-position:center center !important;
+  transform:none !important;
+  transition:opacity .18s ease !important;
+  filter:none !important;
+  will-change:auto !important;
+  background:#eef5ff !important;
+}
+.fs-exact-home .carousel-link.active img{
+  transform:none !important;
+  filter:none !important;
+}
+.fs-exact-home .carousel-arrow{
+  width:36px !important;
+  height:36px !important;
+  font-size:19px !important;
+}
+.fs-exact-home .dots{
+  bottom:7px !important;
+  padding:5px 8px !important;
+  gap:6px !important;
+}
+.fs-exact-home .dot{
+  width:7px !important;
+  height:7px !important;
+}
+.fs-exact-home .dot.active{
+  width:22px !important;
+}
+.fs-exact-home .hero{
+  margin-bottom:8px !important;
+}
+@media (max-width:640px){
+  .fs-exact-home #carousel{
+    height:148px !important;
+    min-height:148px !important;
+    max-height:148px !important;
+  }
+  .fs-exact-home .carousel-arrow{
+    width:32px !important;
+    height:32px !important;
+    font-size:17px !important;
+  }
+}
+.fs-planos-card{
+  position:relative !important;
+}
+.fs-planos-card::before,
+.fs-planos-card::after{
+  display:none !important;
+  content:none !important;
+  animation:none !important;
+  background:none !important;
+}
+
+/* Acabamento uniforme dos três cards: imagem cheia e faixa azul no título. */
+.fs-home-section .card{
+  padding:0 !important;
+  overflow:hidden !important;
+}
+.fs-home-section .card > img{
+  display:block !important;
+  width:calc(100% + 2px) !important;
+  max-width:none !important;
+  height:clamp(210px,44vw,310px) !important;
+  margin:-1px -1px 0 !important;
+  object-fit:cover !important;
+  object-position:center !important;
+  border:0 !important;
+  border-radius:0 !important;
+}
+.fs-home-section .card-body{
+  position:relative !important;
+  min-height:96px !important;
+  overflow:hidden !important;
+  background:linear-gradient(180deg,#fff 0%,#eef8ff 100%) !important;
+}
+.fs-home-section .card-body::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 31% 0 0 !important;
+  display:block !important;
+  border-radius:0 0 72px 0 !important;
+  background:linear-gradient(150deg,rgba(255,255,255,.42),rgba(186,230,253,.9)) !important;
+}
+.fs-home-section .card-title{
+  position:relative !important;
+  z-index:1 !important;
+}
+@media(max-width:640px){
+  .fs-home-section .card > img{
+    height:44vw !important;
+    min-height:190px !important;
+    max-height:280px !important;
+  }
+}
+.fs-planos-brand{
+  position:absolute !important;
+  top:14px !important;
+  right:14px !important;
+  z-index:3 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-width:76px !important;
+  height:34px !important;
+  padding:5px 10px !important;
+  border-radius:10px !important;
+  background:rgba(39,48,151,.92) !important;
+  box-shadow:0 8px 20px rgba(15,23,42,.22) !important;
+  backdrop-filter:blur(5px) !important;
+}
+.fs-planos-brand img{
+  width:auto !important;
+  height:20px !important;
+  max-width:84px !important;
+  object-fit:contain !important;
+  box-shadow:none !important;
+  border-radius:0 !important;
+}
+</style>
+<script id="fs-integracao-central">
+document.addEventListener('DOMContentLoaded', function () {
+  const sections = Array.from(document.querySelectorAll('section'));
+  const negociacoes = sections.find(function (section) {
+    const title = section.querySelector('h2');
+    return title && title.textContent.trim().toLowerCase() === 'negociações';
+  });
+
+  if (negociacoes) {
+    const cards = Array.from(negociacoes.querySelectorAll('.card'));
+    const findCard = function (text) {
+      return cards.find(function (card) {
+        const title = card.querySelector('.card-title');
+        return title && title.textContent.toLowerCase().includes(text);
+      });
+    };
+    const vendas = findCard('vendas');
+    const orcamentos = findCard('orçamentos') || findCard('crediário');
+    const planos = findCard('parcelamentos');
+
+    if (vendas) {
+      const title = vendas.querySelector('.card-title');
+      const image = vendas.querySelector('img');
+      const link = vendas.querySelector('.card-action');
+      if (title) title.textContent = 'Cotações / Vendas';
+      if (image) {
+        image.alt = 'Cotações e Vendas';
+        image.src = 'cotacoes-vendas.webp';
+        image.onerror = null;
+      }
+      if (link) {
+        link.href = 'vendas-mobile.html';
+        link.setAttribute('aria-label', 'Abrir Cotações e Vendas');
+      }
+    }
+
+    if (orcamentos) {
+      const title = orcamentos.querySelector('.card-title');
+      const image = orcamentos.querySelector('img');
+      const link = orcamentos.querySelector('.card-action');
+      if (title) title.textContent = 'Orçamentos';
+      if (image) {
+        image.alt = 'Orçamentos';
+        image.src = 'orcamentos-card.webp';
+        image.onerror = null;
+      }
+      if (link) {
+        link.href = 'orcamentos.html';
+        link.setAttribute('aria-label', 'Abrir Orçamentos');
+      }
+    }
+
+    if (planos) {
+      const image = planos.querySelector('img');
+      const link = planos.querySelector('.card-action');
+      if (image) {
+        image.alt = 'Planos e Parcelamentos';
+        image.src = 'parcelamentos-planos.webp';
+        image.onerror = null;
+      }
+      if (link) {
+        link.href = 'simulador.html';
+        link.setAttribute('aria-label', 'Abrir Planos e Parcelamentos');
+      }
+
+      planos.classList.add('fs-planos-card');
+      const badgeAnterior = planos.querySelector('.fs-planos-brand');
+      if (badgeAnterior) badgeAnterior.remove();
+
+      const grid = negociacoes.querySelector('.grid');
+      if (grid && orcamentos) grid.insertBefore(planos, orcamentos);
+    }
+  }
+
+  sections.forEach(function (section) {
+    const title = section.querySelector('h2');
+    if (title && title.textContent.toLowerCase().includes('acompanhamento')) {
+      section.hidden = true;
+      section.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  if (negociacoes) {
+    negociacoes.addEventListener('click', function (event) {
+      if (event.target.closest('.card')) {
+        try { sessionStorage.setItem('fs_module_from_index', '1'); } catch (e) {}
+      }
+    }, true);
+  }
+
+  [document.getElementById('btnSobrePlataforma'), document.getElementById('btnSobrePlataformaFooter')].filter(Boolean).forEach(function (sobre) {
+    sobre.addEventListener('click', function () {
+      const menu = document.getElementById('menuDropdown');
+      if (menu) menu.classList.remove('open');
+      document.getElementById('fsOptionsBackdrop')?.classList.remove('open');
+      document.getElementById('fsOptionsSheet')?.classList.remove('open');
+      if (typeof abrirSobreSistema === 'function') abrirSobreSistema();
+    });
+  });
+});
+</script>
+<style id="fs-perfil-identificado-v11">
+#fsOptionsAvatar{position:relative;overflow:visible;cursor:pointer;background-size:cover;background-position:center}
+#fsOptionsAvatar.fs-avatar-feminino{background:linear-gradient(145deg,#fff1f5,#fb7185 52%,#be123c) !important;color:#fff !important;border-color:#e11d48 !important;box-shadow:inset 0 2px 2px rgba(255,255,255,.7),0 9px 22px rgba(225,29,72,.34),0 0 0 5px rgba(251,113,133,.14) !important;text-shadow:0 2px 0 #9f1239,0 5px 10px rgba(76,5,25,.38)}
+#fsOptionsAvatar.fs-avatar-masculino{background:linear-gradient(145deg,#eff6ff,#3b82f6 52%,#1e3a8a) !important;color:#fff !important;border-color:#1d4ed8 !important;box-shadow:inset 0 2px 2px rgba(255,255,255,.7),0 9px 22px rgba(29,78,216,.34),0 0 0 5px rgba(59,130,246,.14) !important;text-shadow:0 2px 0 #1e3a8a,0 5px 10px rgba(15,23,42,.42)}
+#fsOptionsAvatar.fs-avatar-neutro{background:linear-gradient(145deg,#f5f3ff,#8b5cf6 52%,#4338ca) !important;color:#fff !important;border-color:#5b21b6 !important;box-shadow:inset 0 2px 2px rgba(255,255,255,.7),0 9px 22px rgba(91,33,182,.30) !important;text-shadow:0 2px 0 #4c1d95,0 5px 10px rgba(15,23,42,.38)}
+#fsOptionsAvatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+#fsOptionsAvatar .fs-avatar-camera{position:absolute;right:-4px;bottom:-3px;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #2f2f96;font-size:13px;box-shadow:0 3px 9px rgba(15,23,42,.22)}
+</style>
+<script id="fs-acesso-identificado-v11">
+(function(){
+  function texto(v){ return String(v == null ? '' : v).trim(); }
+  function maiusculo(v){ return texto(v).toUpperCase(); }
+  function digitos(v){ return texto(v).replace(/\D+/g, ''); }
+  function filial(v){
+    var numero = digitos(v);
+    return numero ? 'FILIAL ' + numero : maiusculo(v).replace(/\s+/g, ' ');
+  }
+
+  var query = new URLSearchParams(window.location.search);
+  var convite = query.get('acesso') === '1' ? {
+    filial: filial(query.get('filial')),
+    nome: maiusculo(query.get('nome')),
+    cargo: maiusculo(query.get('cargo')),
+    whatsapp: digitos(query.get('whatsapp')),
+    genero: maiusculo(query.get('genero')) || 'AUTOMATICO'
+  } : null;
+
+  if(convite && convite.filial && convite.nome && convite.cargo){
+    window.__fsConvitePendente = convite;
+    ['fs_filial','fs_nome','fs_cargo','fs_whatsapp','fs_genero','fs_access_persisted'].forEach(function(chave){
+      localStorage.removeItem(chave);
+    });
+    sessionStorage.removeItem('fs_access_done');
+  }
+
+  function inicialDoNome(nome){
+    var limpo = maiusculo(nome).replace(/[^A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ]/g, '');
+    return limpo.charAt(0) || 'U';
+  }
+
+  function generoVisual(nome){
+    var salvo = maiusculo(localStorage.getItem('fs_genero'));
+    if(['FEMININO','MASCULINO','NEUTRO'].includes(salvo)) return salvo;
+    var primeiro = maiusculo(nome).split(/\s+/)[0] || '';
+    return /A$/.test(primeiro) ? 'FEMININO' : 'MASCULINO';
+  }
+
+  function atualizarPerfil(){
+    var nome = maiusculo(localStorage.getItem('fs_nome')) || 'USUÁRIO';
+    var cargo = maiusculo(localStorage.getItem('fs_cargo')) || 'COLABORADOR';
+    var genero = generoVisual(nome);
+    var avatar = document.getElementById('fsOptionsAvatar');
+    var nomeEl = document.getElementById('fsOptionsUser');
+    var cargoEl = document.getElementById('fsOptionsRole');
+    if(nomeEl) nomeEl.textContent = nome;
+    if(cargoEl) cargoEl.textContent = cargo;
+    if(!avatar) return;
+    avatar.classList.remove('fs-avatar-feminino','fs-avatar-masculino','fs-avatar-neutro');
+    avatar.classList.add('fs-avatar-' + genero.toLowerCase());
+    var foto = localStorage.getItem('fs_profile_photo') || '';
+    avatar.innerHTML = '';
+    if(foto){
+      var img = document.createElement('img');
+      img.src = foto;
+      img.alt = 'Foto de ' + nome;
+      avatar.appendChild(img);
+    }else{
+      avatar.appendChild(document.createTextNode(inicialDoNome(nome)));
+    }
+    var camera = document.createElement('span');
+    camera.className = 'fs-avatar-camera';
+    camera.textContent = '📷';
+    avatar.appendChild(camera);
+    avatar.setAttribute('aria-label', 'Adicionar ou alterar foto de ' + nome);
+  }
+
+  function preencherConvite(){
+    if(!window.__fsConvitePendente) return;
+    var mapa = {
+      fsAccessFilial: window.__fsConvitePendente.filial,
+      fsAccessNome: window.__fsConvitePendente.nome,
+      fsAccessCargo: window.__fsConvitePendente.cargo,
+      fsAccessWhats: window.__fsConvitePendente.whatsapp,
+      fsAccessGenero: window.__fsConvitePendente.genero
+    };
+    Object.keys(mapa).forEach(function(id){
+      var campo = document.getElementById(id);
+      if(!campo) return;
+      campo.value = mapa[id];
+      if(campo.tagName === 'SELECT') campo.disabled = true;
+      else campo.readOnly = true;
+      campo.setAttribute('aria-readonly', 'true');
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var avatar = document.getElementById('fsOptionsAvatar');
+    var seletor = document.createElement('input');
+    seletor.type = 'file';
+    seletor.accept = 'image/*';
+    seletor.id = 'fsProfilePhotoInput';
+    seletor.hidden = true;
+    document.body.appendChild(seletor);
+
+    if(avatar){
+      avatar.addEventListener('click', function(event){
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        seletor.click();
+      }, true);
+    }
+
+    seletor.addEventListener('change', function(){
+      var arquivo = seletor.files && seletor.files[0];
+      if(!arquivo || !arquivo.type.startsWith('image/')) return;
+      var leitor = new FileReader();
+      leitor.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var canvas = document.createElement('canvas');
+          canvas.width = 320;
+          canvas.height = 320;
+          var ctx = canvas.getContext('2d');
+          var lado = Math.min(img.width, img.height);
+          var sx = (img.width - lado) / 2;
+          var sy = (img.height - lado) / 2;
+          ctx.drawImage(img, sx, sy, lado, lado, 0, 0, 320, 320);
+          localStorage.setItem('fs_profile_photo', canvas.toDataURL('image/jpeg', .84));
+          atualizarPerfil();
+        };
+        img.src = leitor.result;
+      };
+      leitor.readAsDataURL(arquivo);
+      seletor.value = '';
+    });
+
+    var filialCampo = document.getElementById('fsAccessFilial');
+    if(filialCampo){
+      filialCampo.addEventListener('blur', function(){ filialCampo.value = filial(filialCampo.value); });
+    }
+
+    var entrar = document.getElementById('fsAccessOk');
+    if(entrar){
+      entrar.addEventListener('click', function(){
+        var f = document.getElementById('fsAccessFilial');
+        if(f) f.value = filial(f.value);
+        setTimeout(function(){
+          var nome = maiusculo(localStorage.getItem('fs_nome'));
+          if(nome){
+            localStorage.setItem('nomeVendedor', nome);
+            localStorage.setItem('nomeVendedorLogado', nome);
+            localStorage.setItem('vendedor_nome', nome);
+          }
+          atualizarPerfil();
+          if(window.__fsConvitePendente){
+            window.__fsConvitePendente = null;
+            history.replaceState({}, document.title, window.location.pathname);
+          }
+        }, 80);
+      }, true);
+    }
+
+    atualizarPerfil();
+    if(window.__fsConvitePendente){
+      var tentativas = 0;
+      var timer = setInterval(function(){
+        preencherConvite();
+        tentativas += 1;
+        if(document.getElementById('fsAccessModal')?.classList.contains('open') || tentativas > 20){
+          clearInterval(timer);
+        }
+      }, 60);
+    }
+
+    new MutationObserver(atualizarPerfil).observe(document.getElementById('menuUserName') || document.body, {childList:true,subtree:true,characterData:true});
+  });
+})();
+</script>
+<style id="fs-cards-sem-moldura-v23">
+/* Regra final: as imagens ocupam toda a largura útil e escondem as molduras laterais. */
+html body .fs-exact-home .fs-home-section .grid > .card{
+  padding:0 !important;
+  overflow:hidden !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card::before,
+html body .fs-exact-home .fs-home-section .grid > .card::after{
+  display:none !important;
+  content:none !important;
+  background:none !important;
+  animation:none !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card > img{
+  display:block !important;
+  width:100% !important;
+  max-width:none !important;
+  height:clamp(245px,52vw,340px) !important;
+  margin:0 !important;
+  object-fit:cover !important;
+  object-position:center center !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  transform:translateY(-18px) scale(1.12) !important;
+  transform-origin:center top !important;
+  margin-bottom:-18px !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card > .card-body{
+  position:relative !important;
+  z-index:2 !important;
+  width:100% !important;
+  margin:0 !important;
+  height:58px !important;
+  min-height:58px !important;
+  max-height:58px !important;
+  padding:0 16px !important;
+  overflow:hidden !important;
+  background:linear-gradient(180deg,#ffffff 0%,#eef8ff 100%) !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card > .card-body::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 31% 0 0 !important;
+  display:block !important;
+  border-radius:0 0 72px 0 !important;
+  background:linear-gradient(150deg,rgba(255,255,255,.42),rgba(186,230,253,.9)) !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card > .card-body::after{
+  display:none !important;
+  content:none !important;
+}
+html body .fs-exact-home .fs-home-section .grid > .card > .card-body > .card-title{
+  position:relative !important;
+  z-index:2 !important;
+  color:#6675b6 !important;
+  opacity:1 !important;
+  font-weight:800 !important;
+}
+@media(max-width:640px){
+  html body .fs-exact-home .fs-home-section .grid > .card > img{
+    width:100% !important;
+    height:56vw !important;
+    min-height:240px !important;
+    max-height:315px !important;
+    margin:0 !important;
+    transform:translateY(-20px) scale(1.135) !important;
+    margin-bottom:-20px !important;
+  }
+}
+html body .fs-author-signature{
+  margin:2px auto 0 !important;
+  padding:2px 8px !important;
+  line-height:1.2 !important;
+}
+html body .fs-categorias-wrap{
+  margin-bottom:4px !important;
+  padding-bottom:0 !important;
+}
+</style>
+<script id="fs-sobre-sem-travamento-v22">
+(function(){
+  function liberarTela(){
+    ['fsAboutModal','fsAboutBackdrop','fsOptionsSheet','fsOptionsBackdrop'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(!el) return;
+      el.classList.remove('open','active','show','visible');
+      if(id === 'fsOptionsSheet') el.setAttribute('aria-hidden','true');
+    });
+    ['fs-hp-open','modal-open','lock-scroll','fs-options-open','fs-modal-open','no-scroll'].forEach(function(classe){
+      document.body.classList.remove(classe);
+      document.documentElement.classList.remove(classe);
+    });
+    [document.body,document.documentElement].forEach(function(el){
+      ['overflow','overflow-y','position','top','height','touch-action'].forEach(function(prop){
+        el.style.removeProperty(prop);
+      });
+    });
+    document.body.style.setProperty('overflow-y','auto');
+    document.documentElement.style.setProperty('overflow-y','auto');
+    var inicio=document.getElementById('fsNavHome');
+    var opcoes=document.getElementById('fsNavOptions');
+    if(opcoes) opcoes.classList.remove('active');
+    if(inicio) inicio.classList.add('active');
+  }
+
+  function abrirSobreLimpo(){
+    liberarTela();
+    var fundo=document.getElementById('fsAboutBackdrop');
+    var modal=document.getElementById('fsAboutModal');
+    if(fundo) fundo.classList.add('open');
+    if(modal) modal.classList.add('open');
+  }
+
+  window.fecharSobreSistema=function(){ liberarTela(); };
+  window.abrirSobreSistema=abrirSobreLimpo;
+
+  document.addEventListener('DOMContentLoaded',function(){
+    var fechar=document.querySelector('.fs-about-close');
+    var fundo=document.getElementById('fsAboutBackdrop');
+    var inicio=document.getElementById('fsNavHome');
+    var sobreMenu=document.getElementById('btnSobrePlataforma');
+    var sobreRodape=document.getElementById('btnSobrePlataformaFooter');
+    if(fechar) fechar.addEventListener('click',function(e){e.preventDefault();liberarTela();},true);
+    if(fundo) fundo.addEventListener('click',function(e){e.preventDefault();liberarTela();},true);
+    if(inicio) inicio.addEventListener('click',liberarTela,true);
+    [sobreMenu,sobreRodape].forEach(function(botao){
+      if(botao) botao.addEventListener('click',function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        abrirSobreLimpo();
+      },true);
+    });
+    document.addEventListener('keydown',function(e){if(e.key==='Escape') liberarTela();});
+    window.addEventListener('pageshow',function(){ liberarTela(); });
+  });
+})();
+</script>
+<script id="fs-finaliza-retorno-v21">
+(function(){
+  if(!document.documentElement.classList.contains('fs-returning-home')) return;
+  var done=false;
+  function liberar(){
+    if(done) return;
+    done=true;
+    document.documentElement.classList.remove('fs-returning-home');
+    try{ sessionStorage.removeItem('fs_returning_home'); }catch(e){}
+  }
+  var imgs=Array.from(document.querySelectorAll('.fs-home-section .grid > .card > img')).slice(0,3);
+  Promise.all(imgs.map(function(img){
+    if(img.complete && img.naturalWidth) return Promise.resolve();
+    return new Promise(function(resolve){
+      img.addEventListener('load',resolve,{once:true});
+      img.addEventListener('error',resolve,{once:true});
+    });
+  })).then(function(){ requestAnimationFrame(function(){ requestAnimationFrame(liberar); }); });
+  setTimeout(liberar,2200);
+})();
+</script>
+<script src="./pwa-update.js?v=51"></script>
+</body>
+</html>

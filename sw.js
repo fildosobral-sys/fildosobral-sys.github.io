@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v50-pdf-a4";
+const CACHE_NAME = "fs-central-v51-index-restaurado";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -12,7 +12,7 @@ const APP_FILES = [
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=50",
+  "/pwa-update.js?v=51",
   "/vendor/jspdf.umd.min.js",
   "/zenir.png",
   "/draft-protection.js?v=29",
