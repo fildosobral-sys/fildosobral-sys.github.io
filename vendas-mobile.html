@@ -30,6 +30,7 @@
   <title>SIMULAÇÕES</title>
   <script src="https://cdn.tailwindcss.com" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <script src="vendor/jspdf.umd.min.js" defer></script>
 <script>
   var nomeVendedorLogado = '';
   var filialLogada = '';
@@ -8900,136 +8901,164 @@ function abrirAlterarStatusProposta(id) {
       return { palco, folha, largura, alturaMinima };
     }
 
+    function fsCarregarImagemExportacao(dataUrl) {
+      return new Promise(function(resolve, reject) {
+        const imagem = new Image();
+        imagem.onload = function() { resolve(imagem); };
+        imagem.onerror = function() { reject(new Error('Não foi possível carregar a imagem para o PDF')); };
+        imagem.src = dataUrl;
+      });
+    }
+
+    async function fsCriarPdfA4(dataUrlImagem) {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        throw new Error('Gerador de PDF indisponível');
+      }
+      const imagem = await fsCarregarImagemExportacao(dataUrlImagem);
+      const paisagem = imagem.naturalWidth > imagem.naturalHeight;
+      const pdf = new window.jspdf.jsPDF({
+        orientation: paisagem ? 'landscape' : 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+      const largura = pdf.internal.pageSize.getWidth();
+      const altura = pdf.internal.pageSize.getHeight();
+      pdf.addImage(dataUrlImagem, 'PNG', 0, 0, largura, altura, undefined, 'FAST');
+      return pdf.output('blob');
+    }
+
     function fsAbrirImagemPronta(url, nomeArquivo, blobImagem, tipoImagem, dataUrlImagem) {
       const overlay = document.createElement('div');
       overlay.className = 'fixed inset-0 z-[10050] bg-black/70 flex items-center justify-center p-4';
       overlay.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col">
           <div class="px-5 py-4 border-b flex items-center justify-between gap-3">
-            <div><h3 class="font-bold text-lg text-gray-900">✅ Imagem A4 pronta</h3><p class="text-xs text-gray-500 mt-1">Salve o PNG em alta definição. O WhatsApp será aberto somente com a mensagem.</p></div>
+            <div><h3 class="font-bold text-lg text-gray-900">✅ PDF A4 pronto</h3><p class="text-xs text-gray-500 mt-1">Compartilhe como documento para preservar a qualidade. O PNG continua disponível como alternativa.</p></div>
             <button type="button" data-fs-fechar class="w-10 h-10 rounded-full bg-gray-100 text-gray-700 text-xl">×</button>
           </div>
-          <div class="p-3 bg-gray-100 overflow-auto flex-1"><img src="${url}" alt="Prévia da imagem A4" class="block w-full h-auto bg-white shadow"></div>
+          <div class="p-3 bg-gray-100 overflow-auto flex-1"><img src="${url}" alt="Prévia do documento A4" class="block w-full h-auto bg-white shadow"></div>
           <div class="p-4 grid grid-cols-2 gap-3 border-t">
-            <button type="button" data-fs-salvar class="rounded-xl bg-blue-600 text-white font-bold px-4 py-3">⬇️ Salvar PNG</button>
-            <button type="button" data-fs-compartilhar class="rounded-xl bg-emerald-600 text-white font-bold px-4 py-3">📤 Compartilhar</button>
-            <button type="button" data-fs-abrir class="rounded-xl bg-indigo-100 text-indigo-800 font-bold px-4 py-3">🔎 Abrir imagem</button>
+            <button type="button" data-fs-pdf class="rounded-xl bg-blue-600 text-white font-bold px-4 py-3">⬇️ Baixar PDF</button>
+            <button type="button" data-fs-compartilhar class="rounded-xl bg-emerald-600 text-white font-bold px-4 py-3">📤 Compartilhar PDF</button>
+            <button type="button" data-fs-png class="rounded-xl bg-indigo-100 text-indigo-800 font-bold px-4 py-3">🖼️ Salvar PNG</button>
             <button type="button" data-fs-fechar class="rounded-xl bg-gray-200 text-gray-800 font-bold px-4 py-3">Fechar</button>
           </div>
         </div>`;
       let sequenciaDownloads = 0;
-      const salvar = async function() {
-        const botao = overlay.querySelector('[data-fs-salvar]');
+      let pdfPromise = null;
+      const nomeBase = String(nomeArquivo || 'PROPOSTA_COMERCIAL.png').replace(/\.png$/i, '');
+      const obterPdf = function() {
+        if (!pdfPromise) pdfPromise = fsCriarPdfA4(dataUrlImagem);
+        return pdfPromise;
+      };
+      const sufixoUnico = function() {
+        sequenciaDownloads += 1;
+        const instante = new Date();
+        return [
+          instante.getFullYear(),
+          String(instante.getMonth() + 1).padStart(2, '0'),
+          String(instante.getDate()).padStart(2, '0'),
+          String(instante.getHours()).padStart(2, '0'),
+          String(instante.getMinutes()).padStart(2, '0'),
+          String(instante.getSeconds()).padStart(2, '0'),
+          String(instante.getMilliseconds()).padStart(3, '0'),
+          sequenciaDownloads
+        ].join('');
+      };
+      const baixarBlob = function(blob, nome) {
+        const urlDownload = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = urlDownload;
+        link.download = nome;
+        link.style.position = 'fixed';
+        link.style.left = '-9999px';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(function() {
+          if (link.parentNode) link.remove();
+          URL.revokeObjectURL(urlDownload);
+        }, 60000);
+      };
+      const salvarPdf = async function() {
+        const botao = overlay.querySelector('[data-fs-pdf]');
         const textoAnterior = botao.textContent;
         botao.disabled = true;
-        botao.textContent = '⏳ Salvando PNG...';
-        let urlDownload = '';
-        let link = null;
+        botao.textContent = '⏳ Gerando PDF...';
         try {
-          if (!blobImagem || blobImagem.size < 1) {
-            throw new Error('Arquivo PNG indisponível para download');
-          }
-          sequenciaDownloads += 1;
-          const instante = new Date();
-          const sufixoUnico = [
-            instante.getFullYear(),
-            String(instante.getMonth() + 1).padStart(2, '0'),
-            String(instante.getDate()).padStart(2, '0'),
-            String(instante.getHours()).padStart(2, '0'),
-            String(instante.getMinutes()).padStart(2, '0'),
-            String(instante.getSeconds()).padStart(2, '0'),
-            String(instante.getMilliseconds()).padStart(3, '0'),
-            sequenciaDownloads
-          ].join('');
-          const nomeUnico = String(nomeArquivo || 'IMAGEM.png')
-            .replace(/\.png$/i, '') + '_' + sufixoUnico + '.png';
-
-          const assinatura = new Uint8Array(await blobImagem.slice(0, 8).arrayBuffer());
-          const pngValido = assinatura.length === 8 &&
-            assinatura[0] === 0x89 && assinatura[1] === 0x50 &&
-            assinatura[2] === 0x4e && assinatura[3] === 0x47 &&
-            assinatura[4] === 0x0d && assinatura[5] === 0x0a &&
-            assinatura[6] === 0x1a && assinatura[7] === 0x0a;
-          if (!pngValido) throw new Error('A imagem gerada não é um PNG válido');
-
-          // O botão Salvar nunca chama navigator.share. No Android/PWA essa
-          // chamada podia permanecer em “Preparando...” e bloquear tentativas
-          // seguintes. Cada toque agora cria um URL e um nome inteiramente novos.
-          const blobDownload = new Blob([blobImagem], { type: 'image/png' });
-          urlDownload = URL.createObjectURL(blobDownload);
-          link = document.createElement('a');
-          link.href = urlDownload;
-          link.download = nomeUnico;
-          link.style.position = 'fixed';
-          link.style.left = '-9999px';
-          link.style.top = '-9999px';
-          document.body.appendChild(link);
-          link.click();
-          setTimeout(function(){
-            if (link && link.parentNode) link.remove();
-            if (urlDownload) URL.revokeObjectURL(urlDownload);
-          }, 60000);
-          showToast('✅ PNG enviado para Downloads. Toque novamente para outra cópia.', 'success');
+          const pdfBlob = await obterPdf();
+          if (!pdfBlob || pdfBlob.size < 1) throw new Error('PDF vazio');
+          baixarBlob(pdfBlob, nomeBase + '_' + sufixoUnico() + '.pdf');
+          showToast('✅ PDF A4 enviado para Downloads.', 'success');
         } catch (erro) {
-          console.warn('Falha ao salvar PNG:', erro);
-          if (link && link.parentNode) link.remove();
-          if (urlDownload) URL.revokeObjectURL(urlDownload);
-          const destinoAlternativo = dataUrlImagem || url;
-          const novaAba = window.open(destinoAlternativo, '_blank', 'noopener');
-          if (!novaAba) window.location.href = destinoAlternativo;
-          showToast('ℹ️ A imagem foi aberta. No menu, escolha “Fazer download”.', 'success');
+          console.warn('Falha ao salvar PDF:', erro);
+          showToast('❌ Não foi possível gerar o PDF. Use a alternativa PNG.', 'error');
         } finally {
           botao.disabled = false;
           botao.textContent = textoAnterior;
+        }
+      };
+      const salvarPng = function() {
+        try {
+          if (!blobImagem || blobImagem.size < 1) throw new Error('PNG indisponível');
+          baixarBlob(new Blob([blobImagem], { type: 'image/png' }), nomeBase + '_' + sufixoUnico() + '.png');
+          showToast('✅ PNG enviado para Downloads.', 'success');
+        } catch (erro) {
+          console.warn('Falha ao salvar PNG:', erro);
+          showToast('❌ Não foi possível salvar o PNG.', 'error');
         }
       };
       const compartilhar = async function() {
         const botao = overlay.querySelector('[data-fs-compartilhar]');
         const textoAnterior = botao.textContent;
         botao.disabled = true;
-        botao.textContent = '⏳ Preparando...';
+        botao.textContent = '⏳ Preparando PDF...';
         try {
           const dados = window.currentProposalData || {};
           const cliente = String(dados.cliente_nome || 'cliente').trim();
           const vendedor = String(dados.vendedor_nome || localStorage.getItem('nomeVendedor') || 'seu vendedor').trim();
           const filial = String(dados.loja_nome || dados.filial || dados.loja || '').trim();
-          let mensagem;
-          if (tipoImagem === 'diretoriaAlcadas') {
-            mensagem = `Olá! Segue a cotação do cliente ${cliente} para análise.\n\nVendedor: ${vendedor}${filial ? `\nFilial: ${filial}` : ''}.\n\nA imagem com os valores e descontos será enviada em seguida.`;
-          } else if (tipoImagem === 'diretoria') {
-            mensagem = `Olá! Seguem os dados do cliente ${cliente} para análise do crediário.\n\nVendedor: ${vendedor}${filial ? `\nFilial: ${filial}` : ''}.\n\nA imagem completa será enviada em seguida.`;
-          } else {
-            mensagem = `Olá, ${cliente}! Tudo bem? Aqui é ${vendedor}${filial ? `, da ${filial}` : ''}. Preparei sua proposta com muito cuidado. A imagem em alta definição será enviada logo em seguida para você conferir todos os detalhes.`;
+          const mensagem = tipoImagem === 'cliente'
+            ? `Olá, ${cliente}! Segue sua proposta comercial em PDF, preparada por ${vendedor}${filial ? `, da ${filial}` : ''}.`
+            : `Olá! Segue em PDF a cotação do cliente ${cliente} para análise.\nVendedor: ${vendedor}${filial ? `\nFilial: ${filial}` : ''}.`;
+          const pdfBlob = await obterPdf();
+          const nomePdf = nomeBase + '_' + sufixoUnico() + '.pdf';
+          const arquivoPdf = new File([pdfBlob], nomePdf, { type: 'application/pdf' });
+          if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [arquivoPdf] }))) {
+            await navigator.share({
+              title: tipoImagem === 'cliente' ? 'Proposta comercial' : 'Planos e cotações',
+              text: mensagem,
+              files: [arquivoPdf]
+            });
+            showToast('✅ PDF compartilhado como documento.', 'success');
+            return;
           }
+          baixarBlob(pdfBlob, nomePdf);
           const destino = String(dados.cliente_contato || '').replace(/\D/g, '');
           const numero = tipoImagem === 'cliente' && destino
             ? (destino.startsWith('55') ? destino : `55${destino}`)
             : '';
-          const whatsapp = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+          const whatsapp = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem + '\n\nO PDF foi salvo no aparelho. Anexe-o como documento para manter a qualidade.')}`;
           const aba = window.open(whatsapp, '_blank', 'noopener');
           if (!aba) window.location.href = whatsapp;
-          showToast('✅ WhatsApp aberto somente com a mensagem. Anexe o PNG salvo e marque HD.', 'success');
+          showToast('✅ PDF salvo. Anexe-o no WhatsApp como documento.', 'success');
         } catch (erro) {
           if (!erro || erro.name !== 'AbortError') {
             console.warn('Falha no compartilhamento:', erro);
-            showToast('❌ Não foi possível abrir o compartilhamento.', 'error');
+            showToast('❌ Não foi possível compartilhar o PDF.', 'error');
           }
         } finally {
           botao.disabled = false;
           botao.textContent = textoAnterior;
         }
       };
-      const abrir = function() {
-        const novaAba = window.open(url, '_blank', 'noopener');
-        if (!novaAba) window.location.href = url;
-      };
       const fechar = function() {
         if (overlay.parentNode) overlay.remove();
         setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
       };
-      overlay.querySelector('[data-fs-salvar]').addEventListener('click', salvar);
+      overlay.querySelector('[data-fs-pdf]').addEventListener('click', salvarPdf);
+      overlay.querySelector('[data-fs-png]').addEventListener('click', salvarPng);
       overlay.querySelector('[data-fs-compartilhar]').addEventListener('click', compartilhar);
-      overlay.querySelector('[data-fs-abrir]').addEventListener('click', abrir);
       overlay.querySelectorAll('[data-fs-fechar]').forEach(function(btn){ btn.addEventListener('click', fechar); });
       overlay.addEventListener('click', function(event){ if (event.target === overlay) fechar(); });
       document.body.appendChild(overlay);
@@ -9108,7 +9137,7 @@ function abrirAlterarStatusProposta(id) {
       }
     }
 
-    // ========== BAIXAR IMAGEM EM FOLHA A4 ==========
+    // ========== GERAR DOCUMENTO EM FOLHA A4 ==========
     async function baixarImagem8K(tipo) {
       const botoesDownload = Array.from(document.querySelectorAll(
         '#btnBaixarImagemCliente8K, #btnBaixarImagemDiretoriaAlcadas8K, #btnBaixarImagemDiretoria8K, #btnBaixar8KModal, #btnEnviarWhatsApp'
@@ -9119,11 +9148,11 @@ function abrirAlterarStatusProposta(id) {
           btn.dataset.fsTextoAnterior = btn.textContent;
           btn.textContent = '⏳ Montando imagem...';
         });
-        showToast('📄 Montando imagem padronizada...', 'success');
+        showToast('📄 Montando documento A4...', 'success');
         const arquivo = await fsGerarImagemA4Padrao(tipo);
         const url = URL.createObjectURL(arquivo.blob);
         fsAbrirImagemPronta(url, arquivo.nomeArquivo, arquivo.blob, tipo, arquivo.dataUrl);
-        showToast('✅ Imagem pronta para salvar ou compartilhar!', 'success');
+        showToast('✅ PDF pronto para baixar ou compartilhar!', 'success');
         return arquivo;
       } catch (error) {
         console.error('Erro ao baixar imagem A4:', error);

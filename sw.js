@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v49-hp12c-web";
+const CACHE_NAME = "fs-central-v50-pdf-a4";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -12,7 +12,8 @@ const APP_FILES = [
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=48",
+  "/pwa-update.js?v=50",
+  "/vendor/jspdf.umd.min.js",
   "/zenir.png",
   "/draft-protection.js?v=29",
   "/home-transition.js?v=29"
