@@ -9254,14 +9254,24 @@ img{
       nome: upper(localStorage.getItem('fs_nome') || ''),
       cargo: upper(localStorage.getItem('fs_cargo') || ''),
       whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || ''),
-      filial: upper(localStorage.getItem('fs_filial') || '')
+      filial: upper(localStorage.getItem('fs_filial') || ''),
+      podeCompartilhar: localStorage.getItem('fs_pode_compartilhar') === '1'
     };
+  }
+
+  function getDeviceId(){
+    let id = localStorage.getItem('fs_device_id');
+    if(!id){
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'fs-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+      localStorage.setItem('fs_device_id', id);
+    }
+    return id;
   }
 
   function isDeveloperMaster(){
     const user = getCurrentAccessData();
-    if(!user.nome && !user.cargo && !user.whatsapp){ return true; }
-    return user.nome === DEV_MASTER_NAME && user.cargo === DEV_MASTER_CARGO && user.whatsapp === DEV_MASTER_WHATS;
+    if(!user.nome || !user.cargo || !user.whatsapp){ return false; }
+    return user.nome === DEV_MASTER_NAME && user.cargo === DEV_MASTER_CARGO && user.whatsapp === DEV_MASTER_WHATS && user.podeCompartilhar;
   }
 
   function isManager(){
@@ -9291,7 +9301,13 @@ img{
   }
 
   function applyPermissionVisibility(){
-    btnSharePanel.style.display = 'inline-flex';
+    const autorizado = isDeveloperMaster();
+    [btnSharePanel, document.getElementById('btnSharePanelFooter')].filter(Boolean).forEach(function(btn){
+      btn.style.display = autorizado ? 'inline-flex' : 'none';
+      btn.hidden = !autorizado;
+      btn.setAttribute('aria-hidden', autorizado ? 'false' : 'true');
+    });
+    if(!autorizado) closeShare();
     syncAccessBadge();
   }
 
@@ -9347,7 +9363,16 @@ img{
   }
 
   function closePanels(){ datePanel.classList.remove('open'); timePanel.classList.remove('open'); datePanel.style.left=''; datePanel.style.top=''; timePanel.style.left=''; timePanel.style.top=''; }
-  function openShare(){ shareBackdrop.classList.add('open'); shareModal.classList.add('open'); }
+  function openShare(){
+    if(!isDeveloperMaster()){
+      closeShare();
+      alert('COMPARTILHAMENTO DISPONÍVEL SOMENTE PARA FRANCIFILDO PEREIRA SOBRAL.');
+      return;
+    }
+    carregarUsuarios();
+    shareBackdrop.classList.add('open');
+    shareModal.classList.add('open');
+  }
   function closeShare(){ shareBackdrop.classList.remove('open'); shareModal.classList.remove('open'); }
 
   async function apiGet(url){
@@ -9355,19 +9380,36 @@ img{
     return await res.json();
   }
   async function apiPost(payload){
+    const actor = getCurrentAccessData();
+    payload = Object.assign({}, payload, {
+      actor_nome: actor.nome,
+      actor_cargo: actor.cargo,
+      actor_whatsapp: actor.whatsapp,
+      actor_token: localStorage.getItem('fs_access_token') || '',
+      device_id: getDeviceId()
+    });
     const res = await fetch(API_FS, {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body: JSON.stringify(payload)});
     return await res.json();
   }
 
   async function carregarUsuarios(){
+    if(!isDeveloperMaster()){
+      usuarios = [];
+      renderUsuarios();
+      renderKpis();
+      return;
+    }
     try{
-      const json = await apiGet(API_FS + '?acao=listarUsuarios');
+      const actor = getCurrentAccessData();
+      const url = API_FS + '?acao=listarUsuarios&actor_nome=' + encodeURIComponent(actor.nome) + '&actor_cargo=' + encodeURIComponent(actor.cargo) + '&actor_whatsapp=' + encodeURIComponent(actor.whatsapp) + '&device_id=' + encodeURIComponent(getDeviceId()) + '&_=' + Date.now();
+      const json = await apiGet(url);
+      if(!json || json.ok === false) throw new Error((json && json.mensagem) || 'Acesso ao banco não autorizado.');
       usuarios = Array.isArray(json.usuarios) ? json.usuarios : [];
       renderUsuarios();
       renderKpis();
     }catch(e){
       console.error(e);
-      alert('ERRO AO CARREGAR USUÁRIOS DO BANCO.');
+      alert(e.message || 'ERRO AO CARREGAR USUÁRIOS DO BANCO.');
     }
   }
 
@@ -9385,7 +9427,10 @@ img{
     const tbody = document.querySelector('#usersTable tbody');
     const devMaster = isDeveloperMaster();
     tbody.innerHTML = '';
+    if(!devMaster) return;
     usuarios.forEach(function(u){
+      const bloqueado = upper(u.status) === 'BLOQUEADO';
+      const protegido = upper(u.nome) === DEV_MASTER_NAME && upper(u.cargo) === DEV_MASTER_CARGO;
       const tr = document.createElement('tr');
       tr.innerHTML =
         '<td>'+(u.filial||'')+'</td>'+
@@ -9395,8 +9440,8 @@ img{
         '<td>'+(u.status||'')+'</td>'+
         '<td><div class="actions">'+
         '<button class="btn-edit" data-id="'+u.id+'">EDITAR</button>'+
-        '<button class="btn-block" data-id="'+u.id+'">BLOQUEAR</button>'+
-        (devMaster ? '<button class="btn-delete-real" data-id="'+u.id+'">DELETAR</button>' : '')+
+        (!protegido ? '<button class="btn-block" data-id="'+u.id+'">'+(bloqueado?'DESBLOQUEAR':'BLOQUEAR')+'</button>' : '')+
+        (!protegido ? '<button class="btn-delete-real" data-id="'+u.id+'">DELETAR</button>' : '')+
         '</div></td>';
       tbody.appendChild(tr);
     });
@@ -9433,14 +9478,30 @@ img{
   }
 
   async function bloquearUsuario(id){
-    if(!confirm('DESEJA BLOQUEAR ESTE USUÁRIO?')) return;
+    if(!isDeveloperMaster()){
+      alert('APENAS FRANCIFILDO PEREIRA SOBRAL PODE ALTERAR ACESSOS.');
+      return;
+    }
+    const anterior = usuarios.find(function(u){ return String(u.id) === String(id); });
+    if(!anterior) return;
+    const estavaBloqueado = upper(anterior.status) === 'BLOQUEADO';
+    const acao = estavaBloqueado ? 'desbloquearUsuario' : 'bloquearUsuario';
+    const verbo = estavaBloqueado ? 'DESBLOQUEAR' : 'BLOQUEAR';
+    if(!confirm('DESEJA '+verbo+' ESTE USUÁRIO?')) return;
     try{
-      const json = await apiPost({ acao:'deletarUsuario', id:id });
-      alert(json.mensagem || 'USUÁRIO BLOQUEADO');
+      let json = await apiPost({ acao:acao, id:id });
+      if((!json || json.ok === false) && !estavaBloqueado){
+        json = await apiPost({ acao:'deletarUsuario', id:id });
+      }
+      if(!json || json.ok === false) throw new Error((json && json.mensagem) || 'O banco não confirmou a alteração.');
       await carregarUsuarios();
+      const atualizado = usuarios.find(function(u){ return String(u.id) === String(id); });
+      const confirmou = atualizado && (estavaBloqueado ? upper(atualizado.status) === 'ATIVO' : upper(atualizado.status) === 'BLOQUEADO');
+      if(!confirmou) throw new Error('O banco não confirmou o novo status. Atualize o Apps Script seguro incluído no pacote.');
+      alert(json.mensagem || ('USUÁRIO '+(estavaBloqueado ? 'DESBLOQUEADO' : 'BLOQUEADO')+' COM SUCESSO.'));
     }catch(e){
       console.error(e);
-      alert('ERRO AO BLOQUEAR USUÁRIO.');
+      alert(e.message || 'ERRO AO ALTERAR O ACESSO DO USUÁRIO.');
     }
   }
 
@@ -9449,11 +9510,15 @@ img{
       alert('APENAS O DESENVOLVEDOR_MASTER PODE DELETAR DEFINITIVAMENTE.');
       return;
     }
+    const anterior = usuarios.find(function(u){ return String(u.id) === String(id); });
+    if(!anterior || !confirm('DESEJA EXCLUIR DEFINITIVAMENTE '+upper(anterior.nome)+'? ESTA AÇÃO NÃO PODE SER DESFEITA.')) return;
     try{
       const json = await apiPost({ acao:'excluirUsuarioDefinitivo', id:id });
       if(json && json.ok){
-        alert(json.mensagem || 'USUÁRIO DELETADO');
         await carregarUsuarios();
+        const aindaExiste = usuarios.some(function(u){ return String(u.id) === String(id); });
+        if(aindaExiste) throw new Error('O banco não confirmou a exclusão definitiva.');
+        alert(json.mensagem || 'USUÁRIO DELETADO');
       }else{
         alert((json && json.mensagem) || 'A API AINDA NÃO TEM EXCLUSÃO DEFINITIVA. USE BLOQUEAR ATÉ ATUALIZAR O APPS SCRIPT.');
       }
@@ -9464,6 +9529,10 @@ img{
   }
 
   async function salvarUsuario(){
+    if(!isDeveloperMaster()){
+      alert('APENAS FRANCIFILDO PEREIRA SOBRAL PODE COMPARTILHAR ACESSOS.');
+      return;
+    }
     const filial = normalizarFilial(filialEl.value);
     const nome = upper(nomeEl.value);
     const cargo = upper(cargoEl.value);
@@ -9494,10 +9563,11 @@ img{
 
     try{
       let json;
+      const conviteToken = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'convite-'+Date.now()+'-'+Math.random().toString(36).slice(2);
       if(editId){
-        json = await apiPost({ acao:'editarUsuario', id: editId, filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp, genero: genero });
+        json = await apiPost({ acao:'editarUsuario', id: editId, filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp, genero: genero, convite_token: conviteToken });
       }else{
-        json = await apiPost({ acao:'cadastrarUsuario', filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp, genero: genero, criado_por:'FS SOLUCOES' });
+        json = await apiPost({ acao:'cadastrarUsuario', filial: filial, nome: nome, cargo: cargo, whatsapp: whatsapp, genero: genero, convite_token: conviteToken, criado_por:'FS SOLUCOES' });
       }
       if(json && json.ok === false){
         alert(json.mensagem || 'NÃO FOI POSSÍVEL GERAR O ACESSO.');
@@ -9510,6 +9580,7 @@ img{
       convite.searchParams.set('cargo', cargo);
       convite.searchParams.set('whatsapp', whatsapp);
       convite.searchParams.set('genero', genero);
+      convite.searchParams.set('token', (json && json.convite_token) || conviteToken);
       const msg = 'OLÁ '+nome+'!\n\nVOCÊ RECEBEU ACESSO À CENTRAL INTELIGENTE DE VENDAS.\n\nFILIAL: '+filial+'\nCARGO: '+cargo+'\n\nABRA O LINK, CONFIRA SEUS DADOS E TOQUE EM ENTRAR:\n\n'+convite.toString();
       const numeroDestino = whatsapp.startsWith('55') ? whatsapp : '55'+whatsapp;
       window.open('https://wa.me/'+numeroDestino+'?text='+encodeURIComponent(msg), '_blank', 'noopener');
@@ -9559,7 +9630,7 @@ img{
   ensureBootstrapAccess();
   syncNow();
   applyPermissionVisibility();
-  carregarUsuarios();
+  if(isDeveloperMaster()) carregarUsuarios();
   setInterval(function(){
     const now = new Date();
     timeLabel.textContent = pad(now.getHours())+':'+pad(now.getMinutes());
@@ -9976,6 +10047,10 @@ window.addEventListener('DOMContentLoaded', function(){
 </script>
 <script id="fs-index-stable-auth">
 (function(){
+  var API_ACESSO_FS = 'https://script.google.com/macros/s/AKfycbzQTAJGkaqzLEZs6xiEBMUp7rnLSxQiZxUQzNPiciAWxdj3ZUL6ObW4iAUfkmutueVasw/exec';
+  var DONO_NOME = 'FRANCIFILDO PEREIRA SOBRAL';
+  var DONO_CARGO = 'DESENVOLVEDOR_MASTER';
+  var DONO_WHATSAPP = '88988222564';
   function upperLive(v){ return String(v||'').toUpperCase(); }
   function upperSave(v){ return String(v||'').toUpperCase().trim(); }
   function onlyDigits(v){ return String(v||'').replace(/\D/g,''); }
@@ -9991,12 +10066,45 @@ window.addEventListener('DOMContentLoaded', function(){
       nome: upperSave(localStorage.getItem('fs_nome') || ''),
       cargo: upperSave(localStorage.getItem('fs_cargo') || ''),
       whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || ''),
-      genero: upperSave(localStorage.getItem('fs_genero') || 'AUTOMATICO')
+      genero: upperSave(localStorage.getItem('fs_genero') || 'AUTOMATICO'),
+      token: localStorage.getItem('fs_access_token') || '',
+      podeCompartilhar: localStorage.getItem('fs_pode_compartilhar') === '1'
     };
+  }
+
+  function getDeviceId(){
+    var id = localStorage.getItem('fs_device_id');
+    if(!id){
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'fs-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+      localStorage.setItem('fs_device_id', id);
+    }
+    return id;
   }
 
   function hasSavedUser(u){
     return !!(u && u.filial && u.nome && u.cargo);
+  }
+
+  function isOwnerUser(u){
+    return !!u && u.nome === DONO_NOME && u.cargo === DONO_CARGO && onlyDigits(u.whatsapp) === DONO_WHATSAPP && u.podeCompartilhar === true;
+  }
+
+  async function validateRemote(u){
+    if(!hasSavedUser(u)) return {ok:false, mensagem:'Dados de acesso incompletos.'};
+    try{
+      var url = API_ACESSO_FS+'?acao=validarAcesso&filial='+encodeURIComponent(u.filial)+'&nome='+encodeURIComponent(u.nome)+'&cargo='+encodeURIComponent(u.cargo)+'&whatsapp='+encodeURIComponent(u.whatsapp||'')+'&token='+encodeURIComponent(u.token||'')+'&device_id='+encodeURIComponent(getDeviceId())+'&_='+Date.now();
+      var response = await fetch(url, {cache:'no-store'});
+      var json = await response.json();
+      var status = upperSave((json.usuario && json.usuario.status) || json.status || 'ATIVO');
+      if(!json || json.ok !== true || status === 'BLOQUEADO' || status === 'INATIVO'){
+        return {ok:false, mensagem:(json && json.mensagem) || 'Usuário bloqueado ou não autorizado.'};
+      }
+      var usuario = Object.assign({}, u, json.usuario || {});
+      usuario.podeCompartilhar = json.pode_compartilhar === true || usuario.podeCompartilhar === true;
+      return {ok:true, usuario:usuario};
+    }catch(e){
+      return {ok:false, mensagem:'Não foi possível confirmar o acesso no banco. Verifique sua internet e tente novamente.'};
+    }
   }
 
   function saveUser(u){
@@ -10005,6 +10113,8 @@ window.addEventListener('DOMContentLoaded', function(){
     localStorage.setItem('fs_cargo', upperSave(u.cargo||''));
     localStorage.setItem('fs_whatsapp', onlyDigits(u.whatsapp||''));
     localStorage.setItem('fs_genero', upperSave(u.genero||'AUTOMATICO'));
+    localStorage.setItem('fs_access_token', u.token || u.convite_token || '');
+    localStorage.setItem('fs_pode_compartilhar', u.podeCompartilhar === true || u.pode_compartilhar === true ? '1' : '0');
     localStorage.setItem('fsAuthGlobal', 'ok-@fildO1060');
     localStorage.setItem('fs_access_persisted', '1');
     sessionStorage.setItem('fs_access_done', '1');
@@ -10016,7 +10126,10 @@ window.addEventListener('DOMContentLoaded', function(){
     localStorage.removeItem('fs_cargo');
     localStorage.removeItem('fs_whatsapp');
     localStorage.removeItem('fs_genero');
+    localStorage.removeItem('fs_access_token');
+    localStorage.removeItem('fs_pode_compartilhar');
     localStorage.removeItem('fs_access_persisted');
+    localStorage.removeItem('fsAuthGlobal');
     sessionStorage.removeItem('fs_access_done');
   }
 
@@ -10040,11 +10153,17 @@ window.addEventListener('DOMContentLoaded', function(){
   }
 
   function applyPermissionVisibility(){
-    var btnShare = document.getElementById('btnSharePanel');
-    if(btnShare){
-      btnShare.style.display = 'inline-flex';
-      btnShare.style.visibility = 'visible';
-      btnShare.style.opacity = '1';
+    var autorizado = isOwnerUser(getUser());
+    [document.getElementById('btnSharePanel'), document.getElementById('btnSharePanelFooter')].filter(Boolean).forEach(function(btnShare){
+      btnShare.style.display = autorizado ? 'inline-flex' : 'none';
+      btnShare.style.visibility = autorizado ? 'visible' : 'hidden';
+      btnShare.style.opacity = autorizado ? '1' : '0';
+      btnShare.hidden = !autorizado;
+      btnShare.setAttribute('aria-hidden', autorizado ? 'false' : 'true');
+    });
+    if(!autorizado){
+      document.getElementById('shareBackdrop')?.classList.remove('open');
+      document.getElementById('shareModal')?.classList.remove('open');
     }
     syncBadge();
   }
@@ -10117,7 +10236,8 @@ window.addEventListener('DOMContentLoaded', function(){
           nome: upperSave(nome.value),
           cargo: upperSave(cargo.value),
           whatsapp: onlyDigits(whats.value),
-          genero: upperSave(genero && genero.value || 'AUTOMATICO')
+          genero: upperSave(genero && genero.value || 'AUTOMATICO'),
+          token: (window.__fsConvitePendente && window.__fsConvitePendente.token) || current.token || ''
         };
         if(!filialOk(payload.filial)){ alert('USE O PADRÃO: FILIAL 28'); filial.focus(); return; }
         if(!payload.nome){ nome.focus(); return; }
@@ -10137,7 +10257,14 @@ window.addEventListener('DOMContentLoaded', function(){
     var actual = getUser();
 
     if(!force && hasSavedUser(actual)){
-      saveUser(actual);
+      var savedValidation = await validateRemote(actual);
+      if(!savedValidation.ok){
+        clearUser();
+        resetBadge();
+        showUnauthorized(savedValidation.mensagem);
+        return false;
+      }
+      saveUser(Object.assign({}, actual, savedValidation.usuario || {}));
       applyPermissionVisibility();
       unlockInterface();
       return true;
@@ -10152,7 +10279,14 @@ window.addEventListener('DOMContentLoaded', function(){
       return false;
     }
 
-    saveUser(data);
+    var validation = await validateRemote(data);
+    if(!validation.ok){
+      clearUser();
+      resetBadge();
+      showUnauthorized(validation.mensagem);
+      return false;
+    }
+    saveUser(Object.assign({}, data, validation.usuario || {}));
     applyPermissionVisibility();
     unlockInterface();
     return true;
@@ -10170,13 +10304,15 @@ window.addEventListener('DOMContentLoaded', function(){
     setTimeout(async function(){
       var u = getUser();
       if(hasSavedUser(u)){
-        saveUser(u);
-        applyPermissionVisibility();
-        unlockInterface();
+        await window.fsConfirmarAcesso(false);
         return;
       }
       await window.fsConfirmarAcesso(true);
     }, 120);
+
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible' && hasSavedUser(getUser())) window.fsConfirmarAcesso(false);
+    });
 
     document.querySelectorAll('.card').forEach(function(card){
       var link = card.querySelector('.card-action[href]');
@@ -12940,12 +13076,13 @@ document.addEventListener('DOMContentLoaded', function () {
     nome: maiusculo(query.get('nome')),
     cargo: maiusculo(query.get('cargo')),
     whatsapp: digitos(query.get('whatsapp')),
-    genero: maiusculo(query.get('genero')) || 'AUTOMATICO'
+    genero: maiusculo(query.get('genero')) || 'AUTOMATICO',
+    token: texto(query.get('token'))
   } : null;
 
   if(convite && convite.filial && convite.nome && convite.cargo){
     window.__fsConvitePendente = convite;
-    ['fs_filial','fs_nome','fs_cargo','fs_whatsapp','fs_genero','fs_access_persisted'].forEach(function(chave){
+    ['fs_filial','fs_nome','fs_cargo','fs_whatsapp','fs_genero','fs_access_token','fs_pode_compartilhar','fs_access_persisted'].forEach(function(chave){
       localStorage.removeItem(chave);
     });
     sessionStorage.removeItem('fs_access_done');
@@ -13094,6 +13231,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=24"></script>
+<script src="./pwa-update.js?v=25"></script>
 </body>
 </html>
