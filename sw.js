@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v27-github-pages-otimizado";
+const CACHE_NAME = "fs-central-v28-correcao-cargo-master";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -14,7 +14,7 @@ const APP_FILES = [
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=27"
+  "/pwa-update.js?v=28"
 ];
 
 self.addEventListener("install", (event) => {
