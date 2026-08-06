@@ -1,24 +1,20 @@
-const CACHE_NAME = "fs-central-v28-correcao-cargo-master";
+const CACHE_NAME = "fs-central-v30-estavel";
 const APP_FILES = [
   "/",
   "/index.html",
-  "/simulador.html",
-  "/vendas-mobile.html",
-  "/orcamentos.html",
-  "/resultados.html",
-  "/resultados-v18.js",
-  "/parcelamentos-planos.webp",
-  "/cotacoes-vendas.webp",
-  "/orcamentos-card.webp",
-  "/manifest.webmanifest?v=18",
+  "/manifest.webmanifest?v=30",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=28"
+  "/pwa-update.js?v=30"
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => Promise.allSettled(APP_FILES.map((file) => cache.add(file))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -44,7 +40,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: "no-store" })
         .then((response) => {
           if (response && response.ok) {
             const copy = response.clone();
