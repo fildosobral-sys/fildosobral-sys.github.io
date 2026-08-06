@@ -1,7 +1,7 @@
 {
   "name": "Central de Vendas FS Soluções",
   "short_name": "FS Vendas",
-  "description": "Central de cotações, planos, parcelamentos e orçamentos.",
+  "description": "Central de cotações, planos, orçamentos e gestão de resultados.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

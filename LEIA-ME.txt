@@ -1,5 +1,30 @@
 SIMULADOR DE PLANOS ZENIR - PACOTE PARA HOSPEDAGEM
 
+NOVIDADE DA VERSAO 24 - PERFIL FINANCEIRO E SEMANAS AUTOMATICAS
+
+- Cada vendedor tem o botao Abrir resultado completo e tambem pode ser aberto pelo seletor do cabecalho.
+- A ficha mostra comissao mercantil informada, 5% automatico dos servicos, subtotal, DSR, ganho atual e projecao financeira.
+- O historico individual registra venda, servicos, ticket, comissoes, DSR, ganho total e taxa media de comissao.
+- A quantidade de semanas e automatica: meses de 28 dias usam 4 semanas; meses de 29 a 31 dias usam 5.
+- As metas mensais sao divididas automaticamente entre essas semanas.
+- O card semanal inteiro fica verde quando entregue, amarelo quando proximo e vermelho quando abaixo da meta; semanas sem lancamento permanecem neutras.
+
+NOVIDADE DA VERSAO 23 - COMPILADO INTELIGENTE E BACKUP SEM DUPLICIDADE
+
+- O backup individual e uma fotografia atualizada: os valores substituem o retrato anterior e nunca sao somados novamente.
+- Reimportar o mesmo arquivo nao duplica resultados; backups antigos nao apagam informacoes mais recentes.
+- A nova aba Compilado compara a projecao da filial com todos os vendedores ou com um vendedor especifico.
+- Tendencias usam a projecao do mes atual contra a media historica de 3, 6 ou 12 meses.
+- A plataforma destaca pontos fortes, alertas, oportunidades e sugestoes de direcionamento.
+
+NOVIDADE DA VERSAO 22 - BACKUP INDIVIDUAL DE VENDEDORES
+
+- Cada vendedor pode baixar um arquivo proprio com todas as competencias e seu historico.
+- O gestor pode importar um arquivo para um vendedor selecionado ou varios arquivos de uma vez com identificacao automatica.
+- A importacao atualiza somente o vendedor correspondente e preserva os dados dos demais.
+- Em Vendedores, tambem e possivel zerar apenas a competencia atual ou excluir o vendedor de todas as competencias e do historico.
+- O fluxo funciona localmente, sem nuvem ou servidor. Guarde os arquivos de backup em local seguro.
+
 VERSAO 20/07/2026
 - Desktop compactado para exibir a simulacao completa em uma tela.
 - Layout mobile preservado.

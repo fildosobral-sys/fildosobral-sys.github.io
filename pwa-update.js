@@ -1,14 +1,13 @@
 (function(){
   if(!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
 
-  var VERSION = '51';
+  var VERSION = '24';
   var path = location.pathname.replace(/\/+$/, '/');
   var isCentral = path === '/' || /\/index\.html$/i.test(location.pathname);
   if(!isCentral) return;
 
   var refreshing = false;
   var promptOpen = false;
-  var reloadKey = 'fs_sw_reload_' + VERSION;
 
   function closePrompt(){
     var current = document.getElementById('fsMandatoryUpdate');
@@ -55,19 +54,16 @@
     localStorage.setItem('fs_sw_applied', VERSION);
     sessionStorage.removeItem('fs_update_requested');
     closePrompt();
-    if(!sessionStorage.getItem(reloadKey)){
-      sessionStorage.setItem(reloadKey,'1');
-      location.replace(location.pathname + '?v=' + VERSION);
-    }
+    location.reload();
   });
 
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('/sw.js?v=' + VERSION, {
+    navigator.serviceWorker.register('/sw.js', {
       scope:'/',
       updateViaCache:'none'
     }).then(function(registration){
       if(registration.waiting && navigator.serviceWorker.controller){
-        registration.waiting.postMessage({type:'SKIP_WAITING'});
+        createPrompt(registration);
       }
 
       registration.addEventListener('updatefound', function(){
@@ -75,15 +71,12 @@
         if(!worker) return;
         worker.addEventListener('statechange', function(){
           if(worker.state === 'installed' && navigator.serviceWorker.controller){
-            worker.postMessage({type:'SKIP_WAITING'});
+            createPrompt(registration);
           }
         });
       });
 
       registration.update().catch(function(){});
-      if(!navigator.serviceWorker.controller){
-        localStorage.setItem('fs_sw_applied', VERSION);
-      }
     }).catch(function(error){
       console.warn('[FS] Atualização automática indisponível:', error);
     });

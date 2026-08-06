@@ -8408,7 +8408,7 @@ overlay.addEventListener('touchend', __tryCloseTaxas);
 </style>
 
 <!-- Botão flutuante para voltar ao início -->
-<a href="./index.html" class="fs-back-home" aria-label="Voltar ao início" title="Voltar ao início">🏠</a>
+<a href="./index.html" class="fs-back-home">← Voltar à central</a>
 
 <style>
   .fs-back-home {
@@ -13197,8 +13197,7 @@ document.addEventListener('click', function(event){
   event.preventDefault();
   event.stopImmediatePropagation();
   try{ sessionStorage.removeItem('fs_module_from_index'); }catch(e){}
-  if(window.fsVoltarCentral){ window.fsVoltarCentral(); }
-  else{ window.location.replace('./index.html'); }
+  window.location.replace('./index.html');
 }, true);
 </script>
 </body>
@@ -14699,10 +14698,10 @@ html body #mainApp,html body .dashboard,html body .content-area,html body .input
 <style id="fs-padrao-voltar-sem-boas-vindas-v12">
 #btnVoltarInicio,.fs-back-home{
   position:fixed !important;left:auto !important;right:max(14px,env(safe-area-inset-right)) !important;
-  bottom:max(14px,env(safe-area-inset-bottom)) !important;width:50px !important;min-width:50px !important;
-  height:50px !important;padding:0 !important;border:0 !important;border-radius:50% !important;
-  display:inline-flex !important;align-items:center !important;justify-content:center !important;
-  background:#111827 !important;color:#fff !important;font:700 23px/1 Arial,sans-serif !important;
+  bottom:max(14px,env(safe-area-inset-bottom)) !important;width:auto !important;min-width:154px !important;
+  height:48px !important;padding:0 18px !important;border:0 !important;border-radius:999px !important;
+  display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;
+  background:#111827 !important;color:#fff !important;font:700 14px/1 Arial,sans-serif !important;
   text-decoration:none !important;box-shadow:0 10px 24px rgba(15,23,42,.28) !important;z-index:2147483000 !important;
 }
 #welcomeMessage .fs-welcome-user,.welcome-message .fs-welcome-user{display:none !important}
@@ -14729,34 +14728,3 @@ html body #mainApp,html body .dashboard,html body .content-area,html body .input
   });
 })();
 </script>
-<style id="fs-casinha-unificada-v20">
-html body #btnVoltarInicio,
-html body:not(.fs-mobile-result-visible) a.fs-back-home.fs-back-home,
-html body a.fs-back-home.fs-back-home[aria-label]{
-  position:fixed !important;
-  left:auto !important;
-  right:max(14px,env(safe-area-inset-right)) !important;
-  bottom:max(14px,env(safe-area-inset-bottom)) !important;
-  width:56px !important;
-  min-width:56px !important;
-  max-width:56px !important;
-  height:56px !important;
-  min-height:56px !important;
-  max-height:56px !important;
-  padding:0 !important;
-  border:0 !important;
-  border-radius:50% !important;
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  background:#111827 !important;
-  color:#fff !important;
-  font:400 26px/1 Arial,sans-serif !important;
-  text-decoration:none !important;
-  box-shadow:0 10px 24px rgba(15,23,42,.32) !important;
-  opacity:1 !important;
-  z-index:2147483000 !important;
-}
-</style>
-<script src="./draft-protection.js?v=29"></script>
-<script src="./home-transition.js?v=29"></script>

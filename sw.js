@@ -1,30 +1,24 @@
-const CACHE_NAME = "fs-central-v51-index-restaurado";
+const CACHE_NAME = "fs-central-v24-perfil-financeiro-semanas";
 const APP_FILES = [
   "/",
   "/index.html",
   "/simulador.html",
   "/vendas-mobile.html",
   "/orcamentos.html",
+  "/resultados.html",
+  "/resultados-v18.js",
   "/parcelamentos-planos.webp",
   "/cotacoes-vendas.webp",
   "/orcamentos-card.webp",
-  "/manifest.webmanifest?v=29",
+  "/manifest.webmanifest?v=18",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=51",
-  "/vendor/jspdf.umd.min.js",
-  "/zenir.png",
-  "/draft-protection.js?v=29",
-  "/home-transition.js?v=29"
+  "/pwa-update.js?v=18"
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => Promise.allSettled(APP_FILES.map((file) => cache.add(file))))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
 });
 
 self.addEventListener("activate", (event) => {
@@ -50,7 +44,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request, { cache: "no-store" })
+      fetch(event.request)
         .then((response) => {
           if (response && response.ok) {
             const copy = response.clone();

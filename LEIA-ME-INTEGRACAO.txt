@@ -6,6 +6,7 @@ MODULOS
 1. Cotacoes / Vendas: vendas-mobile.html
 2. Planos e Parcelamentos: simulador.html
 3. Orcamentos: orcamentos.html
+4. Gestao de Resultados: resultados.html
 
 AJUSTES DESTA VERSAO
 - O index preserva o visual mobile enviado.
@@ -15,6 +16,10 @@ AJUSTES DESTA VERSAO
 - Navegacao por categorias, menu de opcoes e area de orcamentos foram mantidos.
 - Cotacoes / Vendas e Orcamentos herdam a identificacao salva no index.
 - O aplicativo instalado inicia pela central.
+- A Central agora inclui Gestao de Resultados, com metas, lancamentos diarios,
+  acompanhamento semanal e visao por vendedor.
+- A Gestao de Resultados foi otimizada para iPhone, iPad e desktop, com
+  valores monetarios em R$, historico por competencia e relatorio A4.
 - O cache inclui os tres modulos.
 - O banner superior foi compactado para aproveitar melhor a tela.
 - O card Planos e Parcelamentos recebeu uma imagem neutra de pagamentos.
@@ -29,6 +34,40 @@ AJUSTES DESTA VERSAO
 - Foi removida a sobreposicao branca do card Parcelamentos e Planos.
 - Os botoes Voltar dos tres modulos retornam diretamente para ./index.html.
 
+GESTAO DE RESULTADOS - METAS AUDITAVEIS
+- As metas-base mensais ficam centralizadas em Configuracao: mercantil, lucro
+  bruto, produtos elegiveis, servicos e eficiencia.
+- As tres faixas sao calculadas automaticamente: Meta 1 (100% mercantil +
+  95% lucro bruto), Meta 2 (100% + 100%) e Meta 3 (105% + 100%).
+- Cada salvamento registra data, hora, responsavel, origem e observacao.
+- Resultados diarios, semanais, projecoes e relatorios impressos usam a
+  configuracao vigente da competencia.
+- O lancamento diario inclui lucro bruto, status verde para Lançado e destaque
+  verde quando os dois criterios da meta diaria forem atingidos.
+- O relatorio A4 apresenta as duas condicoes de cada faixa e a auditoria mensal.
+
+METAS E MEDIAS POR VENDEDOR
+- O novo menu Metas calcula os ultimos 3 meses, semestre, ultimos 12 meses ou
+  o ano anterior completo.
+- O historico mensal da plataforma e aproveitado automaticamente e meses antigos
+  tambem podem ser informados manualmente por vendedor.
+- Sao exibidas media mensal, media semanal, media diaria, participacao na equipe,
+  meta individual sugerida e referencia proporcional de lucro bruto.
+- A distribuicao pode usar participacao historica, media individual ou divisao igual.
+- O vendedor nao precisa lancar lucro bruto. Seu atingimento considera a meta
+  mercantil individual aplicada pelo gestor.
+- As metas sugeridas podem ser aplicadas aos vendedores com um botao e passam a
+  aparecer nas fichas individuais e no relatorio impresso.
+
+VISAO INDIVIDUAL E LAYOUT COMPACTO
+- O seletor superior alterna entre filial, todos os vendedores e cada vendedor.
+- A visao individual reaproveita os mesmos indicadores, metas e projecoes da filial.
+- O percentual entre lucro bruto e meta mercantil e calculado automaticamente.
+- Cada vendedor recebe uma referencia proporcional de lucro, sem lancamento manual.
+- Dias uteis planejados podem ser definidos por vendedor para ajustar a projecao.
+- A tabela diaria foi compactada e alinhada para mostrar todas as colunas, inclusive
+  notas fiscais e ticket medio, em telas de computador menores.
+
 IMPORTANTE
-Esta e uma versao estrutural para conferencia. As regras comerciais e os calculos
-originais dos tres sistemas nao foram alterados.
+As demais areas da Central foram preservadas. A nova regra comercial foi aplicada
+somente ao modulo Gestao de Resultados.
