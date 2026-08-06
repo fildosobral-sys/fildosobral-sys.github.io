@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v25-acessos-seguros";
+const CACHE_NAME = "fs-central-v27-github-pages-otimizado";
 const APP_FILES = [
   "/",
   "/index.html",
@@ -14,7 +14,7 @@ const APP_FILES = [
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js?v=25"
+  "/pwa-update.js?v=27"
 ];
 
 self.addEventListener("install", (event) => {
