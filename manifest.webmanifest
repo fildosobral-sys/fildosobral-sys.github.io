@@ -3,14 +3,21 @@
   "short_name": "FS Vendas",
   "description": "Central de cotações, planos, orçamentos e gestão de resultados.",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/?v=33",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "any",
   "lang": "pt-BR",
   "dir": "ltr",
-  "categories": ["business", "finance", "productivity"],
+  "categories": [
+    "business",
+    "finance",
+    "productivity"
+  ],
   "prefer_related_applications": false,
   "background_color": "#e8f5ff",
   "theme_color": "#0879e8",

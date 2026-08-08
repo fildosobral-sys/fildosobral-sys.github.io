@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v31-estavel";
+const CACHE_NAME = "fs-central-v33-estavel";
 
 const APP_FILES = [
   "/",
@@ -7,7 +7,8 @@ const APP_FILES = [
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
-  "/pwa-update.js"
+  "/pwa-update.js",
+  "/access-guard.js"
 ];
 
 self.addEventListener("install", (event) => {
