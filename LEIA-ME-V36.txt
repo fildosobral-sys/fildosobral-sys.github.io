@@ -1,0 +1,12 @@
+FS SOLUÇÕES V36 — MULTIACESSO COMPARTILHADO + LIDER
+
+REGRAS
+1. DESENVOLVEDOR_MASTER: acesso completo e multi-dispositivo.
+2. LIDER (com ou sem acento digitado): normalizado para LIDER, acesso completo, painel de compartilhamento e multi-dispositivo.
+3. Todo usuário criado pelo botão GERAR COMPARTILHAMENTO recebe multi_dispositivo=TRUE.
+4. Usuários comuns cadastrados fora do compartilhamento continuam com 1 aparelho por vez e podem transferir o acesso para o aparelho atual.
+5. A autorização continua sendo validada no banco: digitar LIDER não cria autorização sozinho; é necessário existir cadastro ATIVO correspondente.
+
+IMPORTANTE
+Substitua o Apps Script pelo APPS-SCRIPT-ACESSOS-V36.gs e publique uma nova versão do Web App.
+Depois suba os arquivos da pasta no GitHub Pages e aguarde a implantação verde.

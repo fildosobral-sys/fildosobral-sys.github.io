@@ -12,7 +12,7 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=34" rel="manifest"/>
+<link href="/manifest.webmanifest?v=35" rel="manifest"/>
 <link href="/icon-192.png" rel="apple-touch-icon"/>
 <link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
 <script id="fs-auth-guard-boot">
@@ -8817,7 +8817,7 @@ img{
 <h2>Gestão &amp; Resultados</h2>
 <div class="grid">
 <article class="card card-featured fs-results-card">
-<div class="fs-results-hero" aria-label="Painel ilustrativo de resultados"><div class="fs-results-kpis"><div class="fs-results-kpi"><span>FATURAMENTO</span><strong>R$ 713 mil</strong></div><div class="fs-results-kpi"><span>EFICIÊNCIA</span><strong>4,84%</strong></div><div class="fs-results-kpi"><span>PROJEÇÃO</span><strong>69,9%</strong></div></div><div class="fs-results-chart"><i style="height:34%"></i><i style="height:48%"></i><i style="height:42%"></i><i style="height:63%"></i><i style="height:57%"></i><i style="height:78%"></i><i style="height:91%"></i></div></div>
+<img class="fs-results-card-image" alt="Gestão de Resultados" decoding="async" fetchpriority="low" loading="lazy" src="resultados-card.webp"/>
 <div class="card-body"><div class="card-title">Gestão de Resultados</div><p class="card-desc">Acompanhe metas, vendas diárias, eficiência, serviços, projeções, semanas e o desempenho de cada vendedor.</p><a aria-label="Abrir Gestão de Resultados" class="card-action" href="resultados.html">Abrir resultados →</a></div>
 </article>
 </div>
@@ -9196,6 +9196,7 @@ img{
   const PLATFORM_LINK = window.location.origin + window.location.pathname;
   const DEV_MASTER_NAME = 'FRANCIFILDO PEREIRA SOBRAL';
   const DEV_MASTER_CARGO = 'DESENVOLVEDOR_MASTER';
+  const LIDER_CARGO = 'LIDER';
   const DEV_MASTER_WHATS = '88988222564';
   const messages = ['Hoje é dia de fazer história nas vendas!','Cliente bem atendido sempre volta.','Disciplina diária gera resultados extraordinários.','Cada atendimento é uma oportunidade de crescer.','Venda é confiança: entregue valor em cada atendimento.'];
 
@@ -9236,6 +9237,7 @@ img{
   let editId = null;
 
   function upper(v){ return String(v || '').trim().toUpperCase(); }
+  function normalizeAccessRole(v){ let r=upper(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_'); if(r==='DESENVOLVER_MASTER')r=DEV_MASTER_CARGO; if(r==='LIDER'||r==='LIDER(A)'||r==='LIDER_A')r=LIDER_CARGO; return r; }
   function onlyDigits(v){ return String(v || '').replace(/\D/g,''); }
   function pad(n){ return String(n).padStart(2,'0'); }
   function dateToBR(v){ const parts=v.split('-'); return parts[2]+'/'+parts[1]+'/'+parts[0]; }
@@ -9248,7 +9250,7 @@ img{
   function getCurrentAccessData(){
     return {
       nome: upper(localStorage.getItem('fs_nome') || ''),
-      cargo: upper(localStorage.getItem('fs_cargo') || ''),
+      cargo: normalizeAccessRole(localStorage.getItem('fs_cargo') || ''),
       whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || ''),
       filial: upper(localStorage.getItem('fs_filial') || ''),
       podeCompartilhar: localStorage.getItem('fs_pode_compartilhar') === '1'
@@ -9267,12 +9269,14 @@ img{
   function isDeveloperMaster(){
     const user = getCurrentAccessData();
     if(!user.nome || !user.cargo || !user.whatsapp){ return false; }
-    return user.nome === DEV_MASTER_NAME && user.cargo === DEV_MASTER_CARGO && user.whatsapp === DEV_MASTER_WHATS && user.podeCompartilhar;
+    const isMaster = user.nome === DEV_MASTER_NAME && user.cargo === DEV_MASTER_CARGO && user.whatsapp === DEV_MASTER_WHATS;
+    const isLeader = user.cargo === LIDER_CARGO;
+    return (isMaster || isLeader) && user.podeCompartilhar;
   }
 
   function isManager(){
     const user = getCurrentAccessData();
-    return user.cargo === 'GERENTE';
+    return user.cargo === 'GERENTE' || user.cargo === LIDER_CARGO;
   }
 
   function ensureBootstrapAccess(){
@@ -9362,7 +9366,7 @@ img{
   function openShare(){
     if(!isDeveloperMaster()){
       closeShare();
-      alert('COMPARTILHAMENTO DISPONÍVEL SOMENTE PARA FRANCIFILDO PEREIRA SOBRAL.');
+      alert('COMPARTILHAMENTO DISPONÍVEL PARA DESENVOLVEDOR_MASTER E LIDER AUTORIZADO.');
       return;
     }
     carregarUsuarios();
@@ -10050,6 +10054,21 @@ window.addEventListener('DOMContentLoaded', function(){
   }
 });
 </script>
+
+<style id="fs-device-transfer-v36">
+.fs-device-transfer-backdrop{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(15,23,42,.62);backdrop-filter:blur(8px)}
+.fs-device-transfer-backdrop.open{display:flex}
+.fs-device-transfer-card{width:min(440px,100%);border-radius:26px;background:#fff;padding:24px;box-shadow:0 28px 80px rgba(15,23,42,.34);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.fs-device-transfer-icon{width:64px;height:64px;border-radius:20px;margin:0 auto 16px;display:grid;place-items:center;background:#fff7ed;color:#ea580c;font-size:32px;border:1px solid #fed7aa}
+.fs-device-transfer-card h3{margin:0;color:#111827;text-align:center;font-size:22px}
+.fs-device-transfer-card p{margin:10px 0 0;text-align:center;color:#64748b;line-height:1.5;font-size:14px}
+.fs-device-transfer-actions{display:grid;gap:10px;margin-top:20px}
+.fs-device-transfer-actions button{min-height:48px;border-radius:15px;border:0;font-weight:800;font-size:15px;cursor:pointer}
+#fsDeviceTransferConfirm{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}
+#fsDeviceTransferCancel{background:#f1f5f9;color:#334155}
+.fs-results-card-image{display:block;width:100%;aspect-ratio:2.55/1;object-fit:cover;object-position:center;border-radius:24px 24px 0 0;background:#eef2ff}
+@media(max-width:768px){.fs-results-card-image{aspect-ratio:1.55/1;object-position:left center}}
+</style>
 <script id="fs-index-stable-auth">
 (function(){
   'use strict';
@@ -10064,7 +10083,7 @@ window.addEventListener('DOMContentLoaded', function(){
   function onlyDigits(v){ return String(v||'').replace(/\D/g,''); }
   function normalizarFilial(v){ var numero=onlyDigits(v); return numero ? 'FILIAL '+String(parseInt(numero,10)) : upperSave(v).replace(/\s+/g,' '); }
   function filialOk(v){ return /^FILIAL\s+\d+$/i.test(normalizarFilial(v)); }
-  function normalizeRole(v){ var role=upperSave(v).replace(/\s+/g,'_'); if(role==='DESENVOLVER_MASTER') role='DESENVOLVEDOR_MASTER'; return role; }
+  function normalizeRole(v){ var role=upperSave(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_'); if(role==='DESENVOLVER_MASTER') role='DESENVOLVEDOR_MASTER'; if(role==='LIDER'||role==='LIDER(A)'||role==='LIDER_A') role='LIDER'; return role; }
   function safeSet(storage,key,value){ try{storage.setItem(key,value);return true;}catch(e){console.warn('[FS] Não foi possível salvar '+key,e);return false;} }
   function setGate(text){ var el=document.getElementById('fsGateState'); if(el&&text) el.textContent=text; }
   function setStatus(message,type){ var el=document.getElementById('fsAccessStatus'); if(!el)return; if(!message){el.style.display='none';el.textContent='';return;} el.style.display='block';el.textContent=message; if(type==='ok'){el.style.background='#ecfdf5';el.style.borderColor='#a7f3d0';el.style.color='#065f46';}else if(type==='info'){el.style.background='#eff6ff';el.style.borderColor='#bfdbfe';el.style.color='#1e40af';}else{el.style.background='#fff7ed';el.style.borderColor='#fed7aa';el.style.color='#9a3412';} }
@@ -10072,14 +10091,43 @@ window.addEventListener('DOMContentLoaded', function(){
   function getDeviceId(){ var id=localStorage.getItem('fs_device_id'); if(!id){id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'fs-'+Date.now()+'-'+Math.random().toString(36).slice(2);safeSet(localStorage,'fs_device_id',id);} return id; }
   function hasSavedUser(u){ return !!(u&&filialOk(u.filial)&&u.nome&&u.cargo&&u.whatsapp); }
   function fingerprint(u){ return [normalizarFilial(u.filial),upperSave(u.nome),normalizeRole(u.cargo),onlyDigits(u.whatsapp)].join('|'); }
-  function isOwnerUser(u){ return !!u&&u.nome===DONO_NOME&&normalizeRole(u.cargo)===DONO_CARGO&&onlyDigits(u.whatsapp)===DONO_WHATSAPP&&u.podeCompartilhar===true; }
+  function isOwnerUser(u){ if(!u)return false; var role=normalizeRole(u.cargo); var master=u.nome===DONO_NOME&&role===DONO_CARGO&&onlyDigits(u.whatsapp)===DONO_WHATSAPP; var lider=role==='LIDER'; return (master||lider)&&u.podeCompartilhar===true; }
+  function isMasterRole(u){ if(!u)return false; var role=normalizeRole(u.cargo); return role===DONO_CARGO||role==='LIDER'; }
+  function isDeviceConflict(json){
+    var code=upperSave((json&&json.codigo)||'');
+    var msg=upperSave((json&&json.mensagem)||'');
+    return code==='DEVICE_CONFLICT'||code==='APARELHO_DIFERENTE'||msg.indexOf('OUTRO APARELHO')>=0||msg.indexOf('OUTRO DISPOSITIVO')>=0;
+  }
+  async function apiPostAccess(payload){
+    var response=await fetch(API_ACESSO_FS,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    if(!response.ok) throw new Error('HTTP '+response.status);
+    return await response.json();
+  }
+  function askTransferDevice(message){
+    return new Promise(function(resolve){
+      var old=document.getElementById('fsDeviceTransferBackdrop');if(old)old.remove();
+      var wrap=document.createElement('div');wrap.id='fsDeviceTransferBackdrop';wrap.className='fs-device-transfer-backdrop open';
+      wrap.innerHTML='<div class="fs-device-transfer-card" role="dialog" aria-modal="true" aria-label="Transferir acesso"><div class="fs-device-transfer-icon">📱</div><h3>Acesso ativo em outro aparelho</h3><p>'+(message||'Este usuário já está conectado em outro dispositivo.')+'<br><br>Deseja usar o acesso neste aparelho e desconectar o anterior?</p><div class="fs-device-transfer-actions"><button id="fsDeviceTransferConfirm" type="button">Usar neste aparelho</button><button id="fsDeviceTransferCancel" type="button">Cancelar</button></div></div>';
+      document.body.appendChild(wrap);
+      function done(v){wrap.remove();resolve(v);}
+      wrap.querySelector('#fsDeviceTransferConfirm').onclick=function(){done(true);};
+      wrap.querySelector('#fsDeviceTransferCancel').onclick=function(){done(false);};
+    });
+  }
+  async function transferDevice(u){
+    try{
+      var json=await apiPostAccess({acao:'transferirAcesso',filial:normalizarFilial(u.filial),nome:upperSave(u.nome),cargo:normalizeRole(u.cargo),whatsapp:onlyDigits(u.whatsapp||''),token:u.token||'',device_id:getDeviceId(),master_multi:isMasterRole(u)||u.master_multi===true});
+      if(json&&json.ok===true){var usuario=Object.assign({},u,json.usuario||{});usuario.podeCompartilhar=json.pode_compartilhar===true||usuario.podeCompartilhar===true||usuario.pode_compartilhar===true;return {ok:true,usuario:usuario};}
+      return {ok:false,temporario:false,mensagem:(json&&json.mensagem)||'Não foi possível transferir o acesso para este aparelho.'};
+    }catch(e){return {ok:false,temporario:true,mensagem:'Não foi possível comunicar com o banco para transferir o acesso.'};}
+  }
   async function validateRemote(u){
     if(!hasSavedUser(u)) return {ok:false,temporario:false,mensagem:'Preencha filial, nome, cargo e WhatsApp corretamente.'};
     var controller=new AbortController(); var timer=setTimeout(function(){controller.abort();},10000);
     try{
       var url=API_ACESSO_FS+'?acao=validarAcesso&filial='+encodeURIComponent(normalizarFilial(u.filial))+'&nome='+encodeURIComponent(upperSave(u.nome))+'&cargo='+encodeURIComponent(normalizeRole(u.cargo))+'&whatsapp='+encodeURIComponent(onlyDigits(u.whatsapp||''))+'&token='+encodeURIComponent(u.token||'')+'&device_id='+encodeURIComponent(getDeviceId())+'&_='+Date.now();
       var response=await fetch(url,{cache:'no-store',signal:controller.signal}); if(!response.ok) throw new Error('HTTP '+response.status); var json=await response.json(); var status=upperSave((json.usuario&&json.usuario.status)||json.status||'ATIVO');
-      if(!json||json.ok!==true||status==='BLOQUEADO'||status==='INATIVO') return {ok:false,temporario:false,mensagem:(json&&json.mensagem)||'Dados não autorizados. Confira as informações e tente novamente.'};
+      if(!json||json.ok!==true||status==='BLOQUEADO'||status==='INATIVO'){ if(isDeviceConflict(json)) return {ok:false,temporario:false,deviceConflict:true,mensagem:(json&&json.mensagem)||'Este acesso já foi ativado em outro aparelho.'}; return {ok:false,temporario:false,mensagem:(json&&json.mensagem)||'Dados não autorizados. Confira as informações e tente novamente.'}; }
       var usuario=Object.assign({},u,json.usuario||{}); usuario.filial=normalizarFilial(usuario.filial||u.filial);usuario.nome=upperSave(usuario.nome||u.nome);usuario.cargo=normalizeRole(usuario.cargo||u.cargo);usuario.whatsapp=onlyDigits(usuario.whatsapp||u.whatsapp);usuario.podeCompartilhar=json.pode_compartilhar===true||usuario.podeCompartilhar===true||usuario.pode_compartilhar===true; return {ok:true,usuario:usuario};
     }catch(e){ return {ok:false,temporario:true,mensagem:'Sem comunicação com o banco de acesso. A plataforma permanecerá bloqueada até a validação.'}; }
     finally{clearTimeout(timer);}
@@ -10122,9 +10170,19 @@ window.addEventListener('DOMContentLoaded', function(){
         unlockInterface();
         return true;
       }
+      if(savedValidation.deviceConflict){
+        if(isMasterRole(actual)){
+          var masterRetry=await transferDevice(Object.assign({},actual,{master_multi:true}));
+          if(masterRetry.ok){saveUser(Object.assign({},actual,masterRetry.usuario||{}));applyPermissionVisibility();unlockInterface();return true;}
+        }else{
+          var transferSaved=await askTransferDevice(savedValidation.mensagem);
+          if(transferSaved){var movedSaved=await transferDevice(actual);if(movedSaved.ok){saveUser(Object.assign({},actual,movedSaved.usuario||{}));applyPermissionVisibility();unlockInterface();return true;}pendingMessage=movedSaved.mensagem;}
+          else pendingMessage='O acesso continua ativo no outro aparelho. Você pode tentar novamente quando quiser.';
+        }
+      }
       clearAuthorization(true);
       resetBadge();
-      pendingMessage=savedValidation.mensagem||'Acesso salvo não pôde ser validado. Informe os dados novamente.';
+      pendingMessage=pendingMessage||savedValidation.mensagem||'Acesso salvo não pôde ser validado. Informe os dados novamente.';
     }
 
     /* v34: fluxo único, sem chamadas recursivas de fsConfirmarAcesso.
@@ -10142,6 +10200,17 @@ window.addEventListener('DOMContentLoaded', function(){
         applyPermissionVisibility();
         unlockInterface();
         return true;
+      }
+      if(validation.deviceConflict){
+        if(isMasterRole(data)){
+          var masterMoved=await transferDevice(Object.assign({},data,{master_multi:true}));
+          if(masterMoved.ok){saveUser(Object.assign({},data,masterMoved.usuario||{}));applyPermissionVisibility();unlockInterface();return true;}
+          validation=masterMoved;
+        }else{
+          var transferNow=await askTransferDevice(validation.mensagem);
+          if(transferNow){var moved=await transferDevice(data);if(moved.ok){saveUser(Object.assign({},data,moved.usuario||{}));applyPermissionVisibility();unlockInterface();return true;}validation=moved;}
+          else validation={ok:false,temporario:false,mensagem:'Acesso mantido no aparelho anterior. Para trocar, toque em Entrar novamente e escolha “Usar neste aparelho”.'};
+        }
       }
 
       clearAuthorization(true);
@@ -12827,6 +12896,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=34"></script>
+<script src="./pwa-update.js?v=35"></script>
 </body>
 </html>

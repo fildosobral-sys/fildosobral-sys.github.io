@@ -3,7 +3,7 @@
   "short_name": "FS Vendas",
   "description": "Central de cotações, planos, orçamentos e gestão de resultados.",
   "id": "/",
-  "start_url": "/?v=34",
+  "start_url": "/?v=36",
   "scope": "/",
   "display": "standalone",
   "display_override": [

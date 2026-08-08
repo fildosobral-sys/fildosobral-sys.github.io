@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var VERSION = '34';
+  var VERSION = '36';
 
   function isQuotaError(error){
     return !!error && (
