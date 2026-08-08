@@ -1,8 +1,0 @@
-FS Soluções v34 - correção da tela de acesso
-
-- Corrige tela branca/blur após o bloqueio da v33.
-- Mantém toda a Central invisível até validação remota concluída.
-- Modal de acesso fica sempre acima da camada privada.
-- Remove recursão/reentrada na validação após erro.
-- Mantém proteção de acesso direto aos módulos.
-- Cache/PWA atualizado para v34.
