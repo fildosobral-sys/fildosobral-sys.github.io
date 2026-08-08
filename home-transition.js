@@ -55,10 +55,27 @@
     navigating = true;
     clearTimeout(timer);
     cleanupModuleUi();
+    var cameFromIndex = false;
     try{
+      cameFromIndex = sessionStorage.getItem('fs_module_from_index') === '1' || /\/index(?:\.html)?(?:[?#]|$)/i.test(document.referrer || '');
       sessionStorage.setItem('fs_returning_home','1');
-      sessionStorage.removeItem('fs_module_from_index');
     }catch(e){}
+
+    /* V40: ao entrar pelo menu principal, volta usando o histórico/BFCache.
+       Isso evita reconstruir o simulador inteiro antes de retornar e acelera
+       especialmente Parcelamentos e Planos. */
+    if(cameFromIndex && window.history.length > 1){
+      try{
+        window.history.back();
+        setTimeout(function(){
+          if(!document.hidden && /(?:simulador|orcamentos|vendas-mobile|resultados)\.html/i.test(location.pathname)){
+            window.location.replace('./index.html');
+          }
+        }, 500);
+        return;
+      }catch(e){}
+    }
+    try{ sessionStorage.removeItem('fs_module_from_index'); }catch(e){}
     window.location.replace('./index.html');
   }
 
@@ -93,7 +110,7 @@
   window.addEventListener('focus', cleanupModuleUi);
 
   var style = document.createElement('style');
-  style.id = 'fs-universal-home-style-v39';
+  style.id = 'fs-universal-home-style-v40';
   style.textContent = `
     #fsUniversalHomeButton{
       position:fixed!important;

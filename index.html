@@ -8720,6 +8720,53 @@ img{
 <style id="fs-resultados-card-css">
 .fs-results-section .grid{grid-template-columns:1fr!important}.fs-results-card{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(300px,1.1fr);min-height:250px}.fs-results-card .card-body{display:flex;flex-direction:column;justify-content:center}.fs-results-card .card-desc{max-width:620px}.fs-results-hero{position:relative;overflow:hidden;min-height:250px;background:linear-gradient(135deg,#102a43,#0879e8 58%,#7257d9);padding:24px;color:#fff;display:grid;align-content:center;gap:12px}.fs-results-hero:after{content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-90px;top:-100px;background:rgba(255,255,255,.12)}.fs-results-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;position:relative;z-index:1}.fs-results-kpi{padding:14px;border-radius:15px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(8px)}.fs-results-kpi span{display:block;font-size:11px;opacity:.8;font-weight:800}.fs-results-kpi strong{display:block;font-size:20px;margin-top:5px}.fs-results-chart{height:55px;display:flex;align-items:end;gap:7px;position:relative;z-index:1}.fs-results-chart i{flex:1;border-radius:7px 7px 2px 2px;background:linear-gradient(180deg,#fff,#73d7ff);opacity:.9}@media(max-width:700px){.fs-results-card{grid-template-columns:1fr}.fs-results-hero{min-height:205px}.fs-results-kpi strong{font-size:15px}}
 </style>
+
+<style id="fs-v40-home-cards-final">
+/* V40 - cards em largura total + destaque azul consistente */
+.fs-home-section .grid{overflow:visible!important;}
+.fs-home-section .card{padding:0!important;overflow:hidden!important;}
+.fs-home-section .card > img,
+.fs-home-section .card > picture,
+.fs-home-section .card > picture > img,
+.fs-results-section .fs-results-card-image{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+.fs-home-section .card-body{
+  position:relative!important;
+  margin:0!important;
+  padding:18px 20px 20px!important;
+  background:linear-gradient(135deg,rgba(255,255,255,.98) 0%,rgba(238,247,255,.98) 55%,rgba(220,238,255,.96) 100%)!important;
+  box-shadow:inset 0 16px 30px rgba(59,130,246,.13),0 -10px 24px rgba(59,130,246,.08)!important;
+}
+.fs-home-section .card-body::before{
+  content:"";position:absolute;left:-8%;bottom:-40px;width:72%;height:115px;
+  border-radius:55% 55% 0 0;background:linear-gradient(180deg,rgba(147,197,253,.22),rgba(191,219,254,.06));
+  filter:blur(1px);pointer-events:none;z-index:0;
+}
+.fs-home-section .card-title,
+.fs-home-section .card-desc,
+.fs-home-section .card-action{position:relative!important;z-index:1!important;}
+.fs-home-section .card-title{
+  display:block!important;width:100%!important;background:transparent!important;
+  color:#6070c9!important;text-shadow:0 2px 0 rgba(255,255,255,.8),0 7px 18px rgba(37,99,235,.28)!important;
+}
+/* carrossel sem o banner Tudo Pra Você e sem buraco visual */
+.carousel-link:has(img[alt*="Tudo Pra Você"]){display:none!important;}
+@media(max-width:767px){
+  .fs-home-section .card > img,.fs-results-section .fs-results-card-image{height:auto!important;}
+  .fs-home-section .card-body{padding:16px 18px 18px!important;}
+}
+</style>
 </head>
 <body>
 <div aria-live="polite" id="fsSplash">
@@ -8761,7 +8808,7 @@ img{
 </header>
 <section class="hero">
 <div class="carousel" id="carousel">
-<a class="carousel-link" href="https://www.zenirmoveis.com.br/457?map=productClusterIds" rel="noopener noreferrer" target="_blank"><img alt="Tudo Pra Você Zenir" decoding="async" fetchpriority="high" loading="eager" src="https://tfcvih.vtexassets.com/assets/vtex.file-manager-graphql/images/d740ee86-fc48-44cd-a7db-3923dd294133___b7f55b0daf1e885ea42d44a7bc1f516a.png"/></a>
+
 <a class="carousel-link" href="https://www.zenirmoveis.com.br/265?map=productClusterIds" rel="noopener noreferrer" target="_blank"><img alt="Eletrodomésticos" decoding="async" fetchpriority="high" loading="eager" src="https://tfcvih.vtexassets.com/assets/vtex.file-manager-graphql/images/df1500b3-839e-413e-96df-b63b2142844f___8340d1ee63e994135a29b39f35674f7b.png"/></a>
 <a class="carousel-link" href="https://www.zenirmoveis.com.br/327?map=productClusterIds" rel="noopener noreferrer" target="_blank"><img alt="Móveis" decoding="async" fetchpriority="auto" loading="eager" src="https://tfcvih.vtexassets.com/assets/vtex.file-manager-graphql/images/7e5d7698-1407-4138-ae2a-ec3ed6580d0e___f9de51907ceddfd37ee74f1480ffef5a.png"/></a>
 <a class="carousel-link" href="https://www.zenirmoveis.com.br/280?map=productClusterIds" rel="noopener noreferrer" target="_blank"><img alt="Zeflex" decoding="async" fetchpriority="auto" loading="eager" src="https://tfcvih.vtexassets.com/assets/vtex.file-manager-graphql/images/fe7699f6-b407-40ab-8899-57e73f07b12a___0343b12f46937a691d147429bababbc8.png"/></a>
@@ -12936,7 +12983,25 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=39"></script>
+<script src="./pwa-update.js?v=40"></script>
+
+<script id="fs-v40-remove-tudo-pra-voce">
+(function(){
+  function removeSlide(){
+    document.querySelectorAll('.carousel-link,.fs-home-carousel-link').forEach(function(link){
+      var img=link.querySelector('img');
+      var label=((img&&img.alt)||'')+' '+(link.textContent||'')+'';
+      if(/tudo\s*pra\s*vo[cç][eê]/i.test(label)) link.remove();
+    });
+    var carousel=document.getElementById('carousel');
+    if(carousel){
+      var links=carousel.querySelectorAll('.carousel-link');
+      links.forEach(function(el,i){el.classList.toggle('active',i===0);});
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',removeSlide,{once:true}); else removeSlide();
+})();
+</script>
 </body>
 </html>
 

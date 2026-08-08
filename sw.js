@@ -1,4 +1,4 @@
-const CACHE_NAME = "fs-central-v39-estavel";
+const CACHE_NAME = "fs-central-v40-estavel";
 
 const APP_FILES = [
   "/",
