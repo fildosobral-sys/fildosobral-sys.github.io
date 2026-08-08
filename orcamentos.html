@@ -4,10 +4,11 @@
  <head>
 <style id="fs-module-private-boot-v33">html.fs-module-auth-lock body{visibility:hidden!important;background:#eef3f8!important}</style>
 <script>document.documentElement.classList.add('fs-module-auth-lock');</script>
-<script src="./access-guard.js?v=34"></script>
+<script src="./access-guard.js?v=39"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Orçamentos | FS Soluções</title>
+  <!-- v39: SDKs /_sdk removidos; eram opcionais, inexistentes no GitHub Pages e bloqueavam o carregamento. -->
   <script>
     // Herda a identificação já validada na central.
     (function () {
@@ -22,8 +23,6 @@
       }
     })();
   </script>
-  <script src="/_sdk/element_sdk.js"></script>
-  <script src="/_sdk/data_sdk.js"></script>
   <style>
         body {
             box-sizing: border-box;
@@ -4696,77 +4695,7 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
-<style id="fs-home-button-v37-final">
-#btnVoltarInicio,.fs-back-home{
-  position:fixed !important;
-  left:auto !important;
-  right:max(14px,env(safe-area-inset-right)) !important;
-  bottom:max(14px,env(safe-area-inset-bottom)) !important;
-  width:56px !important;
-  min-width:56px !important;
-  max-width:56px !important;
-  height:56px !important;
-  min-height:56px !important;
-  max-height:56px !important;
-  padding:0 !important;
-  margin:0 !important;
-  border:1px solid rgba(255,255,255,.28) !important;
-  border-radius:50% !important;
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  gap:0 !important;
-  overflow:hidden !important;
-  background:rgba(15,23,42,.20) !important;
-  color:#fff !important;
-  font:400 27px/1 system-ui,-apple-system,"Segoe UI Emoji",sans-serif !important;
-  text-decoration:none !important;
-  box-shadow:0 6px 18px rgba(15,23,42,.10) !important;
-  opacity:.24 !important;
-  backdrop-filter:blur(4px) !important;
-  -webkit-backdrop-filter:blur(4px) !important;
-  transform:scale(1) !important;
-  transition:opacity .18s ease,background .18s ease,transform .18s ease,box-shadow .18s ease !important;
-  z-index:2147483000 !important;
-}
-#btnVoltarInicio.fs-home-armed,.fs-back-home.fs-home-armed{
-  opacity:1 !important;
-  background:rgba(30,41,59,.92) !important;
-  transform:scale(1.08) !important;
-  box-shadow:0 10px 26px rgba(15,23,42,.30) !important;
-}
-#btnVoltarInicio span,#btnVoltarInicio svg,.fs-back-home span,.fs-back-home svg{display:none !important;}
-</style>
-<script id="fs-home-button-v37-final-script">
-(function(){
-  'use strict';
-  var armed=false,timer=0,navigating=false;
-  function button(){return document.querySelector('#btnVoltarInicio,.fs-back-home');}
-  function prepare(){
-    var b=button();if(!b)return;
-    b.textContent='🏠';
-    b.setAttribute('aria-label',armed?'Toque novamente para voltar à Central':'Ativar retorno à Central');
-    b.setAttribute('title',armed?'Toque novamente para voltar à Central':'Voltar à Central');
-    b.classList.toggle('fs-home-armed',armed);
-  }
-  function disarm(){armed=false;clearTimeout(timer);prepare();}
-  document.addEventListener('DOMContentLoaded',prepare);
-  document.addEventListener('click',function(event){
-    var b=event.target.closest&&event.target.closest('#btnVoltarInicio,.fs-back-home');
-    if(!b)return;
-    event.preventDefault();event.stopImmediatePropagation();
-    if(navigating)return false;
-    if(!armed){
-      armed=true;prepare();clearTimeout(timer);timer=setTimeout(disarm,2600);return false;
-    }
-    navigating=true;clearTimeout(timer);
-    try{sessionStorage.setItem('fs_returning_home','1');sessionStorage.removeItem('fs_module_from_index');}catch(e){}
-    window.location.replace('./index.html');
-    return false;
-  },true);
-  window.addEventListener('pageshow',function(){navigating=false;disarm();});
-})();
-</script>
-
 </body>
 </html>
+
+<script src="./home-transition.js?v=39"></script>

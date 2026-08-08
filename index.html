@@ -12936,6 +12936,50 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=35"></script>
+<script src="./pwa-update.js?v=39"></script>
 </body>
 </html>
+
+
+<script id="fs-ui-unlock-v39">
+(function(){
+  'use strict';
+  function byId(id){ return document.getElementById(id); }
+  function optionsActuallyOpen(){
+    var sheet=byId('fsOptionsSheet'), back=byId('fsOptionsBackdrop');
+    return !!((sheet && sheet.classList.contains('open')) || (back && back.classList.contains('open')));
+  }
+  function releaseOptionsLock(forceClose){
+    var sheet=byId('fsOptionsSheet'), back=byId('fsOptionsBackdrop');
+    if(forceClose){
+      if(sheet){ sheet.classList.remove('open'); sheet.setAttribute('aria-hidden','true'); }
+      if(back) back.classList.remove('open');
+    }
+    if(forceClose || !optionsActuallyOpen()){
+      document.documentElement.classList.remove('fs-options-open');
+      document.body.classList.remove('fs-options-open');
+      if(document.body.style.overflow === 'hidden') document.body.style.overflow='';
+      if(document.documentElement.style.overflow === 'hidden') document.documentElement.style.overflow='';
+    }
+  }
+  function installObserver(){
+    var sheet=byId('fsOptionsSheet'), back=byId('fsOptionsBackdrop');
+    if(!sheet && !back) return;
+    var obs=new MutationObserver(function(){ setTimeout(function(){ releaseOptionsLock(false); },0); });
+    [sheet,back].filter(Boolean).forEach(function(el){obs.observe(el,{attributes:true,attributeFilter:['class','style','aria-hidden']});});
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    releaseOptionsLock(true);
+    installObserver();
+    // Any option action can close the sheet through older handlers; always release the scroll lock too.
+    document.querySelectorAll('#fsOptionsSheet button,#fsOptionsSheet a,.fs-options-sheet button,.fs-options-sheet a').forEach(function(el){
+      el.addEventListener('click',function(){ setTimeout(function(){ releaseOptionsLock(false); },50); },true);
+    });
+  });
+  window.addEventListener('pageshow',function(){ releaseOptionsLock(true); });
+  window.addEventListener('focus',function(){ setTimeout(function(){ releaseOptionsLock(false); },60); });
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible') setTimeout(function(){ releaseOptionsLock(false); },80);
+  });
+})();
+</script>
