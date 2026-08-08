@@ -12,7 +12,7 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=30" rel="manifest"/>
+<link href="/manifest.webmanifest?v=18" rel="manifest"/>
 <link href="/icon-192.png" rel="apple-touch-icon"/>
 <link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
 <script id="fs-auth-guard-boot">
@@ -8822,6 +8822,14 @@ img{
 <h2>Acompanhamento &amp; Indicadores</h2>
 <div class="grid">
 <article class="card card-featured" id="cardDashboardBI"><div aria-label="Dashboard animado" class="fs-dashboard-hero"><div class="fs-dashboard-overlay"><div class="fs-kpis"><div class="fs-kpi"><div class="fs-kpi-label">VENDAS</div><div class="fs-kpi-value">R$ 8,9 mi</div></div><div class="fs-kpi"><div class="fs-kpi-label">META</div><div class="fs-kpi-value">94%</div></div><div class="fs-kpi"><div class="fs-kpi-label">EFICIÊNCIA</div><div class="fs-kpi-value">+12%</div></div></div><div class="fs-grid-lines"><span></span><span></span><span></span></div><div class="fs-line"><svg aria-hidden="true" preserveaspectratio="none" viewbox="0 0 600 120"><defs><lineargradient id="fsLineStroke" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#7c5cff"></stop><stop offset="100%" stop-color="#22c55e"></stop></lineargradient></defs><path d="M0,88 C45,92 55,60 92,58 C135,56 152,90 196,80 C238,70 256,34 296,38 C338,42 362,76 404,70 C440,65 468,24 512,28 C544,31 570,52 600,18" fill="none" stroke="url(#fsLineStroke)" stroke-linecap="round" stroke-width="6"><animate attributename="d" dur="4.2s" repeatcount="indefinite" values="M0,88 C45,92 55,60 92,58 C135,56 152,90 196,80 C238,70 256,34 296,38 C338,42 362,76 404,70 C440,65 468,24 512,28 C544,31 570,52 600,18;M0,96 C42,86 58,48 96,54 C136,60 156,82 196,72 C238,60 258,28 300,34 C340,40 362,68 404,64 C446,60 472,34 514,36 C546,38 570,44 600,24;M0,88 C45,92 55,60 92,58 C135,56 152,90 196,80 C238,70 256,34 296,38 C338,42 362,76 404,70 C440,65 468,24 512,28 C544,31 570,52 600,18"></animate></path><g fill="#ffffff"><circle cx="92" cy="58" r="6"><animate attributename="cy" dur="4.2s" repeatcount="indefinite" values="58;54;58"></animate></circle><circle cx="196" cy="80" r="6"><animate attributename="cy" dur="4.2s" repeatcount="indefinite" values="80;72;80"></animate></circle><circle cx="296" cy="38" r="6"><animate attributename="cy" dur="4.2s" repeatcount="indefinite" values="38;34;38"></animate></circle><circle cx="404" cy="70" r="6"><animate attributename="cy" dur="4.2s" repeatcount="indefinite" values="70;64;70"></animate></circle><circle cx="512" cy="28" r="6"><animate attributename="cy" dur="4.2s" repeatcount="indefinite" values="28;36;28"></animate></circle></g></svg></div><div class="fs-bars"><div class="fs-bar" style="height:42%"></div><div class="fs-bar" style="height:56%"></div><div class="fs-bar" style="height:48%"></div><div class="fs-bar" style="height:72%"></div><div class="fs-bar" style="height:64%"></div><div class="fs-bar" style="height:82%"></div><div class="fs-bar" style="height:74%"></div></div><div class="fs-logo">FS BI</div></div></div><div class="card-body"><div class="fs-card-badge"></div><div class="card-title">Dashboard</div><p class="card-desc">Painéis de performance, metas e visão gerencial com aparência clean premium.</p><a class="card-action" href="#bi"></a></div></article>
+<article class="card card-featured fs-card-link" data-href="formularios.html?from=mobile" id="cardFormulariosFS">
+<img alt="Relatórios" decoding="async" fetchpriority="high" loading="eager" src="relatorios_banner.webp"/>
+<div class="card-body">
+<div class="card-title">Formulários</div>
+<p class="card-desc">Acesso aos formulários manuais e imprimíveis por modalidade: à vista, carnê, cartão e Pix.</p>
+<a class="card-action" href="formularios.html?from=mobile">Abrir</a>
+</div>
+</article>
 <article class="card card-featured fs-card-link" data-href="https://fildosobral-sys.github.io/FS_escala_operacional/FS_Escala_Operacional_Inteligente.html" id="cardEscalaOperacionalFS">
 <img alt="Escala Operacional Inteligente" decoding="async" fetchpriority="low" loading="lazy" src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&amp;fit=crop&amp;w=1200&amp;q=80"/>
 <div class="card-body">
@@ -9188,28 +9196,11 @@ img{
 </aside>
 <script>
 (function(){
-  window.FS_ACCESS = window.FS_ACCESS || {
-    apiUrl: "https://script.google.com/macros/s/AKfycbzQTAJGkaqzLEZs6xiEBMUp7rnLSxQiZxUQzNPiciAWxdj3ZUL6ObW4iAUfkmutueVasw/exec",
-    ownerName: 'FRANCIFILDO PEREIRA SOBRAL',
-    ownerRole: 'DESENVOLVEDOR_MASTER',
-    ownerWhatsapp: '88988222564',
-    normalizeRole: function(value){
-      const role = String(value || '').trim().toUpperCase();
-      return role === 'DESENVOLVER_MASTER' ? 'DESENVOLVEDOR_MASTER' : role;
-    },
-    isOwner: function(user){
-      if(!user) return false;
-      return String(user.nome || '').trim().toUpperCase() === this.ownerName &&
-        this.normalizeRole(user.cargo) === this.ownerRole &&
-        String(user.whatsapp || '').replace(/\D/g, '') === this.ownerWhatsapp;
-    }
-  };
-  const ACCESS_CORE = window.FS_ACCESS;
-  const API_FS = ACCESS_CORE.apiUrl;
+  const API_FS = "https://script.google.com/macros/s/AKfycbzQTAJGkaqzLEZs6xiEBMUp7rnLSxQiZxUQzNPiciAWxdj3ZUL6ObW4iAUfkmutueVasw/exec";
   const PLATFORM_LINK = window.location.origin + window.location.pathname;
-  const DEV_MASTER_NAME = ACCESS_CORE.ownerName;
-  const DEV_MASTER_CARGO = ACCESS_CORE.ownerRole;
-  const DEV_MASTER_WHATS = ACCESS_CORE.ownerWhatsapp;
+  const DEV_MASTER_NAME = 'FRANCIFILDO PEREIRA SOBRAL';
+  const DEV_MASTER_CARGO = 'DESENVOLVEDOR_MASTER';
+  const DEV_MASTER_WHATS = '88988222564';
   const messages = ['Hoje é dia de fazer história nas vendas!','Cliente bem atendido sempre volta.','Disciplina diária gera resultados extraordinários.','Cada atendimento é uma oportunidade de crescer.','Venda é confiança: entregue valor em cada atendimento.'];
 
   const menuBtn=document.getElementById('menuBtn');
@@ -9261,7 +9252,7 @@ img{
   function getCurrentAccessData(){
     return {
       nome: upper(localStorage.getItem('fs_nome') || ''),
-      cargo: ACCESS_CORE.normalizeRole(localStorage.getItem('fs_cargo') || ''),
+      cargo: upper(localStorage.getItem('fs_cargo') || ''),
       whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || ''),
       filial: upper(localStorage.getItem('fs_filial') || ''),
       podeCompartilhar: localStorage.getItem('fs_pode_compartilhar') === '1'
@@ -9278,7 +9269,9 @@ img{
   }
 
   function isDeveloperMaster(){
-    return ACCESS_CORE.isOwner(getCurrentAccessData());
+    const user = getCurrentAccessData();
+    if(!user.nome || !user.cargo || !user.whatsapp){ return false; }
+    return user.nome === DEV_MASTER_NAME && user.cargo === DEV_MASTER_CARGO && user.whatsapp === DEV_MASTER_WHATS && user.podeCompartilhar;
   }
 
   function isManager(){
@@ -9383,15 +9376,8 @@ img{
   function closeShare(){ shareBackdrop.classList.remove('open'); shareModal.classList.remove('open'); }
 
   async function apiGet(url){
-    const controller = new AbortController();
-    const timer = setTimeout(function(){ controller.abort(); }, 10000);
-    try{
-      const res = await fetch(url, {cache:'no-store', signal:controller.signal});
-      if(!res.ok) throw new Error('BANCO TEMPORARIAMENTE INDISPONÍVEL.');
-      return await res.json();
-    }finally{
-      clearTimeout(timer);
-    }
+    const res = await fetch(url);
+    return await res.json();
   }
   async function apiPost(payload){
     const actor = getCurrentAccessData();
@@ -9399,17 +9385,11 @@ img{
       actor_nome: actor.nome,
       actor_cargo: actor.cargo,
       actor_whatsapp: actor.whatsapp,
-      actor_token: localStorage.getItem('fs_access_token') || ''
+      actor_token: localStorage.getItem('fs_access_token') || '',
+      device_id: getDeviceId()
     });
-    const controller = new AbortController();
-    const timer = setTimeout(function(){ controller.abort(); }, 10000);
-    try{
-      const res = await fetch(API_FS, {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body: JSON.stringify(payload),signal:controller.signal});
-      if(!res.ok) throw new Error('BANCO TEMPORARIAMENTE INDISPONÍVEL.');
-      return await res.json();
-    }finally{
-      clearTimeout(timer);
-    }
+    const res = await fetch(API_FS, {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body: JSON.stringify(payload)});
+    return await res.json();
   }
 
   async function carregarUsuarios(){
@@ -9421,7 +9401,7 @@ img{
     }
     try{
       const actor = getCurrentAccessData();
-      const url = API_FS + '?acao=listarUsuarios&actor_nome=' + encodeURIComponent(actor.nome) + '&actor_cargo=' + encodeURIComponent(actor.cargo) + '&actor_whatsapp=' + encodeURIComponent(actor.whatsapp) + '&_=' + Date.now();
+      const url = API_FS + '?acao=listarUsuarios&actor_nome=' + encodeURIComponent(actor.nome) + '&actor_cargo=' + encodeURIComponent(actor.cargo) + '&actor_whatsapp=' + encodeURIComponent(actor.whatsapp) + '&device_id=' + encodeURIComponent(getDeviceId()) + '&_=' + Date.now();
       const json = await apiGet(url);
       if(!json || json.ok === false) throw new Error((json && json.mensagem) || 'Acesso ao banco não autorizado.');
       usuarios = Array.isArray(json.usuarios) ? json.usuarios : [];
@@ -9450,7 +9430,7 @@ img{
     if(!devMaster) return;
     usuarios.forEach(function(u){
       const bloqueado = upper(u.status) === 'BLOQUEADO';
-      const protegido = ACCESS_CORE.isOwner({nome:u.nome, cargo:u.cargo, whatsapp:u.whatsapp});
+      const protegido = upper(u.nome) === DEV_MASTER_NAME && upper(u.cargo) === DEV_MASTER_CARGO;
       const tr = document.createElement('tr');
       tr.innerHTML =
         '<td>'+(u.filial||'')+'</td>'+
@@ -9555,7 +9535,7 @@ img{
     }
     const filial = normalizarFilial(filialEl.value);
     const nome = upper(nomeEl.value);
-    const cargo = ACCESS_CORE.normalizeRole(cargoEl.value);
+    const cargo = upper(cargoEl.value);
     const whatsapp = onlyDigits(whatsEl.value);
     const genero = upper(generoEl && generoEl.value) || 'AUTOMATICO';
 
@@ -9691,6 +9671,8 @@ img{
   btnCancelarEdicao.addEventListener('click', limparFormulario);
   btnRegistrarAtualizacao.addEventListener('click', registrarAtualizacao);
   btnNotificarTodos.addEventListener('click', notificarTodos);
+  btnTrocarUsuario.addEventListener('click', trocarUsuario);
+  btnSairAcesso.addEventListener('click', sairAcesso);
   document.addEventListener('click', function(e){ if (!menuDropdown.contains(e.target) && !menuBtn.contains(e.target)) menuDropdown.classList.remove('open'); if (!datePanel.contains(e.target) && e.target !== btnDate) datePanel.classList.remove('open'); if (!timePanel.contains(e.target) && e.target !== btnTime) timePanel.classList.remove('open'); });
 
   const hpModal = document.getElementById('hp12cModal');
@@ -10065,8 +10047,10 @@ window.addEventListener('DOMContentLoaded', function(){
 </script>
 <script id="fs-index-stable-auth">
 (function(){
-  var ACCESS_CORE = window.FS_ACCESS;
-  var API_ACESSO_FS = ACCESS_CORE.apiUrl;
+  var API_ACESSO_FS = 'https://script.google.com/macros/s/AKfycbzQTAJGkaqzLEZs6xiEBMUp7rnLSxQiZxUQzNPiciAWxdj3ZUL6ObW4iAUfkmutueVasw/exec';
+  var DONO_NOME = 'FRANCIFILDO PEREIRA SOBRAL';
+  var DONO_CARGO = 'DESENVOLVEDOR_MASTER';
+  var DONO_WHATSAPP = '88988222564';
   function upperLive(v){ return String(v||'').toUpperCase(); }
   function upperSave(v){ return String(v||'').toUpperCase().trim(); }
   function onlyDigits(v){ return String(v||'').replace(/\D/g,''); }
@@ -10080,7 +10064,7 @@ window.addEventListener('DOMContentLoaded', function(){
     return {
       filial: upperSave(localStorage.getItem('fs_filial') || ''),
       nome: upperSave(localStorage.getItem('fs_nome') || ''),
-      cargo: ACCESS_CORE.normalizeRole(localStorage.getItem('fs_cargo') || ''),
+      cargo: upperSave(localStorage.getItem('fs_cargo') || ''),
       whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || ''),
       genero: upperSave(localStorage.getItem('fs_genero') || 'AUTOMATICO'),
       token: localStorage.getItem('fs_access_token') || '',
@@ -10102,44 +10086,35 @@ window.addEventListener('DOMContentLoaded', function(){
   }
 
   function isOwnerUser(u){
-    return ACCESS_CORE.isOwner(u);
+    return !!u && u.nome === DONO_NOME && u.cargo === DONO_CARGO && onlyDigits(u.whatsapp) === DONO_WHATSAPP && u.podeCompartilhar === true;
   }
 
   async function validateRemote(u){
     if(!hasSavedUser(u)) return {ok:false, mensagem:'Dados de acesso incompletos.'};
     try{
-      var url = API_ACESSO_FS+'?acao=validarAcesso&filial='+encodeURIComponent(u.filial)+'&nome='+encodeURIComponent(u.nome)+'&cargo='+encodeURIComponent(ACCESS_CORE.normalizeRole(u.cargo))+'&whatsapp='+encodeURIComponent(u.whatsapp||'')+'&token='+encodeURIComponent(u.token||'')+'&_='+Date.now();
-      var controller = new AbortController();
-      var timer = setTimeout(function(){ controller.abort(); }, 10000);
-      var response;
-      try{
-        response = await fetch(url, {cache:'no-store', signal:controller.signal});
-      }finally{
-        clearTimeout(timer);
-      }
-      if(!response.ok) throw new Error('Banco indisponível');
+      var url = API_ACESSO_FS+'?acao=validarAcesso&filial='+encodeURIComponent(u.filial)+'&nome='+encodeURIComponent(u.nome)+'&cargo='+encodeURIComponent(u.cargo)+'&whatsapp='+encodeURIComponent(u.whatsapp||'')+'&token='+encodeURIComponent(u.token||'')+'&device_id='+encodeURIComponent(getDeviceId())+'&_='+Date.now();
+      var response = await fetch(url, {cache:'no-store'});
       var json = await response.json();
       var status = upperSave((json.usuario && json.usuario.status) || json.status || 'ATIVO');
       if(!json || json.ok !== true || status === 'BLOQUEADO' || status === 'INATIVO'){
         return {ok:false, mensagem:(json && json.mensagem) || 'Usuário bloqueado ou não autorizado.'};
       }
       var usuario = Object.assign({}, u, json.usuario || {});
-      usuario.cargo = ACCESS_CORE.normalizeRole(usuario.cargo);
-      usuario.podeCompartilhar = ACCESS_CORE.isOwner(usuario) || json.pode_compartilhar === true;
+      usuario.podeCompartilhar = json.pode_compartilhar === true || usuario.podeCompartilhar === true;
       return {ok:true, usuario:usuario};
     }catch(e){
-      return {ok:false, temporario:true, mensagem:'Não foi possível confirmar o acesso no banco. A Central continuará com os dados salvos neste aparelho.'};
+      return {ok:false, mensagem:'Não foi possível confirmar o acesso no banco. Verifique sua internet e tente novamente.'};
     }
   }
 
   function saveUser(u){
     localStorage.setItem('fs_filial', upperSave(u.filial||''));
     localStorage.setItem('fs_nome', upperSave(u.nome||''));
-    localStorage.setItem('fs_cargo', ACCESS_CORE.normalizeRole(u.cargo||''));
+    localStorage.setItem('fs_cargo', upperSave(u.cargo||''));
     localStorage.setItem('fs_whatsapp', onlyDigits(u.whatsapp||''));
     localStorage.setItem('fs_genero', upperSave(u.genero||'AUTOMATICO'));
     localStorage.setItem('fs_access_token', u.token || u.convite_token || '');
-    localStorage.setItem('fs_pode_compartilhar', ACCESS_CORE.isOwner(u) || u.podeCompartilhar === true || u.pode_compartilhar === true ? '1' : '0');
+    localStorage.setItem('fs_pode_compartilhar', u.podeCompartilhar === true || u.pode_compartilhar === true ? '1' : '0');
     localStorage.setItem('fsAuthGlobal', 'ok-@fildO1060');
     localStorage.setItem('fs_access_persisted', '1');
     sessionStorage.setItem('fs_access_done', '1');
@@ -10259,7 +10234,7 @@ window.addEventListener('DOMContentLoaded', function(){
         var payload = {
           filial: normalizarFilial(filial.value),
           nome: upperSave(nome.value),
-          cargo: ACCESS_CORE.normalizeRole(cargo.value),
+          cargo: upperSave(cargo.value),
           whatsapp: onlyDigits(whats.value),
           genero: upperSave(genero && genero.value || 'AUTOMATICO'),
           token: (window.__fsConvitePendente && window.__fsConvitePendente.token) || current.token || ''
@@ -10284,11 +10259,6 @@ window.addEventListener('DOMContentLoaded', function(){
     if(!force && hasSavedUser(actual)){
       var savedValidation = await validateRemote(actual);
       if(!savedValidation.ok){
-        if(savedValidation.temporario){
-          applyPermissionVisibility();
-          unlockInterface();
-          return true;
-        }
         clearUser();
         resetBadge();
         showUnauthorized(savedValidation.mensagem);
@@ -10311,11 +10281,6 @@ window.addEventListener('DOMContentLoaded', function(){
 
     var validation = await validateRemote(data);
     if(!validation.ok){
-      if(validation.temporario){
-        alert('NÃO FOI POSSÍVEL CONSULTAR O BANCO. VERIFIQUE A INTERNET E TENTE NOVAMENTE.');
-        setTimeout(function(){ window.fsConfirmarAcesso(true); }, 100);
-        return false;
-      }
       clearUser();
       resetBadge();
       showUnauthorized(validation.mensagem);
@@ -10344,6 +10309,11 @@ window.addEventListener('DOMContentLoaded', function(){
       }
       await window.fsConfirmarAcesso(true);
     }, 120);
+
+    // v31: não revalida a cada visibilitychange. Em celulares, abrir teclado,
+    // seletor de arquivos ou alternar de app pode disparar este evento várias vezes.
+    // A validação continua ocorrendo normalmente na entrada da Central.
+
 
     document.querySelectorAll('.card').forEach(function(card){
       var link = card.querySelector('.card-action[href]');
@@ -10702,8 +10672,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const scope = findAccessModal();
     if(scope){
       addSaveOption(scope);
-      const filled = fillIfSaved(scope);
-      if(filled) tryAutoConfirm(scope);
+      fillIfSaved(scope);
+      // v31: dados podem ser preenchidos automaticamente, mas o acesso só é
+      // confirmado por ação real do usuário. Isso evita loops de click()/fetch.
+
     }
   });
 
@@ -13211,7 +13183,11 @@ document.addEventListener('DOMContentLoaded', function () {
           var sx = (img.width - lado) / 2;
           var sy = (img.height - lado) / 2;
           ctx.drawImage(img, sx, sy, lado, lado, 0, 0, 320, 320);
-          localStorage.setItem('fs_profile_photo', canvas.toDataURL('image/jpeg', .84));
+          try {
+            localStorage.setItem('fs_profile_photo', canvas.toDataURL('image/jpeg', .72));
+          } catch (storageError) {
+            console.warn('[FS] Foto não salva por falta de espaço local.', storageError);
+          }
           atualizarPerfil();
         };
         img.src = leitor.result;
@@ -13262,6 +13238,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=30"></script>
+<script src="./pwa-update.js?v=31"></script>
 </body>
 </html>

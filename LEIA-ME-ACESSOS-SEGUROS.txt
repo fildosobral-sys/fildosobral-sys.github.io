@@ -1,0 +1,27 @@
+ATIVAÇÃO DO BLOQUEIO E COMPARTILHAMENTO SEGURO
+
+O aplicativo já está preparado. Para a proteção funcionar de verdade na versão publicada, o banco do Google também precisa ser atualizado.
+
+1. Abra a planilha usada como banco e entre em Extensões > Apps Script.
+2. Faça uma cópia de segurança do código atual.
+3. Substitua o código de acessos pelo conteúdo de APPS-SCRIPT-ACESSOS-SEGURO.gs.
+4. Confirme que existe na aba USUARIOS o cadastro principal exatamente assim:
+   NOME: FRANCIFILDO PEREIRA SOBRAL
+   CARGO: DESENVOLVEDOR_MASTER
+   WHATSAPP: 88988222564
+   STATUS: ATIVO
+5. Implante uma nova versão do aplicativo da web com execução como proprietário e acesso para qualquer pessoa.
+6. Se o Google gerar outro endereço /exec, substitua no index.html o endereço antigo pelo novo antes de publicar.
+7. Abra primeiro no aparelho de Francifildo. Esse aparelho ficará registrado como administrador.
+8. Edite ou recadastre cada usuário e envie o novo convite. O novo link possui token único e fica vinculado ao primeiro aparelho que o ativar.
+
+RESULTADO
+- Só Francifildo vê e utiliza Compartilhamento e banco FS.
+- Bloquear altera o status para BLOQUEADO e o aplicativo confere o resultado.
+- Excluir remove definitivamente a linha e o aplicativo confere o resultado.
+- Um usuário bloqueado perde o acesso na próxima abertura/retorno ao aplicativo.
+- Um convite já ativado em um aparelho não abre em outro aparelho.
+- Copiar apenas o arquivo raiz não concede autorização, pois o banco precisa validar usuário, token e aparelho.
+
+IMPORTANTE
+Se Francifildo trocar de celular ou limpar completamente os dados do navegador, apague apenas o valor da coluna device_id no cadastro principal antes de entrar pelo aparelho novo.
