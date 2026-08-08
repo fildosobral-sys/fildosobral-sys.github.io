@@ -10120,14 +10120,36 @@ window.addEventListener('DOMContentLoaded', function(){
   }
   async function validateRemote(u){
     if(!hasSavedUser(u)) return {ok:false,temporario:false,mensagem:'Preencha filial, nome, cargo e WhatsApp corretamente.'};
-    var controller=new AbortController(); var timer=setTimeout(function(){controller.abort();},10000);
-    try{
-      var url=API_ACESSO_FS+'?acao=validarAcesso&filial='+encodeURIComponent(normalizarFilial(u.filial))+'&nome='+encodeURIComponent(upperSave(u.nome))+'&cargo='+encodeURIComponent(normalizeRole(u.cargo))+'&whatsapp='+encodeURIComponent(onlyDigits(u.whatsapp||''))+'&token='+encodeURIComponent(u.token||'')+'&device_id='+encodeURIComponent(getDeviceId())+'&_='+Date.now();
-      var response=await fetch(url,{cache:'no-store',signal:controller.signal}); if(!response.ok) throw new Error('HTTP '+response.status); var json=await response.json(); var status=upperSave((json.usuario&&json.usuario.status)||json.status||'ATIVO');
-      if(!json||json.ok!==true||status==='BLOQUEADO'||status==='INATIVO'){ if(isDeviceConflict(json)) return {ok:false,temporario:false,deviceConflict:true,mensagem:(json&&json.mensagem)||'Este acesso já foi ativado em outro aparelho.'}; return {ok:false,temporario:false,mensagem:(json&&json.mensagem)||'Dados não autorizados. Confira as informações e tente novamente.'}; }
-      var usuario=Object.assign({},u,json.usuario||{}); usuario.filial=normalizarFilial(usuario.filial||u.filial);usuario.nome=upperSave(usuario.nome||u.nome);usuario.cargo=normalizeRole(usuario.cargo||u.cargo);usuario.whatsapp=onlyDigits(usuario.whatsapp||u.whatsapp);usuario.podeCompartilhar=json.pode_compartilhar===true||usuario.podeCompartilhar===true||usuario.pode_compartilhar===true; return {ok:true,usuario:usuario};
-    }catch(e){ return {ok:false,temporario:true,mensagem:'Sem comunicação com o banco de acesso. A plataforma permanecerá bloqueada até a validação.'}; }
-    finally{clearTimeout(timer);}
+    var url=API_ACESSO_FS+'?acao=validarAcesso&filial='+encodeURIComponent(normalizarFilial(u.filial))+'&nome='+encodeURIComponent(upperSave(u.nome))+'&cargo='+encodeURIComponent(normalizeRole(u.cargo))+'&whatsapp='+encodeURIComponent(onlyDigits(u.whatsapp||''))+'&token='+encodeURIComponent(u.token||'')+'&device_id='+encodeURIComponent(getDeviceId());
+    var lastError=null;
+    for(var tentativa=1;tentativa<=2;tentativa++){
+      var controller=new AbortController();
+      var timer=setTimeout(function(){controller.abort();}, tentativa===1?12000:16000);
+      try{
+        var response=await fetch(url+'&_='+Date.now(),{cache:'no-store',signal:controller.signal,redirect:'follow'});
+        if(!response.ok) throw new Error('HTTP '+response.status);
+        var json=await response.json();
+        var status=upperSave((json.usuario&&json.usuario.status)||json.status||'ATIVO');
+        if(!json||json.ok!==true||status==='BLOQUEADO'||status==='INATIVO'){
+          if(isDeviceConflict(json)) return {ok:false,temporario:false,deviceConflict:true,mensagem:(json&&json.mensagem)||'Este acesso já foi ativado em outro aparelho.'};
+          return {ok:false,temporario:false,mensagem:(json&&json.mensagem)||'Dados não autorizados. Confira as informações e tente novamente.'};
+        }
+        var usuario=Object.assign({},u,json.usuario||{});
+        usuario.filial=normalizarFilial(usuario.filial||u.filial);
+        usuario.nome=upperSave(usuario.nome||u.nome);
+        usuario.cargo=normalizeRole(usuario.cargo||u.cargo);
+        usuario.whatsapp=onlyDigits(usuario.whatsapp||u.whatsapp);
+        usuario.podeCompartilhar=json.pode_compartilhar===true||usuario.podeCompartilhar===true||usuario.pode_compartilhar===true;
+        return {ok:true,usuario:usuario};
+      }catch(e){
+        lastError=e;
+        if(tentativa===1) await new Promise(function(resolve){setTimeout(resolve,650);});
+      }finally{
+        clearTimeout(timer);
+      }
+    }
+    console.warn('[FS] Banco de acesso indisponível após nova tentativa.',lastError);
+    return {ok:false,temporario:true,mensagem:'Sem comunicação com o banco de acesso. Se este aparelho já foi validado recentemente, a sessão segura será mantida; novos acessos continuam bloqueados.'};
   }
   function saveUser(u){
     var n={filial:normalizarFilial(u.filial||''),nome:upperSave(u.nome||''),cargo:normalizeRole(u.cargo||''),whatsapp:onlyDigits(u.whatsapp||''),genero:upperSave(u.genero||'AUTOMATICO'),token:u.token||u.convite_token||'',podeCompartilhar:u.podeCompartilhar===true||u.pode_compartilhar===true};
@@ -10182,6 +10204,19 @@ window.addEventListener('DOMContentLoaded', function(){
           else pendingMessage='O acesso continua ativo no outro aparelho. Você pode tentar novamente quando quiser.';
         }
       }
+
+      /* v38: se o banco estiver temporariamente indisponível, uma sessão que JÁ FOI
+         validada remotamente neste aparelho continua funcionando por até 12 horas.
+         Isso evita expulsar o usuário por queda momentânea do Apps Script/internet.
+         Usuário novo, dados alterados ou sessão vencida continuam bloqueados. */
+      if(savedValidation.temporario && localSessionValid(actual)){
+        try{sessionStorage.removeItem('fs_returning_home');}catch(e){}
+        applyPermissionVisibility();
+        unlockInterface();
+        setStatus('Conexão com o banco temporariamente indisponível. Usando a última validação segura deste aparelho.','info');
+        return true;
+      }
+
       try{sessionStorage.removeItem('fs_returning_home');}catch(e){}
       clearAuthorization(true);
       resetBadge();

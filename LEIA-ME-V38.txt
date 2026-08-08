@@ -1,0 +1,7 @@
+FS SOLUCOES v38 - ESTABILIDADE DE ACESSO
+
+- Mantem uma sessao ja validada neste aparelho quando houver indisponibilidade temporaria do Apps Script/internet.
+- A tolerancia vale somente para a mesma identidade validada e por ate 12 horas.
+- Usuario novo, dados alterados ou sessao vencida continuam bloqueados ate validacao remota.
+- A consulta ao banco tenta novamente uma segunda vez antes de declarar indisponibilidade.
+- Nenhuma alteracao no Apps Script V36 e necessaria para esta v38.
