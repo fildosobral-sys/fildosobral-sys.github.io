@@ -1,0 +1,10 @@
+FS SOLUÇÕES V37 - RETORNO À CENTRAL
+
+Ajustes:
+- restaurado botão de retorno em formato de casinha (🏠);
+- casinha fica discreta/transparente e é armada no primeiro toque;
+- segundo toque retorna à Central;
+- removido botão grande "Voltar à central";
+- ao retornar de um módulo com sessão local ainda válida, a tela "Acesso protegido / Validando acesso" não é mais exibida;
+- a validação remota continua ocorrendo em segundo plano; se a sessão deixar de ser válida, o bloqueio de acesso volta normalmente;
+- cache/PWA atualizado para v37.

@@ -9954,10 +9954,7 @@ const html = `
 </script>
   
 
-  <button id="btnVoltarInicio" class="fixed right-3 bottom-3 z-40 px-4 py-2 rounded-full bg-gray-900 text-white text-xs md:text-sm shadow-lg flex items-center gap-2">
-    <span>←</span>
-    <span>Voltar à central</span>
-  </button>
+  <button id="btnVoltarInicio" class="fixed right-3 bottom-3 z-40 px-4 py-2 rounded-full bg-gray-900 text-white text-xs md:text-sm shadow-lg flex items-center gap-2">🏠</button>
 
 
   
@@ -17092,27 +17089,6 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 
-<script id="fs-retorno-central-suave">
-document.addEventListener('click', function(event){
-  var voltar = event.target.closest('#btnVoltarInicio,.fs-back-home');
-  if(!voltar) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  try{ sessionStorage.removeItem('fs_module_from_index'); }catch(e){}
-  window.location.replace('./index.html');
-}, true);
-</script>
-<style id="fs-padrao-voltar-sem-boas-vindas-v12">
-#btnVoltarInicio,.fs-back-home{
-  position:fixed !important;left:auto !important;right:max(14px,env(safe-area-inset-right)) !important;
-  bottom:max(14px,env(safe-area-inset-bottom)) !important;width:auto !important;min-width:154px !important;
-  height:48px !important;padding:0 18px !important;border:0 !important;border-radius:999px !important;
-  display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;
-  background:#111827 !important;color:#fff !important;font:700 14px/1 Arial,sans-serif !important;
-  text-decoration:none !important;box-shadow:0 10px 24px rgba(15,23,42,.28) !important;z-index:2147483000 !important;
-}
-#btnMenuBaixarHtmlAtual{display:none !important}
-</style>
 <script id="fs-sem-boas-vindas-repetidas-v12">
 (function(){
   var toastOriginal = window.showToast;
@@ -17149,5 +17125,78 @@ document.addEventListener('click', function(event){
   });
 })();
 </script>
+
+<style id="fs-home-button-v37-final">
+#btnVoltarInicio,.fs-back-home{
+  position:fixed !important;
+  left:auto !important;
+  right:max(14px,env(safe-area-inset-right)) !important;
+  bottom:max(14px,env(safe-area-inset-bottom)) !important;
+  width:56px !important;
+  min-width:56px !important;
+  max-width:56px !important;
+  height:56px !important;
+  min-height:56px !important;
+  max-height:56px !important;
+  padding:0 !important;
+  margin:0 !important;
+  border:1px solid rgba(255,255,255,.28) !important;
+  border-radius:50% !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:0 !important;
+  overflow:hidden !important;
+  background:rgba(15,23,42,.20) !important;
+  color:#fff !important;
+  font:400 27px/1 system-ui,-apple-system,"Segoe UI Emoji",sans-serif !important;
+  text-decoration:none !important;
+  box-shadow:0 6px 18px rgba(15,23,42,.10) !important;
+  opacity:.24 !important;
+  backdrop-filter:blur(4px) !important;
+  -webkit-backdrop-filter:blur(4px) !important;
+  transform:scale(1) !important;
+  transition:opacity .18s ease,background .18s ease,transform .18s ease,box-shadow .18s ease !important;
+  z-index:2147483000 !important;
+}
+#btnVoltarInicio.fs-home-armed,.fs-back-home.fs-home-armed{
+  opacity:1 !important;
+  background:rgba(30,41,59,.92) !important;
+  transform:scale(1.08) !important;
+  box-shadow:0 10px 26px rgba(15,23,42,.30) !important;
+}
+#btnVoltarInicio span,#btnVoltarInicio svg,.fs-back-home span,.fs-back-home svg{display:none !important;}
+</style>
+<script id="fs-home-button-v37-final-script">
+(function(){
+  'use strict';
+  var armed=false,timer=0,navigating=false;
+  function button(){return document.querySelector('#btnVoltarInicio,.fs-back-home');}
+  function prepare(){
+    var b=button();if(!b)return;
+    b.textContent='🏠';
+    b.setAttribute('aria-label',armed?'Toque novamente para voltar à Central':'Ativar retorno à Central');
+    b.setAttribute('title',armed?'Toque novamente para voltar à Central':'Voltar à Central');
+    b.classList.toggle('fs-home-armed',armed);
+  }
+  function disarm(){armed=false;clearTimeout(timer);prepare();}
+  document.addEventListener('DOMContentLoaded',prepare);
+  document.addEventListener('click',function(event){
+    var b=event.target.closest&&event.target.closest('#btnVoltarInicio,.fs-back-home');
+    if(!b)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    if(navigating)return false;
+    if(!armed){
+      armed=true;prepare();clearTimeout(timer);timer=setTimeout(disarm,2600);return false;
+    }
+    navigating=true;clearTimeout(timer);
+    try{sessionStorage.setItem('fs_returning_home','1');sessionStorage.removeItem('fs_module_from_index');}catch(e){}
+    window.location.replace('./index.html');
+    return false;
+  },true);
+  window.addEventListener('pageshow',function(){navigating=false;disarm();});
+})();
+</script>
+
 </body>
 </html>

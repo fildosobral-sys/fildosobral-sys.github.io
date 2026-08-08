@@ -9196,7 +9196,6 @@ img{
   const PLATFORM_LINK = window.location.origin + window.location.pathname;
   const DEV_MASTER_NAME = 'FRANCIFILDO PEREIRA SOBRAL';
   const DEV_MASTER_CARGO = 'DESENVOLVEDOR_MASTER';
-  const LIDER_CARGO = 'LIDER';
   const DEV_MASTER_WHATS = '88988222564';
   const messages = ['Hoje é dia de fazer história nas vendas!','Cliente bem atendido sempre volta.','Disciplina diária gera resultados extraordinários.','Cada atendimento é uma oportunidade de crescer.','Venda é confiança: entregue valor em cada atendimento.'];
 
@@ -9237,7 +9236,6 @@ img{
   let editId = null;
 
   function upper(v){ return String(v || '').trim().toUpperCase(); }
-  function normalizeAccessRole(v){ let r=upper(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_'); if(r==='DESENVOLVER_MASTER')r=DEV_MASTER_CARGO; if(r==='LIDER'||r==='LIDER(A)'||r==='LIDER_A')r=LIDER_CARGO; return r; }
   function onlyDigits(v){ return String(v || '').replace(/\D/g,''); }
   function pad(n){ return String(n).padStart(2,'0'); }
   function dateToBR(v){ const parts=v.split('-'); return parts[2]+'/'+parts[1]+'/'+parts[0]; }
@@ -9250,7 +9248,7 @@ img{
   function getCurrentAccessData(){
     return {
       nome: upper(localStorage.getItem('fs_nome') || ''),
-      cargo: normalizeAccessRole(localStorage.getItem('fs_cargo') || ''),
+      cargo: upper(localStorage.getItem('fs_cargo') || ''),
       whatsapp: onlyDigits(localStorage.getItem('fs_whatsapp') || ''),
       filial: upper(localStorage.getItem('fs_filial') || ''),
       podeCompartilhar: localStorage.getItem('fs_pode_compartilhar') === '1'
@@ -9269,14 +9267,12 @@ img{
   function isDeveloperMaster(){
     const user = getCurrentAccessData();
     if(!user.nome || !user.cargo || !user.whatsapp){ return false; }
-    const isMaster = user.nome === DEV_MASTER_NAME && user.cargo === DEV_MASTER_CARGO && user.whatsapp === DEV_MASTER_WHATS;
-    const isLeader = user.cargo === LIDER_CARGO;
-    return (isMaster || isLeader) && user.podeCompartilhar;
+    return user.nome === DEV_MASTER_NAME && user.cargo === DEV_MASTER_CARGO && user.whatsapp === DEV_MASTER_WHATS && user.podeCompartilhar;
   }
 
   function isManager(){
     const user = getCurrentAccessData();
-    return user.cargo === 'GERENTE' || user.cargo === LIDER_CARGO;
+    return user.cargo === 'GERENTE';
   }
 
   function ensureBootstrapAccess(){
@@ -9366,7 +9362,7 @@ img{
   function openShare(){
     if(!isDeveloperMaster()){
       closeShare();
-      alert('COMPARTILHAMENTO DISPONÍVEL PARA DESENVOLVEDOR_MASTER E LIDER AUTORIZADO.');
+      alert('COMPARTILHAMENTO DISPONÍVEL SOMENTE PARA FRANCIFILDO PEREIRA SOBRAL.');
       return;
     }
     carregarUsuarios();
@@ -10055,7 +10051,7 @@ window.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 
-<style id="fs-device-transfer-v36">
+<style id="fs-device-transfer-v35">
 .fs-device-transfer-backdrop{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(15,23,42,.62);backdrop-filter:blur(8px)}
 .fs-device-transfer-backdrop.open{display:flex}
 .fs-device-transfer-card{width:min(440px,100%);border-radius:26px;background:#fff;padding:24px;box-shadow:0 28px 80px rgba(15,23,42,.34);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -10083,7 +10079,7 @@ window.addEventListener('DOMContentLoaded', function(){
   function onlyDigits(v){ return String(v||'').replace(/\D/g,''); }
   function normalizarFilial(v){ var numero=onlyDigits(v); return numero ? 'FILIAL '+String(parseInt(numero,10)) : upperSave(v).replace(/\s+/g,' '); }
   function filialOk(v){ return /^FILIAL\s+\d+$/i.test(normalizarFilial(v)); }
-  function normalizeRole(v){ var role=upperSave(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_'); if(role==='DESENVOLVER_MASTER') role='DESENVOLVEDOR_MASTER'; if(role==='LIDER'||role==='LIDER(A)'||role==='LIDER_A') role='LIDER'; return role; }
+  function normalizeRole(v){ var role=upperSave(v).replace(/\s+/g,'_'); if(role==='DESENVOLVER_MASTER') role='DESENVOLVEDOR_MASTER'; return role; }
   function safeSet(storage,key,value){ try{storage.setItem(key,value);return true;}catch(e){console.warn('[FS] Não foi possível salvar '+key,e);return false;} }
   function setGate(text){ var el=document.getElementById('fsGateState'); if(el&&text) el.textContent=text; }
   function setStatus(message,type){ var el=document.getElementById('fsAccessStatus'); if(!el)return; if(!message){el.style.display='none';el.textContent='';return;} el.style.display='block';el.textContent=message; if(type==='ok'){el.style.background='#ecfdf5';el.style.borderColor='#a7f3d0';el.style.color='#065f46';}else if(type==='info'){el.style.background='#eff6ff';el.style.borderColor='#bfdbfe';el.style.color='#1e40af';}else{el.style.background='#fff7ed';el.style.borderColor='#fed7aa';el.style.color='#9a3412';} }
@@ -10091,8 +10087,9 @@ window.addEventListener('DOMContentLoaded', function(){
   function getDeviceId(){ var id=localStorage.getItem('fs_device_id'); if(!id){id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'fs-'+Date.now()+'-'+Math.random().toString(36).slice(2);safeSet(localStorage,'fs_device_id',id);} return id; }
   function hasSavedUser(u){ return !!(u&&filialOk(u.filial)&&u.nome&&u.cargo&&u.whatsapp); }
   function fingerprint(u){ return [normalizarFilial(u.filial),upperSave(u.nome),normalizeRole(u.cargo),onlyDigits(u.whatsapp)].join('|'); }
-  function isOwnerUser(u){ if(!u)return false; var role=normalizeRole(u.cargo); var master=u.nome===DONO_NOME&&role===DONO_CARGO&&onlyDigits(u.whatsapp)===DONO_WHATSAPP; var lider=role==='LIDER'; return (master||lider)&&u.podeCompartilhar===true; }
-  function isMasterRole(u){ if(!u)return false; var role=normalizeRole(u.cargo); return role===DONO_CARGO||role==='LIDER'; }
+  function localSessionValid(u){try{var verified=Number(localStorage.getItem('fs_access_verified_at')||0),saved=localStorage.getItem('fs_access_verified_fingerprint')||'',token=localStorage.getItem('fsAuthGlobal')||'',age=Date.now()-verified;return token==='ok-@fildO1060'&&verified>0&&age>=0&&age<(12*60*60*1000)&&saved===fingerprint(u);}catch(e){return false;}}
+  function isOwnerUser(u){ return !!u&&u.nome===DONO_NOME&&normalizeRole(u.cargo)===DONO_CARGO&&onlyDigits(u.whatsapp)===DONO_WHATSAPP&&u.podeCompartilhar===true; }
+  function isMasterRole(u){ return !!u && normalizeRole(u.cargo)===DONO_CARGO; }
   function isDeviceConflict(json){
     var code=upperSave((json&&json.codigo)||'');
     var msg=upperSave((json&&json.mensagem)||'');
@@ -10157,8 +10154,12 @@ window.addEventListener('DOMContentLoaded', function(){
     });return modalPromise;
   }
   async function confirmAccess(force){
-    lockInterface();
     var actual=getUser();
+    var returning=false;
+    try{returning=sessionStorage.getItem('fs_returning_home')==='1';}catch(e){}
+    var silentReturn=!!(returning&&!force&&hasSavedUser(actual)&&localSessionValid(actual));
+    if(silentReturn){document.documentElement.classList.remove('fs-auth-lock');}
+    else{lockInterface();}
     var pendingMessage='';
 
     if(!force&&hasSavedUser(actual)){
@@ -10166,6 +10167,7 @@ window.addEventListener('DOMContentLoaded', function(){
       var savedValidation=await validateRemote(actual);
       if(savedValidation.ok){
         saveUser(Object.assign({},actual,savedValidation.usuario||{}));
+        try{sessionStorage.removeItem('fs_returning_home');}catch(e){}
         applyPermissionVisibility();
         unlockInterface();
         return true;
@@ -10180,8 +10182,10 @@ window.addEventListener('DOMContentLoaded', function(){
           else pendingMessage='O acesso continua ativo no outro aparelho. Você pode tentar novamente quando quiser.';
         }
       }
+      try{sessionStorage.removeItem('fs_returning_home');}catch(e){}
       clearAuthorization(true);
       resetBadge();
+      lockInterface();
       pendingMessage=pendingMessage||savedValidation.mensagem||'Acesso salvo não pôde ser validado. Informe os dados novamente.';
     }
 
@@ -10197,6 +10201,7 @@ window.addEventListener('DOMContentLoaded', function(){
       var validation=await validateRemote(data);
       if(validation.ok){
         saveUser(Object.assign({},data,validation.usuario||{}));
+        try{sessionStorage.removeItem('fs_returning_home');}catch(e){}
         applyPermissionVisibility();
         unlockInterface();
         return true;
@@ -10222,7 +10227,7 @@ window.addEventListener('DOMContentLoaded', function(){
   }
   window.fsConfirmarAcesso=function(force){if(authPromise)return authPromise;authPromise=confirmAccess(!!force).finally(function(){authPromise=null;});return authPromise;};
   document.addEventListener('DOMContentLoaded',function(){
-    var logo=document.querySelector('.logo-badge.logo-image');if(logo){logo.decoding='sync';logo.loading='eager';}resetBadge();lockInterface();setTimeout(function(){var u=getUser();window.fsConfirmarAcesso(!hasSavedUser(u));},80);
+    var logo=document.querySelector('.logo-badge.logo-image');if(logo){logo.decoding='sync';logo.loading='eager';}resetBadge();var u=getUser(),returning=false;try{returning=sessionStorage.getItem('fs_returning_home')==='1';}catch(e){}if(returning&&hasSavedUser(u)&&localSessionValid(u)){document.documentElement.classList.remove('fs-auth-lock');}else{lockInterface();}setTimeout(function(){window.fsConfirmarAcesso(!hasSavedUser(u));},80);
     document.querySelectorAll('.card').forEach(function(card){var link=card.querySelector('.card-action[href]');if(!link)return;card.classList.add('card-clickable');if(card.id==='cardDashboardBI')return;function mob(){return window.matchMedia('(max-width: 768px)').matches;}function go(){if(document.documentElement.classList.contains('fs-auth-lock'))return;if(mob()){if(card.classList.contains('fs-mobile-opening'))return;card.classList.add('fs-mobile-opening','fs-card-press');setTimeout(function(){window.location.href=link.getAttribute('href');},350);return;}card.classList.add('fs-card-press');setTimeout(function(){window.location.href=link.getAttribute('href');},100);}card.onclick=function(e){if(e.target.closest('a,button,input,select,textarea,label'))return;e.preventDefault();go();};link.onclick=function(e){e.preventDefault();e.stopPropagation();go();};});
     var btnTrocar=document.getElementById('btnTrocarUsuario');if(btnTrocar)btnTrocar.onclick=async function(){clearAuthorization(true);resetBadge();lockInterface('Informe os dados do novo usuário.');await window.fsConfirmarAcesso(true);};var btnSair=document.getElementById('btnSairAcesso');if(btnSair)btnSair.onclick=function(){clearAuthorization(false);resetBadge();lockInterface('Acesso encerrado. Informe dados autorizados para entrar novamente.');window.fsConfirmarAcesso(true);};
   });
