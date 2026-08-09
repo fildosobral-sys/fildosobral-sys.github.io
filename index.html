@@ -5,47 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#112a7a">
 <title>FS Soluções</title>
-<style>
-html,body{margin:0;width:100%;height:100%;background:#f3f6fb}
-body{visibility:hidden}
-</style>
+<style>html,body{margin:0;width:100%;height:100%;background:#f3f6fb}body{visibility:hidden}</style>
 <script>
 (function(){
   'use strict';
-
-  function isMobileOrTablet(){
-    try{
-      if(navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean'){
-        if(navigator.userAgentData.mobile) return true;
-      }
-    }catch(e){}
-
-    var ua = navigator.userAgent || '';
+  function mobileOrTablet(){
+    var ua=navigator.userAgent||'';
     if(/Android|iPhone|iPod|iPad|Mobile|Tablet|Silk|Kindle|PlayBook/i.test(ua)) return true;
-
-    /* iPadOS pode se identificar como Mac */
-    if(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return true;
-
+    if(navigator.platform==='MacIntel' && navigator.maxTouchPoints>1) return true;
+    try{ if(navigator.userAgentData && navigator.userAgentData.mobile) return true; }catch(e){}
     return false;
   }
-
-  function target(){
-    var mobileDevice = isMobileOrTablet();
-    var wideScreen = Math.max(window.innerWidth || 0, screen.width || 0) >= 900;
-
-    /* Desktop somente quando for aparelho não-mobile e houver espaço de tela. */
-    return (!mobileDevice && wideScreen) ? './index-desktop.html' : './index-mobile.html';
-  }
-
-  var next = target();
-
-  /* replace evita criar uma etapa extra no histórico e reduz retorno/loop. */
-  location.replace(next);
+  var desktop = !mobileOrTablet() && Math.max(innerWidth||0,screen.width||0)>=900;
+  location.replace(desktop ? './index-desktop.html' : './index-mobile.html');
 })();
 </script>
-<noscript>
-<meta http-equiv="refresh" content="0;url=./index-mobile.html">
-</noscript>
-</head>
-<body></body>
-</html>
+<noscript><meta http-equiv="refresh" content="0;url=./index-mobile.html"></noscript>
+</head><body></body></html>
