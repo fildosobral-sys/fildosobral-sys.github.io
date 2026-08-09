@@ -14311,6 +14311,341 @@ document.addEventListener('DOMContentLoaded', function () {
 }
 </style>
 
+
+<style id="fs-desktop-v3-fine-adjustments">
+/* =========================================================
+   FS DESKTOP V3 — AJUSTES FINOS
+   1) Gestão & Resultados: imagem proporcional + título visível
+   2) Categorias: carrossel horizontal com setas + scrollbar
+   3) Menu: barra vertical fixa à esquerda
+   ========================================================= */
+
+@media (min-width: 900px){
+
+  /* ---------- 1. GESTÃO & RESULTADOS ---------- */
+  .fs-results-section .grid{
+    display:block!important;
+    width:100%!important;
+  }
+
+  .fs-results-section .fs-results-card{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    min-height:0!important;
+    overflow:hidden!important;
+    border-radius:26px!important;
+    background:#fff!important;
+    border:1px solid rgba(99,102,241,.16)!important;
+    box-shadow:0 16px 38px rgba(15,23,42,.10)!important;
+  }
+
+  .fs-results-section .fs-results-card-image{
+    display:block!important;
+    width:100%!important;
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    aspect-ratio:2.55 / 1!important;
+    object-fit:cover!important;
+    object-position:center center!important;
+    border-radius:26px 26px 0 0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  .fs-results-section .fs-results-card > .card-body{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    width:100%!important;
+    height:82px!important;
+    min-height:82px!important;
+    padding:0 26px!important;
+    background:linear-gradient(180deg,#fff,#fbfcff)!important;
+    overflow:hidden!important;
+  }
+
+  .fs-results-section .fs-results-card .card-title{
+    display:block!important;
+    position:static!important;
+    width:100%!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    color:#192235!important;
+    font-size:25px!important;
+    font-weight:800!important;
+    line-height:1.1!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    text-align:left!important;
+    transform:none!important;
+    animation:none!important;
+    filter:none!important;
+    text-shadow:0 1px 0 #fff,0 4px 9px rgba(15,23,42,.13)!important;
+  }
+
+  .fs-results-section .fs-results-card .card-desc,
+  .fs-results-section .fs-results-card .card-action{
+    display:none!important;
+  }
+
+  /* ---------- 2. CATEGORIAS COM ROLAGEM ---------- */
+  .fs-categorias-wrap{
+    position:relative!important;
+    overflow:visible!important;
+  }
+
+  .fs-categorias-fixed-scroll{
+    display:flex!important;
+    grid-template-columns:none!important;
+    gap:20px!important;
+    width:100%!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-behavior:smooth!important;
+    scroll-snap-type:x proximity!important;
+    overscroll-behavior-inline:contain!important;
+    padding:6px 6px 17px!important;
+    scrollbar-width:thin!important;
+    scrollbar-color:#7c8cff #e9edf7!important;
+  }
+
+  .fs-categorias-fixed-scroll::-webkit-scrollbar{
+    height:9px!important;
+  }
+  .fs-categorias-fixed-scroll::-webkit-scrollbar-track{
+    background:#e9edf7!important;
+    border-radius:999px!important;
+  }
+  .fs-categorias-fixed-scroll::-webkit-scrollbar-thumb{
+    background:linear-gradient(90deg,#5b7cff,#7659e6)!important;
+    border-radius:999px!important;
+    border:2px solid #e9edf7!important;
+  }
+
+  .fs-categorias-fixed-scroll > .fs-cat-fixed{
+    flex:0 0 270px!important;
+    width:270px!important;
+    min-width:270px!important;
+    max-width:270px!important;
+    scroll-snap-align:start!important;
+  }
+
+  .fs-cat-desktop-arrow{
+    position:absolute!important;
+    top:50%!important;
+    transform:translateY(-10%)!important;
+    z-index:30!important;
+    width:46px!important;
+    height:46px!important;
+    border:1px solid rgba(99,102,241,.16)!important;
+    border-radius:50%!important;
+    background:rgba(255,255,255,.94)!important;
+    backdrop-filter:blur(12px)!important;
+    -webkit-backdrop-filter:blur(12px)!important;
+    box-shadow:0 10px 28px rgba(15,23,42,.15)!important;
+    color:#4f63d8!important;
+    font-size:27px!important;
+    line-height:1!important;
+    display:grid!important;
+    place-items:center!important;
+    cursor:pointer!important;
+    transition:transform .16s ease,box-shadow .16s ease,opacity .16s ease!important;
+  }
+
+  .fs-cat-desktop-arrow:hover{
+    transform:translateY(-10%) scale(1.06)!important;
+    box-shadow:0 14px 34px rgba(15,23,42,.20)!important;
+  }
+
+  .fs-cat-desktop-arrow:active{
+    transform:translateY(-10%) scale(.96)!important;
+  }
+
+  .fs-cat-desktop-arrow.left{left:-24px!important;}
+  .fs-cat-desktop-arrow.right{right:-24px!important;}
+
+  .fs-cat-desktop-arrow[disabled]{
+    opacity:.28!important;
+    cursor:default!important;
+  }
+
+  /* ---------- 3. MENU VERTICAL ESQUERDO ---------- */
+  #fsBottomNav.fs-bottom-nav{
+    position:fixed!important;
+    left:22px!important;
+    right:auto!important;
+    top:50%!important;
+    bottom:auto!important;
+    transform:translateY(-50%)!important;
+
+    width:84px!important;
+    max-width:84px!important;
+    min-width:84px!important;
+    height:auto!important;
+
+    display:flex!important;
+    flex-direction:column!important;
+    gap:9px!important;
+
+    padding:10px!important;
+    border:1px solid rgba(99,102,241,.14)!important;
+    border-radius:25px!important;
+    background:rgba(255,255,255,.90)!important;
+    backdrop-filter:blur(18px)!important;
+    -webkit-backdrop-filter:blur(18px)!important;
+    box-shadow:0 18px 44px rgba(15,23,42,.14)!important;
+    z-index:500!important;
+  }
+
+  #fsBottomNav .fs-nav-item{
+    width:64px!important;
+    min-width:64px!important;
+    height:68px!important;
+    min-height:68px!important;
+    margin:0!important;
+    padding:7px 3px!important;
+
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:3px!important;
+
+    border:0!important;
+    border-radius:18px!important;
+    background:transparent!important;
+    color:#667085!important;
+    cursor:pointer!important;
+    overflow:hidden!important;
+  }
+
+  #fsBottomNav .fs-nav-item:hover{
+    background:#f2f5ff!important;
+    color:#4058c7!important;
+  }
+
+  #fsBottomNav .fs-nav-item.active{
+    background:linear-gradient(145deg,#eef3ff,#f4f1ff)!important;
+    color:#3656ca!important;
+    box-shadow:inset 0 0 0 1px rgba(91,112,230,.10)!important;
+  }
+
+  #fsBottomNav .fs-nav-icon{
+    font-size:25px!important;
+    line-height:1!important;
+    height:auto!important;
+  }
+
+  #fsBottomNav .fs-nav-label{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    font-size:10px!important;
+    font-weight:700!important;
+    line-height:1.05!important;
+    text-align:center!important;
+    white-space:normal!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+  }
+
+  /* reserva visual discreta; não altera o centro da estrutura */
+  body{
+    padding-bottom:0!important;
+  }
+}
+
+/* Em notebooks menores, menu encosta um pouco mais na borda */
+@media (min-width:900px) and (max-width:1100px){
+  #fsBottomNav.fs-bottom-nav{
+    left:8px!important;
+    width:74px!important;
+    min-width:74px!important;
+    padding:7px!important;
+  }
+  #fsBottomNav .fs-nav-item{
+    width:58px!important;
+    min-width:58px!important;
+  }
+  .fs-cat-desktop-arrow.left{left:-8px!important;}
+  .fs-cat-desktop-arrow.right{right:-8px!important;}
+}
+</style>
+
+<script id="fs-desktop-v3-controls">
+(function(){
+  'use strict';
+
+  function initDesktopV3(){
+    if(window.innerWidth < 900) return;
+
+    /* Corrige apenas os textos visuais do menu; mantém IDs e eventos existentes. */
+    var labels = {
+      fsNavHome: 'Início',
+      fsNavNew: 'Orçamentos',
+      fsNavOptions: 'Opções'
+    };
+    Object.keys(labels).forEach(function(id){
+      var btn = document.getElementById(id);
+      if(!btn) return;
+      var label = btn.querySelector('.fs-nav-label');
+      if(label) label.textContent = labels[id];
+    });
+
+    /* Setas das categorias */
+    var section = document.querySelector('.fs-categorias-wrap');
+    var rail = document.querySelector('.fs-categorias-fixed-scroll');
+    if(!section || !rail || section.dataset.fsDesktopArrows === '1') return;
+
+    section.dataset.fsDesktopArrows = '1';
+
+    var left = document.createElement('button');
+    var right = document.createElement('button');
+    left.type = right.type = 'button';
+    left.className = 'fs-cat-desktop-arrow left';
+    right.className = 'fs-cat-desktop-arrow right';
+    left.setAttribute('aria-label','Categorias anteriores');
+    right.setAttribute('aria-label','Próximas categorias');
+    left.innerHTML = '&#8249;';
+    right.innerHTML = '&#8250;';
+    section.appendChild(left);
+    section.appendChild(right);
+
+    function amount(){
+      var first = rail.querySelector('.fs-cat-fixed');
+      return first ? first.getBoundingClientRect().width + 20 : 290;
+    }
+
+    function update(){
+      var max = Math.max(0, rail.scrollWidth - rail.clientWidth);
+      left.disabled = rail.scrollLeft <= 4;
+      right.disabled = rail.scrollLeft >= max - 4;
+    }
+
+    left.addEventListener('click',function(){
+      rail.scrollBy({left:-amount()*2,behavior:'smooth'});
+    });
+    right.addEventListener('click',function(){
+      rail.scrollBy({left:amount()*2,behavior:'smooth'});
+    });
+
+    rail.addEventListener('scroll',update,{passive:true});
+    window.addEventListener('resize',update,{passive:true});
+    update();
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded',initDesktopV3,{once:true});
+  }else{
+    initDesktopV3();
+  }
+})();
+</script>
+
 </body>
 </html>
 
