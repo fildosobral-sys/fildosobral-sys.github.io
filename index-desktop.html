@@ -11652,20 +11652,41 @@ window.addEventListener('pageshow', function(){
   const root = document.querySelector('.fs-exact-home');
   if(!root) return;
   const track = root.querySelector('.info-rotator-track');
-  const nome = ((localStorage.getItem('fs_nome') || '').trim() || 'Colaborador').toUpperCase();
-  const hora = new Date().getHours();
-  let saudacao = 'Bom dia';
-  if(hora >= 12 && hora < 18) saudacao = 'Boa tarde';
-  if(hora >= 18) saudacao = 'Boa noite';
+
+  function getGreetingText(){
+    const nomeAtual = ((localStorage.getItem('fs_nome') || '').trim() || 'Colaborador').toUpperCase();
+    const horaAtual = new Date().getHours();
+    let saudacaoAtual = 'Bom dia';
+    if(horaAtual >= 12 && horaAtual < 18) saudacaoAtual = 'Boa tarde';
+    if(horaAtual >= 18) saudacaoAtual = 'Boa noite';
+    return `👋 ${saudacaoAtual}, ${nomeAtual}!`;
+  }
+
   const mensagens = [
-    `👋 ${saudacao}, ${nome}!`,
+    getGreetingText(),
     '💬 Hoje é dia de foco, disciplina e venda 🚀',
     '🔥 Atendimento forte gera resultado'
   ];
+
   if(track){
     track.innerHTML = mensagens.map((m,i)=>`<div class="info-item${i===0?' active':''}">${m}</div>`).join('');
     const items = Array.from(track.querySelectorAll('.info-item'));
     let idx = 0;
+
+    function syncGreetingName(){
+      if(items[0]){
+        const novoTexto = getGreetingText();
+        if(items[0].textContent !== novoTexto) items[0].textContent = novoTexto;
+      }
+    }
+
+    /* Atualiza no mesmo aparelho/aba quando o usuário é trocado, sem recarregar a página. */
+    syncGreetingName();
+    setInterval(syncGreetingName, 800);
+    window.addEventListener('storage', syncGreetingName);
+    window.addEventListener('focus', syncGreetingName);
+    document.addEventListener('visibilitychange', function(){ if(!document.hidden) syncGreetingName(); });
+
     setInterval(()=>{items[idx].classList.remove('active'); idx=(idx+1)%items.length; items[idx].classList.add('active');},2800);
   }
   const filialBar = root.querySelector('#fsFilialBar');
