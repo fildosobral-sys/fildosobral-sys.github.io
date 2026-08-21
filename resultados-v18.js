@@ -287,11 +287,11 @@
   function renderDailyGoalSummary(metrics) {
     document.getElementById('dailyGoalSummary').innerHTML = `
       <div class="daily-goal-metric highlight"><span>META DA FILIAL NO DIA</span><strong>${brl.format(metrics.branchGoal)}</strong></div>
-      <div class="daily-goal-metric"><span>META DE SERVIÇOS (7%)</span><strong>${brl.format(metrics.serviceGoal)}</strong></div>
+      <div class="daily-goal-metric"><span>META DE SERVIÇOS/GARANTIA (7%)</span><strong>${brl.format(metrics.serviceGoal)}</strong></div>
       <div class="daily-goal-metric"><span>META POR VENDEDOR</span><strong>${metrics.sellerCount ? brl.format(metrics.perSeller) : 'Cadastre a equipe'}</strong></div>
-      <div class="daily-goal-metric"><span>SERVIÇOS POR VENDEDOR</span><strong>${metrics.sellerCount ? brl.format(metrics.servicePerSeller) : 'Cadastre a equipe'}</strong></div>`;
+      <div class="daily-goal-metric"><span>SERVIÇOS/GARANTIA POR VENDEDOR</span><strong>${metrics.sellerCount ? brl.format(metrics.servicePerSeller) : 'Cadastre a equipe'}</strong></div>`;
     document.getElementById('dailyGoalTeam').innerHTML = metrics.sellerCount
-      ? `<strong>Distribuição automática:</strong> ${metrics.sellerCount} vendedor(es), com ${brl.format(metrics.perSeller)} de mercantil e ${brl.format(metrics.servicePerSeller)} de serviços para cada um.`
+      ? `<strong>Média automática por vendedor:</strong> ${brl.format(metrics.perSeller)} de mercantil e ${brl.format(metrics.servicePerSeller)} de serviços/garantia (7%) para cada um, considerando ${metrics.sellerCount} vendedor(es).`
       : '<strong>Equipe ainda não configurada.</strong> Informe a quantidade de vendedores em Configuração ou cadastre os nomes na aba Vendedores.';
     document.getElementById('downloadDailyGoal').disabled = !metrics.percent;
   }
@@ -312,58 +312,61 @@
     data.goalPercent = num(document.getElementById('dailyGoalPercent').value);
     db.daily[key] = data; persist(); renderAll();
   }
-  async function exportDailyGoalPdf(key) {
+  function roundedCanvasRect(ctx, x, y, width, height, radius = 24) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + width, y, x + width, y + height, r); ctx.arcTo(x + width, y + height, x, y + height, r); ctx.arcTo(x, y + height, x, y, r); ctx.arcTo(x, y, x + width, y, r); ctx.closePath();
+  }
+  function drawCanvasMetric(ctx, x, y, width, height, label, value, accent = false, note = '') {
+    ctx.fillStyle = accent ? '#e3f2ff' : '#f4f7fc'; roundedCanvasRect(ctx, x, y, width, height, 24); ctx.fill();
+    ctx.fillStyle = '#64748b'; ctx.font = '800 23px Arial, sans-serif'; ctx.fillText(String(label).toUpperCase(), x + 28, y + 42);
+    ctx.fillStyle = '#102a43'; ctx.font = '900 38px Arial, sans-serif'; ctx.fillText(value, x + 28, y + 93);
+    if (note) { ctx.fillStyle = '#64748b'; ctx.font = '600 20px Arial, sans-serif'; ctx.fillText(note, x + 28, y + height - 22); }
+  }
+  function canvasToBlob(canvas) {
+    return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Falha ao gerar a imagem.')), 'image/png'));
+  }
+  async function shareOrDownloadImage(canvas, filename, title) {
+    const blob = await canvasToBlob(canvas), file = new File([blob], filename, { type: 'image/png' });
+    try {
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title }); return; }
+    } catch (error) { if (error.name === 'AbortError') return; }
+    const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob); anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(anchor.href), 1200);
+  }
+  function imageHeader(ctx, title, subtitle, width) {
+    const gradient = ctx.createLinearGradient(0, 0, width, 0); gradient.addColorStop(0, '#0879e8'); gradient.addColorStop(1, '#6b4ce6');
+    ctx.fillStyle = gradient; roundedCanvasRect(ctx, 54, 50, width - 108, 220, 38); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.font = '900 53px Arial, sans-serif'; ctx.fillText(title, 92, 139);
+    ctx.font = '600 25px Arial, sans-serif'; ctx.fillText(subtitle, 92, 198);
+  }
+  async function exportDailyGoalImage(key) {
     const data = dayData(key), metrics = dailyGoalMetrics(key, data);
     if (!metrics.percent) { alert('Informe o percentual da meta deste dia antes de baixar.'); return; }
-    const JsPdf = window.jspdf?.jsPDF;
-    if (!JsPdf) { alert('O gerador de PDF não foi carregado. Atualize a página e tente novamente.'); return; }
     const date = new Date(`${key}T12:00:00`), services = metrics.actualServices;
     const efficiency = num(data.eligible) ? services / num(data.eligible) : 0;
     const goalRate = metrics.branchGoal ? num(data.general) / metrics.branchGoal : 0;
-    const doc = new JsPdf({ unit: 'mm', format: 'a4' });
-    doc.setFillColor(8, 121, 232); doc.roundedRect(12, 12, 186, 34, 5, 5, 'F');
-    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(19); doc.text('META DIARIA DA FILIAL', 20, 25);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text(`${db.branch || 'Filial nao informada'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, 20, 34);
-    doc.setTextColor(27, 45, 65); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Planejamento do dia', 14, 57);
-    const boxes = [
-      ['Meta mensal', brl.format(num(db.mercantileGoal))], [`Percentual do dia`, `${metrics.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`],
-      ['Meta da filial', brl.format(metrics.branchGoal)], ['Servicos (7%)', brl.format(metrics.serviceGoal)]
+    const serviceRate = metrics.serviceGoal ? services / metrics.serviceGoal : 0;
+    const ticket = num(data.nfs) ? num(data.general) / num(data.nfs) : 0;
+    const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1350;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    imageHeader(ctx, 'META DO DIA - FILIAL', `${db.branch || 'Filial não informada'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Missão do dia', 64, 334);
+    const percentText = `${metrics.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+    drawCanvasMetric(ctx, 64, 365, 296, 142, 'Percentual do dia', percentText);
+    drawCanvasMetric(ctx, 392, 365, 296, 142, 'Meta mercantil', brl.format(metrics.branchGoal), true);
+    drawCanvasMetric(ctx, 720, 365, 296, 142, 'Serviços/garantia 7%', brl.format(metrics.serviceGoal));
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Média por vendedor', 64, 568);
+    drawCanvasMetric(ctx, 64, 598, 460, 154, 'Mercantil por vendedor', metrics.sellerCount ? brl.format(metrics.perSeller) : 'Equipe não cadastrada', true, metrics.sellerCount ? `${metrics.sellerCount} vendedor(es)` : '');
+    drawCanvasMetric(ctx, 556, 598, 460, 154, 'Serviços/garantia por vendedor', metrics.sellerCount ? brl.format(metrics.servicePerSeller) : 'Equipe não cadastrada', false, 'Sempre 7% da meta mercantil');
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Resultado registrado no dia', 64, 815);
+    const results = [
+      ['Venda mercantil', brl.format(num(data.general)), pct.format(goalRate)], ['Venda elegível', brl.format(num(data.eligible)), 'Base da eficiência'],
+      ['Serviços realizados', brl.format(services), `${pct.format(serviceRate)} da missão`], ['Eficiência', efficiencyPct.format(efficiency), 'Serviços ÷ elegível'],
+      ['Ticket médio', brl.format(ticket), `${num(data.nfs)} nota(s)`], ['Situação', data.status === 'done' ? 'Lançado' : data.status === 'off' ? 'Não trabalha' : 'Pendente', 'Atualização do dia']
     ];
-    boxes.forEach(([label, value], index) => {
-      const col = index % 2, row = Math.floor(index / 2), x = 14 + col * 92, y = 63 + row * 24;
-      doc.setFillColor(index === 2 ? 232 : 245, index === 2 ? 244 : 248, 255); doc.roundedRect(x, y, 86, 19, 3, 3, 'F');
-      doc.setTextColor(92, 111, 133); doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.text(label.toUpperCase(), x + 5, y + 6);
-      doc.setTextColor(16, 42, 67); doc.setFontSize(12); doc.text(value, x + 5, y + 14);
-    });
-    let y = 119;
-    doc.setTextColor(27, 45, 65); doc.setFontSize(12); doc.text(`Distribuicao da equipe (${metrics.sellerCount || 0} vendedor(es))`, 14, y); y += 8;
-    if (metrics.sellerCount) {
-      metrics.sellerNames.forEach((name, index) => {
-        if (y > 208) { doc.addPage(); y = 20; }
-        doc.setFillColor(index % 2 ? 250 : 242, 247, 253); doc.roundedRect(14, y - 5, 178, 12, 2, 2, 'F');
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.text(name, 18, y + 2);
-        doc.setFont('helvetica', 'normal'); doc.text(`${brl.format(metrics.perSeller)} mercantil  |  ${brl.format(metrics.servicePerSeller)} servicos`, 88, y + 2); y += 14;
-      });
-    } else { doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.text('Cadastre a quantidade de vendedores para calcular o rateio.', 14, y); y += 12; }
-    if (y > 226) { doc.addPage(); y = 20; }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Resultado registrado ate agora', 14, y); y += 8;
-    const resultLines = [
-      `Venda mercantil: ${brl.format(num(data.general))} (${pct.format(goalRate)} da meta do dia)`,
-      `Venda elegivel: ${brl.format(num(data.eligible))}`,
-      `Servicos: ${brl.format(services)} | Eficiencia: ${efficiencyPct.format(efficiency)}`,
-      `Situacao: ${data.status === 'done' ? 'Lancado' : data.status === 'off' ? 'Nao trabalha' : 'Pendente'}`
-    ];
-    doc.setFillColor(244, 248, 253); doc.roundedRect(14, y - 4, 178, 34, 3, 3, 'F');
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); resultLines.forEach((line, index) => doc.text(line, 19, y + 3 + index * 7));
-    doc.setTextColor(115, 128, 145); doc.setFontSize(8); doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestao de Resultados`, 14, 286);
-    const blob = doc.output('blob');
+    results.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 846 + row * 174, 296, 148, label, value, index === 0, note); });
+    ctx.fillStyle = '#748296'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1315);
     const safeBranch = String(db.branch || 'filial').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
-    const filename = `meta-diaria-${safeBranch || 'filial'}-${key}.pdf`;
-    const file = new File([blob], filename, { type: 'application/pdf' });
-    try {
-      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: `Meta diaria - ${date.toLocaleDateString('pt-BR')}` }); return; }
-    } catch (error) { if (error.name === 'AbortError') return; }
-    const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob); anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(anchor.href), 700);
+    await shareOrDownloadImage(canvas, `meta-diaria-${safeBranch || 'filial'}-${key}.png`, `Meta do dia - ${date.toLocaleDateString('pt-BR')}`);
   }
 
   function dailyIssues() {
@@ -444,7 +447,7 @@
       const reached = dayReachedPrimaryGoal(data);
       const classes = [disabled ? 'day-off' : '', key === todayKey ? 'today-row' : '', reached ? 'goal-hit' : ''].join(' ');
       const dailyGoal = dailyGoalMetrics(key, data);
-      return `<tr class="${classes}" data-date="${key}"><td><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong><br><span class="muted">${date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>${dailyGoal.percent ? `<span class="day-goal-table-note">${dailyGoal.percent.toLocaleString('pt-BR')}% · ${brl.format(dailyGoal.branchGoal)}</span><button class="day-goal-table-btn" data-daily-export="${key}">PDF do dia</button>` : ''}${reached ? '<br><span class="goal-hit-badge">Meta dia ✓</span>' : ''}</td><td>${statusSelect(data)}</td>${['general', 'grossProfit', 'eligible', 'warranty', 'other', 'mixed'].map((field) => `<td>${moneyInput(field, num(data[field]), key, disabled)}</td>`).join('')}<td class="derived">${brl.format(services)}</td><td class="derived ${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(efficiency)}</td><td><input data-f="nfs" inputmode="numeric" type="number" min="0" step="1" value="${num(data.nfs) || ''}" ${disabled ? 'disabled' : ''}></td><td class="derived">${brl.format(ticket)}</td></tr>`;
+      return `<tr class="${classes}" data-date="${key}"><td><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong><br><span class="muted">${date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>${dailyGoal.percent ? `<span class="day-goal-table-note">${dailyGoal.percent.toLocaleString('pt-BR')}% · ${brl.format(dailyGoal.branchGoal)}</span><button class="day-goal-table-btn" data-daily-export="${key}">Imagem do dia</button>` : ''}${reached ? '<br><span class="goal-hit-badge">Meta dia ✓</span>' : ''}</td><td>${statusSelect(data)}</td>${['general', 'grossProfit', 'eligible', 'warranty', 'other', 'mixed'].map((field) => `<td>${moneyInput(field, num(data[field]), key, disabled)}</td>`).join('')}<td class="derived">${brl.format(services)}</td><td class="derived ${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(efficiency)}</td><td><input data-f="nfs" inputmode="numeric" type="number" min="0" step="1" value="${num(data.nfs) || ''}" ${disabled ? 'disabled' : ''}></td><td class="derived">${brl.format(ticket)}</td></tr>`;
     }).join('');
     document.getElementById('dailyCards').innerHTML = rows.map(({ key, date, data }) => {
       const services = num(data.warranty) + num(data.other) + num(data.mixed);
@@ -452,7 +455,7 @@
       const ticket = num(data.nfs) ? num(data.general) / num(data.nfs) : 0;
       const disabled = data.status === 'off', reached = dayReachedPrimaryGoal(data);
       const dailyGoal = dailyGoalMetrics(key, data), isOpen = openDailyKey === key;
-      return `<article class="day-card ${isOpen ? 'is-open' : ''} ${disabled ? 'day-off' : ''} ${key === todayKey ? 'today-row' : ''} ${reached ? 'goal-hit' : ''}" data-date="${key}"><div class="day-card-head"><button class="day-card-toggle" type="button" aria-expanded="${isOpen}" aria-controls="day-content-${key}"><div class="day-card-title"><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</strong><span>${date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>${reached ? '<span class="goal-hit-badge">Meta dia atingida ✓</span>' : ''}</div><span class="day-card-chevron" aria-hidden="true">⌄</span></button>${statusSelect(data)}</div><div class="day-card-content" id="day-content-${key}" ${isOpen ? '' : 'hidden'}><div class="day-goal-strip"><div><label>Percentual do dia (%)</label><input data-f="goalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${dailyGoal.percent || ''}" placeholder="Ex.: 3,51"></div><div class="day-goal-mini"><span>META FILIAL</span><strong>${brl.format(dailyGoal.branchGoal)}</strong></div><div class="day-goal-mini"><span>SERVIÇOS 7%</span><strong>${brl.format(dailyGoal.serviceGoal)}</strong></div><div class="day-goal-mini"><span>POR VENDEDOR</span><strong>${dailyGoal.sellerCount ? brl.format(dailyGoal.perSeller) : '—'}</strong></div><button class="btn small day-goal-export" data-daily-export="${key}" ${dailyGoal.percent ? '' : 'disabled'}>Baixar PDF do dia</button></div><div class="day-card-grid">${[['general', 'Venda mercantil'], ['grossProfit', 'Lucro bruto'], ['eligible', 'Venda elegível'], ['warranty', 'Garantia'], ['other', 'Outros serviços'], ['mixed', 'Presta-mista']].map(([field, label]) => `<div class="day-card-field"><label>${label}</label>${moneyInput(field, num(data[field]), key, disabled)}</div>`).join('')}<div class="day-card-field"><label>Notas fiscais</label><input data-f="nfs" inputmode="numeric" type="number" min="0" step="1" value="${num(data.nfs) || ''}" ${disabled ? 'disabled' : ''}></div></div><div class="day-card-results"><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(efficiency)}</strong></div><div><span>TICKET</span><strong>${brl.format(ticket)}</strong></div></div></div></article>`;
+      return `<article class="day-card ${isOpen ? 'is-open' : ''} ${disabled ? 'day-off' : ''} ${key === todayKey ? 'today-row' : ''} ${reached ? 'goal-hit' : ''}" data-date="${key}"><div class="day-card-head"><button class="day-card-toggle" type="button" aria-expanded="${isOpen}" aria-controls="day-content-${key}"><div class="day-card-title"><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</strong><span>${date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>${reached ? '<span class="goal-hit-badge">Meta dia atingida ✓</span>' : ''}</div><span class="day-card-chevron" aria-hidden="true">⌄</span></button>${statusSelect(data)}</div><div class="day-card-content" id="day-content-${key}" ${isOpen ? '' : 'hidden'}><div class="day-goal-strip"><div><label>Percentual do dia (%)</label><input data-f="goalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${dailyGoal.percent || ''}" placeholder="Ex.: 3,51"></div><div class="day-goal-mini"><span>META FILIAL</span><strong>${brl.format(dailyGoal.branchGoal)}</strong></div><div class="day-goal-mini"><span>SERVIÇOS 7%</span><strong>${brl.format(dailyGoal.serviceGoal)}</strong></div><div class="day-goal-mini"><span>POR VENDEDOR</span><strong>${dailyGoal.sellerCount ? brl.format(dailyGoal.perSeller) : '—'}</strong></div><button class="btn small day-goal-export" data-daily-export="${key}" ${dailyGoal.percent ? '' : 'disabled'}>Baixar imagem HD</button></div><div class="day-card-grid">${[['general', 'Venda mercantil'], ['grossProfit', 'Lucro bruto'], ['eligible', 'Venda elegível'], ['warranty', 'Garantia'], ['other', 'Outros serviços'], ['mixed', 'Presta-mista']].map(([field, label]) => `<div class="day-card-field"><label>${label}</label>${moneyInput(field, num(data[field]), key, disabled)}</div>`).join('')}<div class="day-card-field"><label>Notas fiscais</label><input data-f="nfs" inputmode="numeric" type="number" min="0" step="1" value="${num(data.nfs) || ''}" ${disabled ? 'disabled' : ''}></div></div><div class="day-card-results"><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(efficiency)}</strong></div><div><span>TICKET</span><strong>${brl.format(ticket)}</strong></div></div></div></article>`;
     }).join('');
     bindDailyInputs(document.getElementById('dailyBody'));
     bindDailyInputs(document.getElementById('dailyCards'));
@@ -462,7 +465,7 @@
       renderDaily();
       if (openDailyKey) document.querySelector(`.day-card[data-date="${openDailyKey}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }));
-    document.querySelectorAll('[data-daily-export]').forEach((button) => button.addEventListener('click', () => exportDailyGoalPdf(button.dataset.dailyExport)));
+    document.querySelectorAll('[data-daily-export]').forEach((button) => button.addEventListener('click', () => exportDailyGoalImage(button.dataset.dailyExport)));
     const issues = dailyIssues();
     const box = document.getElementById('dailyValidation');
     box.classList.toggle('show', issues.length > 0);
@@ -547,14 +550,73 @@
     const services = num(seller.warranty) + num(seller.other) + num(seller.mixed);
     const count = num(db.sellerCount) || db.sellers.length;
     const individualGoal = num(seller.assignedGoal) || (count ? num(db.mercantileGoal) / count : 0);
+    const serviceGoal = individualGoal * 0.07;
     const rate = individualGoal ? num(seller.general) / individualGoal : 0;
+    const serviceRate = serviceGoal ? services / serviceGoal : 0;
     const ticket = num(seller.nfs) ? num(seller.general) / num(seller.nfs) : 0;
     const efficiency = num(seller.eligible) ? services / num(seller.eligible) : 0;
     const plannedDays = num(seller.plannedDays) || num(db.businessDays);
     const projection = num(seller.days) ? (num(seller.general) / num(seller.days)) * plannedDays : 0;
+    const serviceProjection = num(seller.days) ? (services / num(seller.days)) * plannedDays : 0;
     const dailyAverage = num(seller.days) ? num(seller.general) / num(seller.days) : 0;
+    const serviceDailyAverage = num(seller.days) ? services / num(seller.days) : 0;
+    const missing = Math.max(0, individualGoal - num(seller.general));
+    const serviceMissing = Math.max(0, serviceGoal - services);
+    const remainingDays = Math.max(0, plannedDays - num(seller.days));
+    const neededPerDay = remainingDays ? missing / remainingDays : 0;
+    const serviceNeededPerDay = remainingDays ? serviceMissing / remainingDays : 0;
     const grossReference = individualGoal * grossProfitRate();
-    return { services, individualGoal, grossReference, plannedDays, rate, ticket, efficiency, projection, dailyAverage };
+    return { services, individualGoal, serviceGoal, grossReference, plannedDays, remainingDays, rate, serviceRate, ticket, efficiency, projection, serviceProjection, dailyAverage, serviceDailyAverage, missing, serviceMissing, neededPerDay, serviceNeededPerDay };
+  }
+  function sellerMissionMetrics(seller, key) {
+    const metrics = sellerMetrics(seller), percent = num(dayData(key).goalPercent);
+    const mercantileGoal = metrics.individualGoal * percent / 100;
+    const serviceGoal = mercantileGoal * 0.07;
+    return { key, percent, mercantileGoal, serviceGoal, metrics };
+  }
+  function selectedSellerMissionDate() {
+    const input = document.getElementById('sellerMissionDate');
+    const first = `${db.month}-01`, last = `${db.month}-${String(monthParts().days).padStart(2, '0')}`;
+    const todayKey = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    if (!input.value || input.value < first || input.value > last) input.value = todayKey.startsWith(`${db.month}-`) ? todayKey : first;
+    input.min = first; input.max = last; return input.value;
+  }
+  function renderSellerMission(seller) {
+    const key = selectedSellerMissionDate(), mission = sellerMissionMetrics(seller, key);
+    document.getElementById('sellerMissionSummary').innerHTML = [
+      ['Percentual do dia', mission.percent ? `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : 'Não informado'],
+      ['Meta mercantil do dia', brl.format(mission.mercantileGoal)], ['Serviços/garantia (7%)', brl.format(mission.serviceGoal)]
+    ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    document.getElementById('sellerMissionImage').disabled = !mission.percent;
+  }
+  async function exportSellerMissionImage(seller, key = selectedSellerMissionDate()) {
+    if (!seller) return;
+    const mission = sellerMissionMetrics(seller, key), metrics = mission.metrics;
+    if (!mission.percent) { alert('Informe primeiro o percentual deste dia na meta diária da filial.'); return; }
+    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1800;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    imageHeader(ctx, 'MISSÃO DO DIA - VENDEDOR', `${seller.name || 'Vendedor'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Meta individual do dia', 64, 334);
+    drawCanvasMetric(ctx, 64, 365, 296, 142, 'Percentual do dia', `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
+    drawCanvasMetric(ctx, 392, 365, 296, 142, 'Mercantil do dia', brl.format(mission.mercantileGoal), true);
+    drawCanvasMetric(ctx, 720, 365, 296, 142, 'Serviços/garantia 7%', brl.format(mission.serviceGoal));
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento mercantil acumulado', 64, 568);
+    const mercantileCards = [
+      ['Meta mensal', brl.format(metrics.individualGoal), 'Meta individual cadastrada'], ['Realizado', brl.format(num(seller.general)), pct.format(metrics.rate)], ['Falta', brl.format(metrics.missing), 'Para atingir a meta'],
+      ['Média por dia', brl.format(metrics.dailyAverage), `${num(seller.days)} dia(s) informado(s)`], ['Projeção', brl.format(metrics.projection), `${metrics.plannedDays} dias planejados`], ['Necessário/dia', brl.format(metrics.neededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+    ];
+    mercantileCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 598 + row * 174, 296, 148, label, value, index === 1, note); });
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento de serviços', 64, 1006);
+    const serviceCards = [
+      ['Meta serviços (7%)', brl.format(metrics.serviceGoal), 'Sobre a meta mercantil'], ['Serviços realizados', brl.format(metrics.services), pct.format(metrics.serviceRate)], ['Falta em serviços', brl.format(metrics.serviceMissing), 'Para atingir 7%'],
+      ['Média serviços/dia', brl.format(metrics.serviceDailyAverage), `${num(seller.days)} dia(s) informado(s)`], ['Projeção serviços', brl.format(metrics.serviceProjection), `${metrics.plannedDays} dias planejados`], ['Necessário/dia', brl.format(metrics.serviceNeededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+    ];
+    serviceCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 1036 + row * 174, 296, 148, label, value, index === 1, note); });
+    drawCanvasMetric(ctx, 64, 1420, 952, 154, 'Eficiência atual', efficiencyPct.format(metrics.efficiency), true, 'Serviços realizados ÷ venda elegível');
+    ctx.fillStyle = '#102a43'; ctx.font = '800 22px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'} • acompanhamento acumulado informado pelo gestor`, 64, 1650);
+    ctx.fillStyle = '#748296'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1750);
+    const safeName = String(seller.name || 'vendedor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+    await shareOrDownloadImage(canvas, `missao-diaria-${safeName || 'vendedor'}-${key}.png`, `Missão do dia - ${seller.name || 'Vendedor'}`);
   }
   function sellerFinancials(seller, source = db) {
     const [year, month] = String(source.month || db.month).split('-').map(Number), calendarDays = new Date(year, month, 0).getDate();
@@ -589,7 +651,13 @@
     const expectedDsr = financial.plannedDays ? expectedSubtotal / financial.plannedDays * financial.restDays : 0, expectedTotal = expectedSubtotal + expectedDsr;
     document.getElementById('sellerProfileTitle').textContent = seller.name || 'Vendedor sem nome';
     document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • ${financial.plannedDays} dias úteis + ${financial.restDays} descansos`;
-    document.getElementById('sellerProfileKpis').innerHTML = [['Venda mercantil', brl.format(num(seller.general))], ['Meta individual', brl.format(metrics.individualGoal)], ['Atingimento', pct.format(metrics.rate)], ['Projeção de venda', brl.format(metrics.projection)], ['Eficiência', efficiencyPct.format(metrics.efficiency)], ['Ticket médio', brl.format(metrics.ticket)]].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    document.getElementById('sellerProfileKpis').innerHTML = [
+      ['Venda mercantil acumulada', brl.format(num(seller.general))], ['Meta mercantil', brl.format(metrics.individualGoal)], ['Atingimento mercantil', pct.format(metrics.rate)],
+      ['Falta mercantil', brl.format(metrics.missing)], ['Média mercantil/dia', brl.format(metrics.dailyAverage)], ['Projeção mercantil', brl.format(metrics.projection)], ['Necessário/dia', brl.format(metrics.neededPerDay)],
+      ['Serviços acumulados', brl.format(metrics.services)], ['Meta serviços (7%)', brl.format(metrics.serviceGoal)], ['Atingimento serviços', pct.format(metrics.serviceRate)],
+      ['Falta serviços', brl.format(metrics.serviceMissing)], ['Média serviços/dia', brl.format(metrics.serviceDailyAverage)], ['Projeção serviços', brl.format(metrics.serviceProjection)], ['Eficiência', efficiencyPct.format(metrics.efficiency)]
+    ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    renderSellerMission(seller);
     const commissionInput = document.getElementById('profileCommissionMercantile'); commissionInput.value = num(seller.commissionMercantile) ? brl.format(num(seller.commissionMercantile)) : ''; bindMoneyBehavior(commissionInput);
     document.getElementById('profileJustifiedDays').value = num(seller.justifiedDays) || '';
     document.getElementById('sellerFinanceResults').innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL</span><strong>${brl.format(financial.mercantileCommission)}</strong></div><div class="metric"><span>5% DOS SERVIÇOS</span><strong>${brl.format(financial.serviceCommission)}</strong></div><div class="metric"><span>SUBTOTAL COMISSÕES</span><strong>${brl.format(financial.commissionSubtotal)}</strong></div><div class="metric"><span>DSR ESTIMADO</span><strong>${brl.format(financial.dsr)}</strong></div><div class="metric financial-highlight"><span>GANHO ATUAL</span><strong>${brl.format(financial.total)}</strong></div><div class="metric financial-highlight"><span>PROJEÇÃO DE GANHO</span><strong>${brl.format(financial.projectedTotal)}</strong></div><div class="metric"><span>GANHO ESPERADO PELA MÉDIA</span><strong>${historicalRate ? brl.format(expectedTotal) : 'Sem histórico'}</strong></div><div class="metric"><span>MÉDIA DE COMISSÃO MERCANTIL</span><strong>${historicalRate ? pct2.format(historicalRate) : 'Sem histórico'}</strong></div><div class="metric"><span>ATESTADOS / JUSTIFICADOS</span><strong>${num(seller.justifiedDays)} dia(s)</strong></div>`;
@@ -616,7 +684,7 @@
     list.innerHTML = reconciliation + db.sellers.map((seller, index) => {
       const metrics = sellerMetrics(seller);
       const money = (field, label) => `<div class="seller-field"><label>${label}</label><input class="money-input" inputmode="decimal" data-f="${field}" value="${num(seller[field]) ? esc(brl.format(num(seller[field]))) : ''}"></div>`;
-      return `<article class="seller-row" data-i="${index}"><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('general', 'Venda mercantil')}${money('eligible', 'Venda elegível')}${money('warranty', 'Garantia')}${money('other', 'Outros serviços')}${money('mixed', 'Presta-mista')}<div class="seller-field"><label>Notas fiscais</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias trabalhados</label><input inputmode="numeric" type="number" min="0" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META INDIVIDUAL</span><strong>${count ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>LUCRO DE REFERÊNCIA</span><strong>${brl.format(metrics.grossReference)}</strong></div><div class="metric"><span>ATINGIMENTO</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>PROJEÇÃO</span><strong>${brl.format(metrics.projection)}</strong></div><div class="metric"><span>MÉDIA/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${efficiencyPct.format(metrics.efficiency)}</strong></div><div class="metric"><span>TICKET</span><strong>${brl.format(metrics.ticket)}</strong></div></div></article>`;
+      return `<article class="seller-row" data-i="${index}"><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('assignedGoal', 'Meta mercantil mensal')}${money('general', 'Venda mercantil acumulada')}${money('eligible', 'Venda elegível acumulada')}${money('warranty', 'Garantia/serviços acumulados')}${money('other', 'Outros serviços acumulados')}${money('mixed', 'Presta-mista acumulada')}<div class="seller-field"><label>Notas fiscais acumuladas</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias já trabalhados</label><input inputmode="numeric" type="number" min="0" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META MERCANTIL</span><strong>${count || num(seller.assignedGoal) ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>META SERVIÇOS 7%</span><strong>${brl.format(metrics.serviceGoal)}</strong></div><div class="metric"><span>ATINGIMENTO MERCANTIL</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>ATINGIMENTO SERVIÇOS</span><strong class="${statusClass(metrics.serviceRate)}">${pct.format(metrics.serviceRate)}</strong></div><div class="metric"><span>FALTA MERCANTIL</span><strong>${brl.format(metrics.missing)}</strong></div><div class="metric"><span>FALTA SERVIÇOS</span><strong>${brl.format(metrics.serviceMissing)}</strong></div><div class="metric"><span>PROJEÇÃO MERCANTIL</span><strong>${brl.format(metrics.projection)}</strong></div><div class="metric"><span>PROJEÇÃO SERVIÇOS</span><strong>${brl.format(metrics.serviceProjection)}</strong></div><div class="metric"><span>MÉDIA MERCANTIL/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>MÉDIA SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceDailyAverage)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${efficiencyPct.format(metrics.efficiency)}</strong></div></div></article>`;
     }).join('');
     list.querySelectorAll('.seller-row').forEach((row) => {
       const index = Number(row.dataset.i), seller = db.sellers[index], head = row.querySelector('.seller-card-head'), fields = row.querySelector('.seller-fields');
@@ -1002,7 +1070,7 @@
   document.getElementById('dailyGoalDate').addEventListener('change', renderDailyGoalPlanner);
   document.getElementById('dailyGoalPercent').addEventListener('input', previewDailyGoalFromPlanner);
   document.getElementById('dailyGoalPercent').addEventListener('change', saveDailyGoalFromPlanner);
-  document.getElementById('downloadDailyGoal').addEventListener('click', () => exportDailyGoalPdf(selectedDailyGoalDate()));
+  document.getElementById('downloadDailyGoal').addEventListener('click', () => exportDailyGoalImage(selectedDailyGoalDate()));
   document.getElementById('saveSettings').addEventListener('click', readSettings);
   document.getElementById('month').addEventListener('change', (event) => { document.getElementById('weeks').value = automaticWeeks(event.target.value || monthDefault); });
   ['mercantileGoal', 'grossProfitGoal'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
@@ -1021,6 +1089,12 @@
   }));
   document.getElementById('refreshCompiled').addEventListener('click', renderCompiled);
   document.getElementById('sellerProfileBack').addEventListener('click', () => showView('sellers'));
+  document.getElementById('sellerMissionDate').addEventListener('change', () => {
+    const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (seller) renderSellerMission(seller);
+  });
+  document.getElementById('sellerMissionImage').addEventListener('click', () => {
+    const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (seller) exportSellerMissionImage(seller);
+  });
   document.getElementById('saveSellerFinance').addEventListener('click', () => {
     const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (!seller) return;
     seller.commissionMercantile = num(document.getElementById('profileCommissionMercantile').value);
@@ -1028,7 +1102,7 @@
     persist(); renderSellers(); renderSellerProfile(); renderCompiled(); renderPrint();
   });
   document.getElementById('sellerProfilePrint').addEventListener('click', () => {
-    printSellerOnlyId = activeSellerProfileId; renderPrint(); setTimeout(() => window.print(), 50);
+    const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (seller) exportSellerMissionImage(seller);
   });
   document.getElementById('saveHistoryEntry').addEventListener('click', saveHistoryEntry);
   document.getElementById('applySuggestedGoals').addEventListener('click', () => {

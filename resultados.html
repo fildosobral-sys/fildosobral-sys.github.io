@@ -111,7 +111,8 @@
   .day-goal-strip{display:grid;grid-template-columns:minmax(115px,.8fr) repeat(3,minmax(110px,1fr)) auto;gap:7px;align-items:center;margin:10px 0;padding:9px;border-radius:13px;background:#eef6ff;border:1px solid #d3e5fa}.day-goal-strip label,.day-goal-mini span{display:block;font-size:9px;color:var(--muted);font-weight:900}.day-goal-strip input{width:100%;box-sizing:border-box;margin-top:3px;padding:7px 8px;border:1px solid #c9dbef;border-radius:9px;background:#fff;font-weight:900}.day-goal-mini strong{display:block;font-size:11px;color:var(--navy);margin-top:3px}.day-goal-export{white-space:nowrap}.day-goal-table-note{display:block;margin-top:4px;font-size:9px;font-weight:900;color:#0879e8}.day-goal-table-btn{margin-top:4px;border:0;border-radius:7px;padding:4px 7px;background:#e7f2ff;color:#0879e8;font-size:9px;font-weight:900;cursor:pointer}
   @media(max-width:900px){.daily-goal-summary{grid-template-columns:1fr 1fr}.daily-goal-controls{grid-template-columns:1fr 1fr}.daily-goal-controls .btn{grid-column:1/-1;width:100%}}
   .day-card-toggle{display:flex;align-items:center;gap:9px;min-width:0;flex:1;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;padding:0}.day-card-toggle .day-card-title{flex:1;min-width:0}.day-card-chevron{width:30px;height:30px;display:grid;place-items:center;border-radius:999px;background:#edf4ff;color:#0879e8;font-size:18px;font-weight:900;transition:transform .2s ease}.day-card.is-open .day-card-chevron{transform:rotate(180deg)}
-  @media(max-width:760px){.daily-goal-planner{padding:13px}.daily-goal-head{display:block}.daily-goal-head .pill{display:inline-flex;margin-top:8px}.daily-goal-controls{grid-template-columns:1fr 1fr}.day-goal-strip{grid-template-columns:1fr 1fr}.day-goal-strip .day-goal-export{grid-column:1/-1;width:100%}.daily-goal-metric strong{font-size:13px}.day-card{padding:0!important;overflow:hidden}.day-card-head{padding:12px 13px;cursor:pointer}.day-card-head select{flex:0 0 auto;max-width:145px}.day-card-content{padding:0 13px 13px;border-top:1px solid #edf1f6}.day-card-content[hidden]{display:none!important}.day-card:not(.is-open) .day-card-head{min-height:62px}.day-card:not(.is-open).today-row{box-shadow:inset 4px 0 0 #e6a700,0 7px 18px rgba(15,42,67,.05)}.day-card:not(.is-open).goal-hit{box-shadow:inset 4px 0 0 #18a66a,0 7px 18px rgba(15,42,67,.05)}}
+  .seller-mission-panel{display:grid;grid-template-columns:minmax(180px,.45fr) 1fr auto;gap:12px;align-items:end;margin:12px 0 18px;padding:14px;border:1px solid #cfe0f7;border-radius:16px;background:linear-gradient(135deg,#eef7ff,#f6f2ff)}.seller-mission-panel>.field{background:#fff;border:1px solid #dce7f4;border-radius:12px;padding:9px 11px}.seller-mission-panel input{width:100%;border:0;outline:0;background:transparent;font-weight:900}.seller-mission-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.seller-mission-summary .metric{background:#fff}.seller-mission-summary .metric:first-child{background:#e3f2ff}.seller-mission-panel .btn{white-space:nowrap}
+  @media(max-width:760px){.daily-goal-planner{padding:13px}.daily-goal-head{display:block}.daily-goal-head .pill{display:inline-flex;margin-top:8px}.daily-goal-controls{grid-template-columns:1fr 1fr}.day-goal-strip{grid-template-columns:1fr 1fr}.day-goal-strip .day-goal-export{grid-column:1/-1;width:100%}.daily-goal-metric strong{font-size:13px}.day-card{padding:0!important;overflow:hidden}.day-card-head{padding:12px 13px;cursor:pointer}.day-card-head select{flex:0 0 auto;max-width:145px}.day-card-content{padding:0 13px 13px;border-top:1px solid #edf1f6}.day-card-content[hidden]{display:none!important}.day-card:not(.is-open) .day-card-head{min-height:62px}.day-card:not(.is-open).today-row{box-shadow:inset 4px 0 0 #e6a700,0 7px 18px rgba(15,42,67,.05)}.day-card:not(.is-open).goal-hit{box-shadow:inset 4px 0 0 #18a66a,0 7px 18px rgba(15,42,67,.05)}.seller-mission-panel{grid-template-columns:1fr}.seller-mission-summary{grid-template-columns:1fr 1fr}.seller-mission-panel .btn{width:100%}}
 </style>
 
 </head>
@@ -166,7 +167,7 @@
         <div class="daily-goal-controls">
           <div class="field"><label for="dailyGoalDate">Dia de referência</label><input id="dailyGoalDate" type="date"></div>
           <div class="field"><label for="dailyGoalPercent">Percentual do dia (%)</label><input id="dailyGoalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="Ex.: 3,51"></div>
-          <button class="btn primary" id="downloadDailyGoal">Baixar / compartilhar PDF</button>
+          <button class="btn primary" id="downloadDailyGoal">Baixar / compartilhar imagem HD</button>
         </div>
         <div class="daily-goal-summary" id="dailyGoalSummary"></div>
         <div class="daily-goal-team" id="dailyGoalTeam"></div>
@@ -194,8 +195,15 @@
   </section>
   <section class="view" id="sellerProfile">
     <article class="panel">
-      <div class="profile-head"><button class="btn" id="sellerProfileBack">← Vendedores</button><div class="profile-title"><h2 id="sellerProfileTitle">Resultado completo do vendedor</h2><p id="sellerProfileSubtitle"></p></div><button class="btn primary" id="sellerProfilePrint">Imprimir resultado</button></div>
+      <div class="profile-head"><button class="btn" id="sellerProfileBack">← Vendedores</button><div class="profile-title"><h2 id="sellerProfileTitle">Resultado completo do vendedor</h2><p id="sellerProfileSubtitle"></p></div><button class="btn primary" id="sellerProfilePrint">Baixar imagem individual</button></div>
       <div class="profile-kpis" id="sellerProfileKpis"></div>
+      <div class="config-section">Missão do dia do vendedor</div>
+      <div class="seller-mission-panel">
+        <div class="field"><label for="sellerMissionDate">Dia de referência</label><input id="sellerMissionDate" type="date"></div>
+        <div class="seller-mission-summary" id="sellerMissionSummary"></div>
+        <button class="btn primary" id="sellerMissionImage">Baixar / compartilhar missão em imagem</button>
+      </div>
+      <div class="config-section">Acompanhamento acumulado informado pelo gestor</div>
       <div class="config-section">Ganhos financeiros e projeção</div>
       <div class="finance-layout">
         <div class="finance-entry">
@@ -340,8 +348,7 @@
   renderAll();
 })();
 </script>
-<script src="jspdf.umd.min.js"></script>
-<script src="resultados-v18.js?v=28"></script>
+<script src="resultados-v18.js?v=29"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
