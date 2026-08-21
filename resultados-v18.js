@@ -6,6 +6,7 @@
   const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   const pct = new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const pct2 = new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const efficiencyPct = new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const today = new Date();
   const monthDefault = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   const moneyFields = new Set(['general', 'grossProfit', 'eligible', 'warranty', 'other', 'mixed']);
@@ -70,10 +71,11 @@
       { name: 'Meta 3', mercantile: mercantile * 1.05, grossProfit: gross, mercPct: 1.05, grossPct: 1 }
     ];
   }
-  function tierRate(tier, mercantileResult, grossProfitResult) {
+  function tierRate(tier, mercantileResult, grossProfitResult, grossAvailable = true) {
     const mercRate = tier.mercantile ? num(mercantileResult) / tier.mercantile : 0;
     const grossRate = tier.grossProfit ? num(grossProfitResult) / tier.grossProfit : 0;
-    return { mercRate, grossRate, overall: Math.min(mercRate, grossRate), passed: mercRate >= 1 && grossRate >= 1 };
+    const overall = grossAvailable ? Math.min(mercRate, grossRate) : mercRate;
+    return { mercRate, grossRate, grossAvailable, overall, passed: mercRate >= 1 && (!grossAvailable || grossRate >= 1) };
   }
   function configSnapshot(source = db) {
     return {
@@ -107,6 +109,7 @@
   let activeScope = 'branch';
   let activeSellerProfileId = null;
   let printSellerOnlyId = null;
+  let openDailyKey = null;
 
   function persist(showState = true) {
     const key = recordKey(db.branch, db.month);
@@ -150,7 +153,7 @@
     return { year, month, days: new Date(year, month, 0).getDate() };
   }
   function emptyDay(key) {
-    return { status: new Date(`${key}T12:00:00`).getDay() === 0 ? 'off' : 'pending', general: 0, grossProfit: 0, eligible: 0, warranty: 0, other: 0, mixed: 0, nfs: 0 };
+    return { status: new Date(`${key}T12:00:00`).getDay() === 0 ? 'off' : 'pending', goalPercent: 0, general: 0, grossProfit: 0, eligible: 0, warranty: 0, other: 0, mixed: 0, nfs: 0 };
   }
   function dayData(key) { return db.daily[key] || emptyDay(key); }
   function allDays() {
@@ -159,6 +162,10 @@
       const key = isoDate(year, month, index + 1);
       return { key, date: new Date(`${key}T12:00:00`), data: dayData(key) };
     });
+  }
+  function hasCompleteGrossProfit(items = allDays()) {
+    const launchedSales = items.map((item) => item.data || item).filter((day) => day.status === 'done' && num(day.general) > 0);
+    return launchedSales.length > 0 && launchedSales.every((day) => num(day.grossProfit) > 0);
   }
   function isWorked(day) { return day.status === 'done'; }
   function aggregate(list = allDays().map((item) => item.data)) {
@@ -245,10 +252,118 @@
   function setText(id, value) { const element = document.getElementById(id); if (element) element.textContent = value; }
   function clampRate(value) { return Math.max(0, Math.min(100, value * 100)); }
   function statusClass(value) { return value >= 1 ? 'positive' : value >= 0.85 ? 'warning' : 'negative'; }
+  function dailyGoalMetrics(key, source = dayData(key)) {
+    const percent = num(source.goalPercent);
+    const branchGoal = num(db.mercantileGoal) * percent / 100;
+    const serviceGoal = branchGoal * 0.07;
+    const namedSellers = db.sellers.map((seller) => String(seller.name || '').trim()).filter(Boolean);
+    const sellerCount = Math.max(Math.round(num(db.sellerCount)), namedSellers.length);
+    const sellerNames = namedSellers.slice(0, sellerCount);
+    while (sellerNames.length < sellerCount) sellerNames.push(`Vendedor ${sellerNames.length + 1}`);
+    const perSeller = sellerCount ? branchGoal / sellerCount : 0;
+    const servicePerSeller = sellerCount ? serviceGoal / sellerCount : 0;
+    const actualServices = num(source.warranty) + num(source.other) + num(source.mixed);
+    return { key, percent, branchGoal, serviceGoal, sellerCount, sellerNames, perSeller, servicePerSeller, actualServices };
+  }
   function dayReachedPrimaryGoal(data) {
     if (data.status !== 'done') return false;
+    if (num(data.goalPercent) > 0) {
+      const daily = dailyGoalMetrics('', data);
+      return num(data.general) >= daily.branchGoal && daily.actualServices >= daily.serviceGoal;
+    }
     const tier = tierGoals()[0], days = Math.max(1, num(db.businessDays));
-    return num(data.general) >= tier.mercantile / days && num(data.grossProfit) >= tier.grossProfit / days;
+    const mercantileReached = num(data.general) >= tier.mercantile / days;
+    return mercantileReached && (!num(data.grossProfit) || num(data.grossProfit) >= tier.grossProfit / days);
+  }
+
+  function selectedDailyGoalDate() {
+    const input = document.getElementById('dailyGoalDate');
+    const first = `${db.month}-01`, last = `${db.month}-${String(monthParts().days).padStart(2, '0')}`;
+    const todayKey = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    if (!input.value || input.value < first || input.value > last) input.value = todayKey.startsWith(`${db.month}-`) ? todayKey : first;
+    input.min = first; input.max = last;
+    return input.value;
+  }
+  function renderDailyGoalSummary(metrics) {
+    document.getElementById('dailyGoalSummary').innerHTML = `
+      <div class="daily-goal-metric highlight"><span>META DA FILIAL NO DIA</span><strong>${brl.format(metrics.branchGoal)}</strong></div>
+      <div class="daily-goal-metric"><span>META DE SERVIÇOS (7%)</span><strong>${brl.format(metrics.serviceGoal)}</strong></div>
+      <div class="daily-goal-metric"><span>META POR VENDEDOR</span><strong>${metrics.sellerCount ? brl.format(metrics.perSeller) : 'Cadastre a equipe'}</strong></div>
+      <div class="daily-goal-metric"><span>SERVIÇOS POR VENDEDOR</span><strong>${metrics.sellerCount ? brl.format(metrics.servicePerSeller) : 'Cadastre a equipe'}</strong></div>`;
+    document.getElementById('dailyGoalTeam').innerHTML = metrics.sellerCount
+      ? `<strong>Distribuição automática:</strong> ${metrics.sellerCount} vendedor(es), com ${brl.format(metrics.perSeller)} de mercantil e ${brl.format(metrics.servicePerSeller)} de serviços para cada um.`
+      : '<strong>Equipe ainda não configurada.</strong> Informe a quantidade de vendedores em Configuração ou cadastre os nomes na aba Vendedores.';
+    document.getElementById('downloadDailyGoal').disabled = !metrics.percent;
+  }
+  function renderDailyGoalPlanner() {
+    const key = selectedDailyGoalDate(), metrics = dailyGoalMetrics(key);
+    const percentInput = document.getElementById('dailyGoalPercent');
+    percentInput.value = metrics.percent || '';
+    renderDailyGoalSummary(metrics);
+  }
+  function previewDailyGoalFromPlanner() {
+    const key = selectedDailyGoalDate(), data = { ...dayData(key), goalPercent: num(document.getElementById('dailyGoalPercent').value) };
+    db.daily[key] = data;
+    persist(false);
+    renderDailyGoalSummary(dailyGoalMetrics(key, data));
+  }
+  function saveDailyGoalFromPlanner() {
+    const key = selectedDailyGoalDate(), data = { ...dayData(key) };
+    data.goalPercent = num(document.getElementById('dailyGoalPercent').value);
+    db.daily[key] = data; persist(); renderAll();
+  }
+  async function exportDailyGoalPdf(key) {
+    const data = dayData(key), metrics = dailyGoalMetrics(key, data);
+    if (!metrics.percent) { alert('Informe o percentual da meta deste dia antes de baixar.'); return; }
+    const JsPdf = window.jspdf?.jsPDF;
+    if (!JsPdf) { alert('O gerador de PDF não foi carregado. Atualize a página e tente novamente.'); return; }
+    const date = new Date(`${key}T12:00:00`), services = metrics.actualServices;
+    const efficiency = num(data.eligible) ? services / num(data.eligible) : 0;
+    const goalRate = metrics.branchGoal ? num(data.general) / metrics.branchGoal : 0;
+    const doc = new JsPdf({ unit: 'mm', format: 'a4' });
+    doc.setFillColor(8, 121, 232); doc.roundedRect(12, 12, 186, 34, 5, 5, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(19); doc.text('META DIARIA DA FILIAL', 20, 25);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text(`${db.branch || 'Filial nao informada'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, 20, 34);
+    doc.setTextColor(27, 45, 65); doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Planejamento do dia', 14, 57);
+    const boxes = [
+      ['Meta mensal', brl.format(num(db.mercantileGoal))], [`Percentual do dia`, `${metrics.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`],
+      ['Meta da filial', brl.format(metrics.branchGoal)], ['Servicos (7%)', brl.format(metrics.serviceGoal)]
+    ];
+    boxes.forEach(([label, value], index) => {
+      const col = index % 2, row = Math.floor(index / 2), x = 14 + col * 92, y = 63 + row * 24;
+      doc.setFillColor(index === 2 ? 232 : 245, index === 2 ? 244 : 248, 255); doc.roundedRect(x, y, 86, 19, 3, 3, 'F');
+      doc.setTextColor(92, 111, 133); doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.text(label.toUpperCase(), x + 5, y + 6);
+      doc.setTextColor(16, 42, 67); doc.setFontSize(12); doc.text(value, x + 5, y + 14);
+    });
+    let y = 119;
+    doc.setTextColor(27, 45, 65); doc.setFontSize(12); doc.text(`Distribuicao da equipe (${metrics.sellerCount || 0} vendedor(es))`, 14, y); y += 8;
+    if (metrics.sellerCount) {
+      metrics.sellerNames.forEach((name, index) => {
+        if (y > 208) { doc.addPage(); y = 20; }
+        doc.setFillColor(index % 2 ? 250 : 242, 247, 253); doc.roundedRect(14, y - 5, 178, 12, 2, 2, 'F');
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.text(name, 18, y + 2);
+        doc.setFont('helvetica', 'normal'); doc.text(`${brl.format(metrics.perSeller)} mercantil  |  ${brl.format(metrics.servicePerSeller)} servicos`, 88, y + 2); y += 14;
+      });
+    } else { doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.text('Cadastre a quantidade de vendedores para calcular o rateio.', 14, y); y += 12; }
+    if (y > 226) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Resultado registrado ate agora', 14, y); y += 8;
+    const resultLines = [
+      `Venda mercantil: ${brl.format(num(data.general))} (${pct.format(goalRate)} da meta do dia)`,
+      `Venda elegivel: ${brl.format(num(data.eligible))}`,
+      `Servicos: ${brl.format(services)} | Eficiencia: ${efficiencyPct.format(efficiency)}`,
+      `Situacao: ${data.status === 'done' ? 'Lancado' : data.status === 'off' ? 'Nao trabalha' : 'Pendente'}`
+    ];
+    doc.setFillColor(244, 248, 253); doc.roundedRect(14, y - 4, 178, 34, 3, 3, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); resultLines.forEach((line, index) => doc.text(line, 19, y + 3 + index * 7));
+    doc.setTextColor(115, 128, 145); doc.setFontSize(8); doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestao de Resultados`, 14, 286);
+    const blob = doc.output('blob');
+    const safeBranch = String(db.branch || 'filial').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+    const filename = `meta-diaria-${safeBranch || 'filial'}-${key}.pdf`;
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    try {
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: `Meta diaria - ${date.toLocaleDateString('pt-BR')}` }); return; }
+    } catch (error) { if (error.name === 'AbortError') return; }
+    const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob); anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(anchor.href), 700);
   }
 
   function dailyIssues() {
@@ -267,27 +382,31 @@
 
   function renderOverview() {
     const scope = currentScope(), result = scope.result, goalSource = scope.goals;
+    const grossAvailable = scope.type !== 'branch' || hasCompleteGrossProfit();
     setText('heroEyebrow', scope.type === 'branch' ? 'Faturamento atual da filial' : scope.type === 'all' ? 'Resultado consolidado dos vendedores' : `Resultado atual — ${scope.label}`);
     setText('revenueHero', brl.format(result.revenue)); setText('workedHero', result.worked); setText('remainingHero', result.remaining);
     setText('dailyHero', brl.format(result.dailyAvg)); setText('projectionHero', brl.format(result.projection));
     setText('eligibleKpi', brl.format(result.eligible)); setText('servicesKpi', brl.format(result.services));
     setText('grossProfitKpiLabel', scope.type === 'branch' ? 'Lucro bruto' : 'Lucro bruto de referência');
-    setText('grossProfitKpi', brl.format(result.grossProfit));
-    setText('grossProfitKpiSub', scope.type === 'branch' ? `${pct.format(num(goalSource.grossProfitGoal) ? result.grossProfit / num(goalSource.grossProfitGoal) : 0)} da meta de lucro` : `${pct2.format(grossProfitRate())} da venda mercantil`);
+    setText('grossProfitKpi', grossAvailable ? brl.format(result.grossProfit) : 'Não informado');
+    setText('grossProfitKpiSub', scope.type === 'branch' ? (grossAvailable ? `${pct.format(num(goalSource.grossProfitGoal) ? result.grossProfit / num(goalSource.grossProfitGoal) : 0)} da meta de lucro` : 'Não interfere no percentual mercantil') : `${pct2.format(grossProfitRate())} da venda mercantil`);
     setText('eligibleGoalKpi', brl.format(num(goalSource.eligibleGoal)));
     setText('eligibleGoalKpiSub', `${pct.format(num(goalSource.eligibleGoal) ? result.eligible / num(goalSource.eligibleGoal) : 0)} atingido`);
-    setText('efficiencyKpi', pct.format(result.efficiency)); setText('ticketKpi', brl.format(result.ticket));
+    setText('efficiencyKpi', efficiencyPct.format(result.efficiency)); setText('ticketKpi', brl.format(result.ticket));
     setText('nfKpi', `${result.nfs.toLocaleString('pt-BR')} notas fiscais • média dos tickets diários`);
     const tiers = tierGoals(goalSource), firstGoal = tiers[0].mercantile;
     const projectedRate = firstGoal ? result.projection / firstGoal : 0;
     const projectedGrossRate = tiers[0].grossProfit ? result.grossProfitProjection / tiers[0].grossProfit : 0;
-    setText('projectionText', result.worked ? `Projeção da Meta 1: mercantil ${pct.format(projectedRate)} • lucro bruto ${pct.format(projectedGrossRate)}.` : 'Preencha os resultados diários para calcular.');
+    setText('projectionText', result.worked ? (grossAvailable ? `Projeção da Meta 1: mercantil ${pct.format(projectedRate)} • lucro bruto ${pct.format(projectedGrossRate)}.` : `Projeção da Meta 1 mercantil: ${pct.format(projectedRate)} • lucro bruto não informado.`) : 'Preencha os resultados diários para calcular.');
     document.getElementById('projectionBar').style.width = `${clampRate(projectedRate)}%`;
     document.getElementById('goalGrid').innerHTML = tiers.map((tier) => {
-      const rates = tierRate(tier, result.revenue, result.grossProfit);
+      const rates = tierRate(tier, result.revenue, result.grossProfit, grossAvailable);
       const missingMerc = Math.max(0, tier.mercantile - result.revenue), missingGross = Math.max(0, tier.grossProfit - result.grossProfit);
       const needMerc = result.remaining ? missingMerc / result.remaining : 0, needGross = result.remaining ? missingGross / result.remaining : 0;
-      return `<article class="goal ${rates.passed ? 'goal-pass' : ''}"><div class="goal-head"><div><div class="goal-title">${tier.name}</div><div class="goal-subtitle">${pct.format(tier.mercPct)} mercantil + ${pct.format(tier.grossPct)} lucro bruto</div></div><span class="pill ${statusClass(rates.overall)}">${rates.passed ? '✓ Atingida' : pct.format(rates.overall)}</span></div><div class="bar"><span style="width:${clampRate(rates.overall)}%"></span></div><dl class="goal-dual"><dt></dt><dd class="goal-col-head">Mercantil</dd><dd class="goal-col-head">Lucro bruto</dd><dt>Objetivo</dt><dd>${brl.format(tier.mercantile)}</dd><dd>${brl.format(tier.grossProfit)}</dd><dt>Atingimento</dt><dd class="${statusClass(rates.mercRate)}">${pct.format(rates.mercRate)}</dd><dd class="${statusClass(rates.grossRate)}">${pct.format(rates.grossRate)}</dd><dt>Falta</dt><dd class="${missingMerc ? 'negative' : 'positive'}">${brl.format(missingMerc)}</dd><dd class="${missingGross ? 'negative' : 'positive'}">${brl.format(missingGross)}</dd><dt>Necessário/dia</dt><dd>${brl.format(needMerc)}</dd><dd>${brl.format(needGross)}</dd></dl></article>`;
+      const grossStatus = grossAvailable ? pct.format(rates.grossRate) : 'Não informado';
+      const grossMissing = grossAvailable ? brl.format(missingGross) : '—';
+      const grossNeed = grossAvailable ? brl.format(needGross) : '—';
+      return `<article class="goal ${rates.passed ? 'goal-pass' : ''}"><div class="goal-head"><div><div class="goal-title">${tier.name}</div><div class="goal-subtitle">${grossAvailable ? `${pct.format(tier.mercPct)} mercantil + ${pct.format(tier.grossPct)} lucro bruto` : `${pct.format(tier.mercPct)} mercantil • lucro bruto não informado`}</div></div><span class="pill ${statusClass(rates.overall)}">${rates.passed ? '✓ Atingida' : pct.format(rates.overall)}</span></div><div class="bar"><span style="width:${clampRate(rates.overall)}%"></span></div><dl class="goal-dual"><dt></dt><dd class="goal-col-head">Mercantil</dd><dd class="goal-col-head">Lucro bruto</dd><dt>Objetivo</dt><dd>${brl.format(tier.mercantile)}</dd><dd>${brl.format(tier.grossProfit)}</dd><dt>Atingimento</dt><dd class="${statusClass(rates.mercRate)}">${pct.format(rates.mercRate)}</dd><dd class="${grossAvailable ? statusClass(rates.grossRate) : ''}">${grossStatus}</dd><dt>Falta</dt><dd class="${missingMerc ? 'negative' : 'positive'}">${brl.format(missingMerc)}</dd><dd class="${grossAvailable ? (missingGross ? 'negative' : 'positive') : ''}">${grossMissing}</dd><dt>Necessário/dia</dt><dd>${brl.format(needMerc)}</dd><dd>${grossNeed}</dd></dl></article>`;
     }).join('');
     const servicesRate = num(goalSource.servicesGoal) ? result.services / num(goalSource.servicesGoal) : 0;
     setText('servicesRate', pct.format(servicesRate)); document.getElementById('servicesRate').className = `pill ${statusClass(servicesRate)}`;
@@ -298,10 +417,10 @@
     if (!db.branch) messages.push('Informe a filial antes de fechar ou imprimir o resultado.');
     if (!result.worked) messages.push('Comece pelo lançamento diário para ativar as análises.');
     else {
-      const achieved = tiers.filter((tier) => tierRate(tier, result.revenue, result.grossProfit).passed).at(-1);
-      messages.push(achieved ? `${scope.label} já atingiu a ${achieved.name} nos dois critérios.` : `Meta 1 pendente: faltam ${brl.format(Math.max(0, firstGoal - result.revenue))} em mercantil e ${brl.format(Math.max(0, tiers[0].grossProfit - result.grossProfit))} em lucro bruto${scope.type === 'branch' ? '' : ' de referência'}.`);
-      messages.push(result.projection >= firstGoal && result.grossProfitProjection >= tiers[0].grossProfit ? 'O ritmo atual projeta fechamento dentro da Meta 1.' : 'A projeção ainda não atende aos dois critérios da Meta 1.');
-      messages.push(`Eficiência: ${pct.format(result.efficiency)} • meta: ${pct.format(num(db.efficiencyGoal))}.`);
+      const achieved = tiers.filter((tier) => tierRate(tier, result.revenue, result.grossProfit, grossAvailable).passed).at(-1);
+      messages.push(achieved ? `${scope.label} já atingiu a ${achieved.name}${grossAvailable ? ' nos dois critérios' : ' pelo resultado mercantil'}.` : grossAvailable ? `Meta 1 pendente: faltam ${brl.format(Math.max(0, firstGoal - result.revenue))} em mercantil e ${brl.format(Math.max(0, tiers[0].grossProfit - result.grossProfit))} em lucro bruto${scope.type === 'branch' ? '' : ' de referência'}.` : `Meta 1 mercantil pendente: faltam ${brl.format(Math.max(0, firstGoal - result.revenue))}. Lucro bruto não informado.`);
+      messages.push(grossAvailable ? (result.projection >= firstGoal && result.grossProfitProjection >= tiers[0].grossProfit ? 'O ritmo atual projeta fechamento dentro da Meta 1.' : 'A projeção ainda não atende aos dois critérios da Meta 1.') : (result.projection >= firstGoal ? 'O ritmo atual projeta fechamento dentro da Meta 1 mercantil.' : 'A projeção mercantil ainda está abaixo da Meta 1.'));
+      messages.push(`Eficiência: ${efficiencyPct.format(result.efficiency)} • meta: ${efficiencyPct.format(num(db.efficiencyGoal))}.`);
     }
     const issues = dailyIssues(); if (issues.length) messages.push(`${issues.length} pendência(s) precisam de revisão no lançamento diário.`);
     document.getElementById('insights').innerHTML = messages.map((message, index) => `<div class="metric" style="margin-bottom:8px"><span>${index === 0 ? 'ATENÇÃO' : index === 1 ? 'STATUS' : 'ANÁLISE'}</span><strong>${esc(message)}</strong></div>`).join('');
@@ -315,6 +434,7 @@
   }
   function renderDaily() {
     const rows = allDays();
+    renderDailyGoalPlanner();
     const todayKey = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
     document.getElementById('dailyBody').innerHTML = rows.map(({ key, date, data }) => {
       const services = num(data.warranty) + num(data.other) + num(data.mixed);
@@ -323,17 +443,26 @@
       const disabled = data.status === 'off';
       const reached = dayReachedPrimaryGoal(data);
       const classes = [disabled ? 'day-off' : '', key === todayKey ? 'today-row' : '', reached ? 'goal-hit' : ''].join(' ');
-      return `<tr class="${classes}" data-date="${key}"><td><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong><br><span class="muted">${date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>${reached ? '<br><span class="goal-hit-badge">Meta dia ✓</span>' : ''}</td><td>${statusSelect(data)}</td>${['general', 'grossProfit', 'eligible', 'warranty', 'other', 'mixed'].map((field) => `<td>${moneyInput(field, num(data[field]), key, disabled)}</td>`).join('')}<td class="derived">${brl.format(services)}</td><td class="derived ${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${pct.format(efficiency)}</td><td><input data-f="nfs" inputmode="numeric" type="number" min="0" step="1" value="${num(data.nfs) || ''}" ${disabled ? 'disabled' : ''}></td><td class="derived">${brl.format(ticket)}</td></tr>`;
+      const dailyGoal = dailyGoalMetrics(key, data);
+      return `<tr class="${classes}" data-date="${key}"><td><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong><br><span class="muted">${date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>${dailyGoal.percent ? `<span class="day-goal-table-note">${dailyGoal.percent.toLocaleString('pt-BR')}% · ${brl.format(dailyGoal.branchGoal)}</span><button class="day-goal-table-btn" data-daily-export="${key}">PDF do dia</button>` : ''}${reached ? '<br><span class="goal-hit-badge">Meta dia ✓</span>' : ''}</td><td>${statusSelect(data)}</td>${['general', 'grossProfit', 'eligible', 'warranty', 'other', 'mixed'].map((field) => `<td>${moneyInput(field, num(data[field]), key, disabled)}</td>`).join('')}<td class="derived">${brl.format(services)}</td><td class="derived ${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(efficiency)}</td><td><input data-f="nfs" inputmode="numeric" type="number" min="0" step="1" value="${num(data.nfs) || ''}" ${disabled ? 'disabled' : ''}></td><td class="derived">${brl.format(ticket)}</td></tr>`;
     }).join('');
     document.getElementById('dailyCards').innerHTML = rows.map(({ key, date, data }) => {
       const services = num(data.warranty) + num(data.other) + num(data.mixed);
       const efficiency = num(data.eligible) ? services / num(data.eligible) : 0;
       const ticket = num(data.nfs) ? num(data.general) / num(data.nfs) : 0;
       const disabled = data.status === 'off', reached = dayReachedPrimaryGoal(data);
-      return `<article class="day-card ${disabled ? 'day-off' : ''} ${key === todayKey ? 'today-row' : ''} ${reached ? 'goal-hit' : ''}" data-date="${key}"><div class="day-card-head"><div class="day-card-title"><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</strong><span>${date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>${reached ? '<span class="goal-hit-badge">Meta dia atingida ✓</span>' : ''}</div>${statusSelect(data)}</div><div class="day-card-grid">${[['general', 'Venda mercantil'], ['grossProfit', 'Lucro bruto'], ['eligible', 'Venda elegível'], ['warranty', 'Garantia'], ['other', 'Outros serviços'], ['mixed', 'Presta-mista']].map(([field, label]) => `<div class="day-card-field"><label>${label}</label>${moneyInput(field, num(data[field]), key, disabled)}</div>`).join('')}<div class="day-card-field"><label>Notas fiscais</label><input data-f="nfs" inputmode="numeric" type="number" min="0" step="1" value="${num(data.nfs) || ''}" ${disabled ? 'disabled' : ''}></div></div><div class="day-card-results"><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${pct.format(efficiency)}</strong></div><div><span>TICKET</span><strong>${brl.format(ticket)}</strong></div></div></article>`;
+      const dailyGoal = dailyGoalMetrics(key, data), isOpen = openDailyKey === key;
+      return `<article class="day-card ${isOpen ? 'is-open' : ''} ${disabled ? 'day-off' : ''} ${key === todayKey ? 'today-row' : ''} ${reached ? 'goal-hit' : ''}" data-date="${key}"><div class="day-card-head"><button class="day-card-toggle" type="button" aria-expanded="${isOpen}" aria-controls="day-content-${key}"><div class="day-card-title"><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</strong><span>${date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>${reached ? '<span class="goal-hit-badge">Meta dia atingida ✓</span>' : ''}</div><span class="day-card-chevron" aria-hidden="true">⌄</span></button>${statusSelect(data)}</div><div class="day-card-content" id="day-content-${key}" ${isOpen ? '' : 'hidden'}><div class="day-goal-strip"><div><label>Percentual do dia (%)</label><input data-f="goalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${dailyGoal.percent || ''}" placeholder="Ex.: 3,51"></div><div class="day-goal-mini"><span>META FILIAL</span><strong>${brl.format(dailyGoal.branchGoal)}</strong></div><div class="day-goal-mini"><span>SERVIÇOS 7%</span><strong>${brl.format(dailyGoal.serviceGoal)}</strong></div><div class="day-goal-mini"><span>POR VENDEDOR</span><strong>${dailyGoal.sellerCount ? brl.format(dailyGoal.perSeller) : '—'}</strong></div><button class="btn small day-goal-export" data-daily-export="${key}" ${dailyGoal.percent ? '' : 'disabled'}>Baixar PDF do dia</button></div><div class="day-card-grid">${[['general', 'Venda mercantil'], ['grossProfit', 'Lucro bruto'], ['eligible', 'Venda elegível'], ['warranty', 'Garantia'], ['other', 'Outros serviços'], ['mixed', 'Presta-mista']].map(([field, label]) => `<div class="day-card-field"><label>${label}</label>${moneyInput(field, num(data[field]), key, disabled)}</div>`).join('')}<div class="day-card-field"><label>Notas fiscais</label><input data-f="nfs" inputmode="numeric" type="number" min="0" step="1" value="${num(data.nfs) || ''}" ${disabled ? 'disabled' : ''}></div></div><div class="day-card-results"><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(efficiency)}</strong></div><div><span>TICKET</span><strong>${brl.format(ticket)}</strong></div></div></div></article>`;
     }).join('');
     bindDailyInputs(document.getElementById('dailyBody'));
     bindDailyInputs(document.getElementById('dailyCards'));
+    document.querySelectorAll('.day-card-toggle').forEach((button) => button.addEventListener('click', () => {
+      const card = button.closest('[data-date]');
+      openDailyKey = openDailyKey === card.dataset.date ? null : card.dataset.date;
+      renderDaily();
+      if (openDailyKey) document.querySelector(`.day-card[data-date="${openDailyKey}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }));
+    document.querySelectorAll('[data-daily-export]').forEach((button) => button.addEventListener('click', () => exportDailyGoalPdf(button.dataset.dailyExport)));
     const issues = dailyIssues();
     const box = document.getElementById('dailyValidation');
     box.classList.toggle('show', issues.length > 0);
@@ -357,7 +486,7 @@
           if (data.status === 'off') ['general', 'grossProfit', 'eligible', 'warranty', 'other', 'mixed', 'nfs'].forEach((item) => { data[item] = 0; });
         } else {
           data[field] = field === 'nfs' ? Math.round(num(event.target.value)) : num(event.target.value);
-          if (data.status === 'pending') data.status = 'done';
+          if (data.status === 'pending' && field !== 'goalPercent') data.status = 'done';
         }
         db.daily[key] = data; persist(); renderAll();
       });
@@ -375,21 +504,42 @@
     result.pendingDays = items.filter((item) => item.data.status === 'pending').length;
     return result;
   }
+  function weekTargetContext(items) {
+    const workingDays = items.filter((item) => item.data.status !== 'off');
+    const configuredDays = workingDays.filter((item) => num(item.data.goalPercent) > 0);
+    const share = configuredDays.reduce((sum, item) => sum + num(item.data.goalPercent), 0) / 100;
+    return { share, configured: configuredDays.length, expected: workingDays.length, useDaily: workingDays.length > 0 && configuredDays.length === workingDays.length };
+  }
+  function weeklyTierTarget(tier, context, weeks) {
+    return {
+      ...tier,
+      mercantile: context.useDaily ? tier.mercantile * context.share : tier.mercantile / weeks,
+      grossProfit: context.useDaily ? tier.grossProfit * context.share : tier.grossProfit / weeks
+    };
+  }
   function renderWeekly() {
     const weeks = Math.max(1, num(db.weeks));
     document.getElementById('weeklyGrid').innerHTML = weekBuckets().map((items, index) => {
-      const result = weekStats(items), serviceTarget = num(db.servicesGoal) / weeks, serviceRate = serviceTarget ? result.services / serviceTarget : 0;
+      const result = weekStats(items), targetContext = weekTargetContext(items);
+      const grossAvailable = hasCompleteGrossProfit(items);
+      const serviceTarget = targetContext.useDaily ? num(db.mercantileGoal) * targetContext.share * 0.07 : num(db.servicesGoal) / weeks;
+      const serviceRate = serviceTarget ? result.services / serviceTarget : 0;
       const goals = tierGoals().map((tier) => {
-        const mercTarget = tier.mercantile / weeks, grossTarget = tier.grossProfit / weeks;
-        const rates = tierRate({ ...tier, mercantile: mercTarget, grossProfit: grossTarget }, result.general, result.grossProfit);
+        const target = weeklyTierTarget(tier, targetContext, weeks), mercTarget = target.mercantile, grossTarget = target.grossProfit;
+        const rates = tierRate(target, result.general, result.grossProfit, grossAvailable);
         const missingMerc = Math.max(0, mercTarget - result.general), missingGross = Math.max(0, grossTarget - result.grossProfit);
-        return `<div class="week-goal ${rates.passed ? 'goal-pass' : ''}"><header><span>${tier.name}</span><span class="${statusClass(rates.overall)}">${rates.passed ? '✓ Atingida' : pct.format(rates.overall)}</span></header><dl><dt>Mercantil / semana</dt><dd>${brl.format(mercTarget)}</dd><dt>Lucro bruto / semana</dt><dd>${brl.format(grossTarget)}</dd><dt>Falta mercantil</dt><dd class="${missingMerc ? 'negative' : 'positive'}">${brl.format(missingMerc)}</dd><dt>Falta lucro bruto</dt><dd class="${missingGross ? 'negative' : 'positive'}">${brl.format(missingGross)}</dd></dl></div>`;
+        return `<div class="week-goal ${rates.passed ? 'goal-pass' : ''}"><header><span>${tier.name}</span><span class="${statusClass(rates.overall)}">${rates.passed ? '✓ Atingida' : pct.format(rates.overall)}</span></header><dl><dt>Mercantil / semana</dt><dd>${brl.format(mercTarget)}</dd><dt>Lucro bruto / semana</dt><dd>${grossAvailable ? brl.format(grossTarget) : 'Não informado'}</dd><dt>Falta mercantil</dt><dd class="${missingMerc ? 'negative' : 'positive'}">${brl.format(missingMerc)}</dd><dt>Falta lucro bruto</dt><dd class="${grossAvailable ? (missingGross ? 'negative' : 'positive') : ''}">${grossAvailable ? brl.format(missingGross) : '—'}</dd></dl></div>`;
       }).join('');
-      const primary = tierRate({ ...tierGoals()[0], mercantile: tierGoals()[0].mercantile / weeks, grossProfit: tierGoals()[0].grossProfit / weeks }, result.general, result.grossProfit);
+      const primary = tierRate(weeklyTierTarget(tierGoals()[0], targetContext, weeks), result.general, result.grossProfit, grossAvailable);
       const hasResults = result.worked > 0 || result.general > 0 || result.grossProfit > 0;
       const visualClass = !hasResults ? '' : primary.passed ? 'week-good' : primary.overall >= 0.85 ? 'week-near' : 'week-bad';
       const visualText = !hasResults ? 'Aguardando lançamentos' : primary.passed ? '✓ Semana entregue' : primary.overall >= 0.85 ? 'Próxima da meta' : 'Abaixo da meta';
-      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><span class="pill ${primary.passed ? 'positive' : hasResults ? primary.overall >= 0.85 ? 'warning' : 'negative' : ''}">${visualText}</span></div><div class="week-metrics"><div class="metric"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${brl.format(result.grossProfit)}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0)}">${pct.format(result.efficiency)}</strong></div><div class="metric"><span>DIAS PENDENTES</span><strong>${result.pendingDays}</strong></div></div><div class="week-goals">${goals}</div></article>`;
+      const targetNote = targetContext.useDaily
+        ? `Meta semanal calculada pela soma dos percentuais diários: ${pct2.format(targetContext.share)} da meta mensal.`
+        : targetContext.configured
+          ? `Percentuais diários incompletos (${targetContext.configured}/${targetContext.expected}); mantida a divisão mensal em ${weeks} semanas.`
+          : `Meta semanal padrão: divisão mensal em ${weeks} semanas.`;
+      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><span class="pill ${primary.passed ? 'positive' : hasResults ? primary.overall >= 0.85 ? 'warning' : 'negative' : ''}">${visualText}</span></div><div class="week-metrics"><div class="metric"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(result.efficiency)}</strong></div><div class="metric"><span>DIAS PENDENTES</span><strong>${result.pendingDays}</strong></div></div><div class="hint">${targetNote}${grossAvailable ? '' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
     }).join('');
   }
 
@@ -439,7 +589,7 @@
     const expectedDsr = financial.plannedDays ? expectedSubtotal / financial.plannedDays * financial.restDays : 0, expectedTotal = expectedSubtotal + expectedDsr;
     document.getElementById('sellerProfileTitle').textContent = seller.name || 'Vendedor sem nome';
     document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • ${financial.plannedDays} dias úteis + ${financial.restDays} descansos`;
-    document.getElementById('sellerProfileKpis').innerHTML = [['Venda mercantil', brl.format(num(seller.general))], ['Meta individual', brl.format(metrics.individualGoal)], ['Atingimento', pct.format(metrics.rate)], ['Projeção de venda', brl.format(metrics.projection)], ['Eficiência', pct.format(metrics.efficiency)], ['Ticket médio', brl.format(metrics.ticket)]].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    document.getElementById('sellerProfileKpis').innerHTML = [['Venda mercantil', brl.format(num(seller.general))], ['Meta individual', brl.format(metrics.individualGoal)], ['Atingimento', pct.format(metrics.rate)], ['Projeção de venda', brl.format(metrics.projection)], ['Eficiência', efficiencyPct.format(metrics.efficiency)], ['Ticket médio', brl.format(metrics.ticket)]].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     const commissionInput = document.getElementById('profileCommissionMercantile'); commissionInput.value = num(seller.commissionMercantile) ? brl.format(num(seller.commissionMercantile)) : ''; bindMoneyBehavior(commissionInput);
     document.getElementById('profileJustifiedDays').value = num(seller.justifiedDays) || '';
     document.getElementById('sellerFinanceResults').innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL</span><strong>${brl.format(financial.mercantileCommission)}</strong></div><div class="metric"><span>5% DOS SERVIÇOS</span><strong>${brl.format(financial.serviceCommission)}</strong></div><div class="metric"><span>SUBTOTAL COMISSÕES</span><strong>${brl.format(financial.commissionSubtotal)}</strong></div><div class="metric"><span>DSR ESTIMADO</span><strong>${brl.format(financial.dsr)}</strong></div><div class="metric financial-highlight"><span>GANHO ATUAL</span><strong>${brl.format(financial.total)}</strong></div><div class="metric financial-highlight"><span>PROJEÇÃO DE GANHO</span><strong>${brl.format(financial.projectedTotal)}</strong></div><div class="metric"><span>GANHO ESPERADO PELA MÉDIA</span><strong>${historicalRate ? brl.format(expectedTotal) : 'Sem histórico'}</strong></div><div class="metric"><span>MÉDIA DE COMISSÃO MERCANTIL</span><strong>${historicalRate ? pct2.format(historicalRate) : 'Sem histórico'}</strong></div><div class="metric"><span>ATESTADOS / JUSTIFICADOS</span><strong>${num(seller.justifiedDays)} dia(s)</strong></div>`;
@@ -466,7 +616,7 @@
     list.innerHTML = reconciliation + db.sellers.map((seller, index) => {
       const metrics = sellerMetrics(seller);
       const money = (field, label) => `<div class="seller-field"><label>${label}</label><input class="money-input" inputmode="decimal" data-f="${field}" value="${num(seller[field]) ? esc(brl.format(num(seller[field]))) : ''}"></div>`;
-      return `<article class="seller-row" data-i="${index}"><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('general', 'Venda mercantil')}${money('eligible', 'Venda elegível')}${money('warranty', 'Garantia')}${money('other', 'Outros serviços')}${money('mixed', 'Presta-mista')}<div class="seller-field"><label>Notas fiscais</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias trabalhados</label><input inputmode="numeric" type="number" min="0" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META INDIVIDUAL</span><strong>${count ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>LUCRO DE REFERÊNCIA</span><strong>${brl.format(metrics.grossReference)}</strong></div><div class="metric"><span>ATINGIMENTO</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>PROJEÇÃO</span><strong>${brl.format(metrics.projection)}</strong></div><div class="metric"><span>MÉDIA/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${pct.format(metrics.efficiency)}</strong></div><div class="metric"><span>TICKET</span><strong>${brl.format(metrics.ticket)}</strong></div></div></article>`;
+      return `<article class="seller-row" data-i="${index}"><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('general', 'Venda mercantil')}${money('eligible', 'Venda elegível')}${money('warranty', 'Garantia')}${money('other', 'Outros serviços')}${money('mixed', 'Presta-mista')}<div class="seller-field"><label>Notas fiscais</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias trabalhados</label><input inputmode="numeric" type="number" min="0" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META INDIVIDUAL</span><strong>${count ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>LUCRO DE REFERÊNCIA</span><strong>${brl.format(metrics.grossReference)}</strong></div><div class="metric"><span>ATINGIMENTO</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>PROJEÇÃO</span><strong>${brl.format(metrics.projection)}</strong></div><div class="metric"><span>MÉDIA/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${efficiencyPct.format(metrics.efficiency)}</strong></div><div class="metric"><span>TICKET</span><strong>${brl.format(metrics.ticket)}</strong></div></div></article>`;
     }).join('');
     list.querySelectorAll('.seller-row').forEach((row) => {
       const index = Number(row.dataset.i), seller = db.sellers[index], head = row.querySelector('.seller-card-head'), fields = row.querySelector('.seller-fields');
@@ -619,7 +769,7 @@
       if (trendGap > 0.05) strengths.push('crescimento superior ao da filial');
       if (sellerHasData && goalRate < 0.85) attentions.push(`projeção em ${pct.format(goalRate)} da meta`);
       if (trendGap < -0.10) attentions.push('evolução abaixo do movimento da filial');
-      if (metrics.efficiency < num(db.efficiencyGoal)) opportunities.push(`elevar eficiência para ${pct.format(num(db.efficiencyGoal))}`);
+      if (metrics.efficiency < num(db.efficiencyGoal)) opportunities.push(`elevar eficiência para ${efficiencyPct.format(num(db.efficiencyGoal))}`);
       if (metrics.dailyAverage && metrics.individualGoal > currentProjection) opportunities.push(`buscar ${brl.format((metrics.individualGoal - num(seller.general)) / Math.max(1, metrics.plannedDays - num(seller.days)))} por dia restante`);
       return { id, name, metrics, currentProjection, historicalAverage, historyCount: historyValues.length, sellerTrend, branchTrend, trendGap, goalRate, diagnosis, diagnosisClass, strengths, attentions, opportunities };
     });
@@ -638,10 +788,10 @@
       ['Projeção da filial', brl.format(data.branchProjection)], ['Tendência da filial', signedPct(data.branchTrend)],
       ['Vendedores acompanhando', `${aligned} de ${data.rows.length}`], ['Precisam de atenção', attention]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
-    document.getElementById('branchTrendPanel').innerHTML = `<div class="trend-hero"><span>Panorama da filial</span><div class="trend-value">${signedPct(data.branchTrend)}</div><div>${trendLabel(data.branchTrend)} na projeção atual</div><div class="muted">Comparação com ${data.branchHistoryCount ? `a média de ${data.branchHistoryCount} competência(s)` : 'a meta atual, pois ainda não há histórico suficiente'}.</div></div><div class="trend-details"><div class="metric"><span>PROJEÇÃO ATUAL</span><strong>${brl.format(data.branchProjection)}</strong></div><div class="metric"><span>BASE COMPARATIVA</span><strong>${brl.format(data.branchBaseline)}</strong></div><div class="metric"><span>VENDEDORES EM CRESCIMENTO</span><strong>${growing}</strong></div><div class="metric"><span>EFICIÊNCIA DA FILIAL</span><strong>${pct.format(data.branchCurrent.efficiency)}</strong></div></div>`;
-    const rowHtml = (row) => `<tr><td class="compiled-person"><strong>${esc(row.name)}</strong><span>${row.historyCount ? `${row.historyCount} mês(es) na base` : 'sem histórico; comparação pela meta'}</span></td><td>${brl.format(row.currentProjection)}</td><td>${row.historicalAverage ? brl.format(row.historicalAverage) : '—'}</td><td><span class="trend-badge ${trendClass(row.sellerTrend)}">${signedPct(row.sellerTrend)}</span></td><td><span class="trend-badge ${trendClass(row.branchTrend)}">${signedPct(row.branchTrend)}</span></td><td class="${statusClass(row.goalRate)}">${pct.format(row.goalRate)}</td><td>${pct.format(row.metrics.efficiency)}</td><td><span class="trend-badge ${row.diagnosisClass}">${esc(row.diagnosis)}</span></td></tr>`;
+    document.getElementById('branchTrendPanel').innerHTML = `<div class="trend-hero"><span>Panorama da filial</span><div class="trend-value">${signedPct(data.branchTrend)}</div><div>${trendLabel(data.branchTrend)} na projeção atual</div><div class="muted">Comparação com ${data.branchHistoryCount ? `a média de ${data.branchHistoryCount} competência(s)` : 'a meta atual, pois ainda não há histórico suficiente'}.</div></div><div class="trend-details"><div class="metric"><span>PROJEÇÃO ATUAL</span><strong>${brl.format(data.branchProjection)}</strong></div><div class="metric"><span>BASE COMPARATIVA</span><strong>${brl.format(data.branchBaseline)}</strong></div><div class="metric"><span>VENDEDORES EM CRESCIMENTO</span><strong>${growing}</strong></div><div class="metric"><span>EFICIÊNCIA DA FILIAL</span><strong>${efficiencyPct.format(data.branchCurrent.efficiency)}</strong></div></div>`;
+    const rowHtml = (row) => `<tr><td class="compiled-person"><strong>${esc(row.name)}</strong><span>${row.historyCount ? `${row.historyCount} mês(es) na base` : 'sem histórico; comparação pela meta'}</span></td><td>${brl.format(row.currentProjection)}</td><td>${row.historicalAverage ? brl.format(row.historicalAverage) : '—'}</td><td><span class="trend-badge ${trendClass(row.sellerTrend)}">${signedPct(row.sellerTrend)}</span></td><td><span class="trend-badge ${trendClass(row.branchTrend)}">${signedPct(row.branchTrend)}</span></td><td class="${statusClass(row.goalRate)}">${pct.format(row.goalRate)}</td><td>${efficiencyPct.format(row.metrics.efficiency)}</td><td><span class="trend-badge ${row.diagnosisClass}">${esc(row.diagnosis)}</span></td></tr>`;
     document.getElementById('compiledTableBody').innerHTML = visibleRows.length ? visibleRows.map(rowHtml).join('') : '<tr><td colspan="8">Cadastre vendedores e resultados para gerar o comparativo.</td></tr>';
-    document.getElementById('compiledCards').innerHTML = visibleRows.length ? visibleRows.map((row) => `<article class="compiled-card"><header><div><strong>${esc(row.name)}</strong><div class="muted">${row.historyCount ? `${row.historyCount} mês(es) analisados` : 'Comparação pela meta'}</div></div><span class="trend-badge ${row.diagnosisClass}">${esc(row.diagnosis)}</span></header><div class="compiled-card-grid"><div class="metric"><span>PROJEÇÃO</span><strong>${brl.format(row.currentProjection)}</strong></div><div class="metric"><span>TENDÊNCIA</span><strong>${signedPct(row.sellerTrend)}</strong></div><div class="metric"><span>META</span><strong>${pct.format(row.goalRate)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${pct.format(row.metrics.efficiency)}</strong></div></div></article>`).join('') : '<div class="empty">Cadastre vendedores e resultados para gerar o comparativo.</div>';
+    document.getElementById('compiledCards').innerHTML = visibleRows.length ? visibleRows.map((row) => `<article class="compiled-card"><header><div><strong>${esc(row.name)}</strong><div class="muted">${row.historyCount ? `${row.historyCount} mês(es) analisados` : 'Comparação pela meta'}</div></div><span class="trend-badge ${row.diagnosisClass}">${esc(row.diagnosis)}</span></header><div class="compiled-card-grid"><div class="metric"><span>PROJEÇÃO</span><strong>${brl.format(row.currentProjection)}</strong></div><div class="metric"><span>TENDÊNCIA</span><strong>${signedPct(row.sellerTrend)}</strong></div><div class="metric"><span>META</span><strong>${pct.format(row.goalRate)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${efficiencyPct.format(row.metrics.efficiency)}</strong></div></div></article>`).join('') : '<div class="empty">Cadastre vendedores e resultados para gerar o comparativo.</div>';
     const names = (items) => items.map((row) => row.name).join(', ');
     const strongRows = visibleRows.filter((row) => row.strengths.length), attentionRows = visibleRows.filter((row) => row.attentions.length), opportunityRows = visibleRows.filter((row) => row.opportunities.length);
     const individual = visibleRows.length === 1 ? visibleRows[0] : null;
@@ -794,22 +944,24 @@
   }
   function renderPrint() {
     const result = calculate(), weeks = weekBuckets();
+    const grossAvailable = hasCompleteGrossProfit();
     const goals = tierGoals().map((tier) => {
-      const rates = tierRate(tier, result.revenue, result.grossProfit);
-      return `<article class="print-goal"><h3>${tier.name} — ${rates.passed ? 'ATINGIDA' : pct.format(rates.overall)}</h3><dl><dt>Mercantil (${pct.format(tier.mercPct)})</dt><dd>${brl.format(tier.mercantile)}</dd><dt>Mercantil realizado</dt><dd>${brl.format(result.revenue)} · ${pct.format(rates.mercRate)}</dd><dt>Lucro bruto (${pct.format(tier.grossPct)})</dt><dd>${brl.format(tier.grossProfit)}</dd><dt>Lucro bruto realizado</dt><dd>${brl.format(result.grossProfit)} · ${pct.format(rates.grossRate)}</dd></dl></article>`;
+      const rates = tierRate(tier, result.revenue, result.grossProfit, grossAvailable);
+      return `<article class="print-goal"><h3>${tier.name} — ${rates.passed ? 'ATINGIDA' : pct.format(rates.overall)}</h3><dl><dt>Mercantil (${pct.format(tier.mercPct)})</dt><dd>${brl.format(tier.mercantile)}</dd><dt>Mercantil realizado</dt><dd>${brl.format(result.revenue)} · ${pct.format(rates.mercRate)}</dd><dt>Lucro bruto (${pct.format(tier.grossPct)})</dt><dd>${brl.format(tier.grossProfit)}</dd><dt>Lucro bruto realizado</dt><dd>${grossAvailable ? `${brl.format(result.grossProfit)} · ${pct.format(rates.grossRate)}` : 'Não informado — percentual baseado no mercantil'}</dd></dl></article>`;
     }).join('');
     const weeklyRows = weeks.map((items, index) => {
-      const stat = weekStats(items);
-      const goalCells = tierGoals().map((tier) => { const target = { ...tier, mercantile: tier.mercantile / Math.max(1, num(db.weeks)), grossProfit: tier.grossProfit / Math.max(1, num(db.weeks)) }; const rate = tierRate(target, stat.general, stat.grossProfit); return `<td>${pct.format(rate.overall)}</td>`; }).join('');
-      return `<tr><td>${index + 1}ª<br>${items[0].date.toLocaleDateString('pt-BR')}–${items.at(-1).date.toLocaleDateString('pt-BR')}</td><td>${brl.format(stat.general)}</td><td>${brl.format(stat.grossProfit)}</td>${goalCells}<td>${brl.format(stat.services)}</td><td>${pct.format(stat.efficiency)}</td><td>${stat.worked}</td></tr>`;
+      const stat = weekStats(items), targetContext = weekTargetContext(items), weekCount = Math.max(1, num(db.weeks));
+      const weekGrossAvailable = hasCompleteGrossProfit(items);
+      const goalCells = tierGoals().map((tier) => { const target = weeklyTierTarget(tier, targetContext, weekCount); const rate = tierRate(target, stat.general, stat.grossProfit, weekGrossAvailable); return `<td>${pct.format(rate.overall)}</td>`; }).join('');
+      return `<tr><td>${index + 1}ª<br>${items[0].date.toLocaleDateString('pt-BR')}–${items.at(-1).date.toLocaleDateString('pt-BR')}</td><td>${brl.format(stat.general)}</td><td>${weekGrossAvailable ? brl.format(stat.grossProfit) : 'Não informado'}</td>${goalCells}<td>${brl.format(stat.services)}</td><td>${efficiencyPct.format(stat.efficiency)}</td><td>${stat.worked}</td></tr>`;
     }).join('');
     const dailyRows = allDays().map(({ date, data }) => {
       const services = num(data.warranty) + num(data.other) + num(data.mixed), efficiency = num(data.eligible) ? services / num(data.eligible) : 0, ticket = num(data.nfs) ? num(data.general) / num(data.nfs) : 0;
-      return `<tr><td>${date.toLocaleDateString('pt-BR')}<br>${date.toLocaleDateString('pt-BR', { weekday: 'short' })}</td><td>${data.status === 'done' ? '✓ Lançado' : data.status === 'off' ? 'Não trabalha' : 'Pendente'}${dayReachedPrimaryGoal(data) ? '<br>Meta dia ✓' : ''}</td><td>${brl.format(num(data.general))}</td><td>${brl.format(num(data.grossProfit))}</td><td>${brl.format(num(data.eligible))}</td><td>${brl.format(num(data.warranty))}</td><td>${brl.format(num(data.other))}</td><td>${brl.format(num(data.mixed))}</td><td>${brl.format(services)}</td><td>${pct.format(efficiency)}</td><td>${num(data.nfs)}</td><td>${brl.format(ticket)}</td></tr>`;
+      return `<tr><td>${date.toLocaleDateString('pt-BR')}<br>${date.toLocaleDateString('pt-BR', { weekday: 'short' })}</td><td>${data.status === 'done' ? '✓ Lançado' : data.status === 'off' ? 'Não trabalha' : 'Pendente'}${dayReachedPrimaryGoal(data) ? '<br>Meta dia ✓' : ''}</td><td>${brl.format(num(data.general))}</td><td>${brl.format(num(data.grossProfit))}</td><td>${brl.format(num(data.eligible))}</td><td>${brl.format(num(data.warranty))}</td><td>${brl.format(num(data.other))}</td><td>${brl.format(num(data.mixed))}</td><td>${brl.format(services)}</td><td>${efficiencyPct.format(efficiency)}</td><td>${num(data.nfs)}</td><td>${brl.format(ticket)}</td></tr>`;
     }).join('');
     const sellerPages = db.sellers.filter((seller, index) => !printSellerOnlyId || sellerIdentity(seller, index) === printSellerOnlyId).map((seller) => {
       const metrics = sellerMetrics(seller);
-      return `<section class="print-page">${printHeader(`Resultado individual — ${seller.name || 'Vendedor'}`)}<div class="print-kpis"><div class="print-kpi"><span>Venda mercantil</span><strong>${brl.format(num(seller.general))}</strong></div><div class="print-kpi"><span>Meta individual</span><strong>${brl.format(metrics.individualGoal)}</strong></div><div class="print-kpi"><span>Atingimento</span><strong>${pct.format(metrics.rate)}</strong></div><div class="print-kpi"><span>Projeção</span><strong>${brl.format(metrics.projection)}</strong></div><div class="print-kpi"><span>Média diária</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="print-kpi"><span>Eficiência</span><strong>${pct.format(metrics.efficiency)}</strong></div></div><table class="print-table"><thead><tr><th>Elegível</th><th>Garantia</th><th>Outros</th><th>Presta-mista</th><th>Serviços</th><th>NFs</th><th>Dias</th></tr></thead><tbody><tr><td>${brl.format(num(seller.eligible))}</td><td>${brl.format(num(seller.warranty))}</td><td>${brl.format(num(seller.other))}</td><td>${brl.format(num(seller.mixed))}</td><td>${brl.format(metrics.services)}</td><td>${num(seller.nfs)}</td><td>${num(seller.days)}</td></tr></tbody></table><h2 class="print-section-title">Direcionamento</h2><p>${esc(seller.notes || 'Sem registro.')}</p><h2 class="print-section-title">Compromisso</h2><p>${esc(seller.commitment || 'Sem registro.')} ${seller.deadline ? `Prazo: ${new Date(`${seller.deadline}T12:00:00`).toLocaleDateString('pt-BR')}.` : ''}</p><div class="print-signatures"><div>Gestor</div><div>Vendedor</div></div></section>`;
+      return `<section class="print-page">${printHeader(`Resultado individual — ${seller.name || 'Vendedor'}`)}<div class="print-kpis"><div class="print-kpi"><span>Venda mercantil</span><strong>${brl.format(num(seller.general))}</strong></div><div class="print-kpi"><span>Meta individual</span><strong>${brl.format(metrics.individualGoal)}</strong></div><div class="print-kpi"><span>Atingimento</span><strong>${pct.format(metrics.rate)}</strong></div><div class="print-kpi"><span>Projeção</span><strong>${brl.format(metrics.projection)}</strong></div><div class="print-kpi"><span>Média diária</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="print-kpi"><span>Eficiência</span><strong>${efficiencyPct.format(metrics.efficiency)}</strong></div></div><table class="print-table"><thead><tr><th>Elegível</th><th>Garantia</th><th>Outros</th><th>Presta-mista</th><th>Serviços</th><th>NFs</th><th>Dias</th></tr></thead><tbody><tr><td>${brl.format(num(seller.eligible))}</td><td>${brl.format(num(seller.warranty))}</td><td>${brl.format(num(seller.other))}</td><td>${brl.format(num(seller.mixed))}</td><td>${brl.format(metrics.services)}</td><td>${num(seller.nfs)}</td><td>${num(seller.days)}</td></tr></tbody></table><h2 class="print-section-title">Direcionamento</h2><p>${esc(seller.notes || 'Sem registro.')}</p><h2 class="print-section-title">Compromisso</h2><p>${esc(seller.commitment || 'Sem registro.')} ${seller.deadline ? `Prazo: ${new Date(`${seller.deadline}T12:00:00`).toLocaleDateString('pt-BR')}.` : ''}</p><div class="print-signatures"><div>Gestor</div><div>Vendedor</div></div></section>`;
     }).join('');
     const sellerFinancialPages = db.sellers.filter((seller, index) => !printSellerOnlyId || sellerIdentity(seller, index) === printSellerOnlyId).map((seller) => {
       const metrics = sellerMetrics(seller), financial = sellerFinancials(seller);
@@ -819,10 +971,10 @@
     const historyRows = historyData.rows.map((row) => `<tr><td>${esc(row.name)}</td><td>${row.months}</td><td>${brl.format(row.monthlyAverage)}</td><td>${brl.format(row.weeklyAverage)}</td><td>${brl.format(row.dailyAverage)}</td><td>${pct.format(row.share)}</td><td>${brl.format(row.suggested)}</td><td>${brl.format(row.grossReference)}</td></tr>`).join('');
     const historyPage = `<section class="print-page">${printHeader('Metas e médias por vendedor')}<p>Período: ${historyData.period === 'previousYear' ? 'ano anterior completo' : `últimos ${historyData.analyzedMonths} meses`} • Método: ${historyData.method === 'share' ? 'participação histórica' : historyData.method === 'average' ? 'média histórica' : 'divisão igual'}.</p><table class="print-table"><thead><tr><th>Vendedor</th><th>Meses</th><th>Média/mês</th><th>Média/semana</th><th>Média/dia</th><th>Participação</th><th>Meta sugerida</th><th>Lucro referência</th></tr></thead><tbody>${historyRows || '<tr><td colspan="8">Sem histórico cadastrado.</td></tr>'}</tbody></table><div class="print-signatures"><div>Gestor responsável</div><div>Gerência da filial</div></div></section>`;
     const compiled = compiledAnalysis();
-    const compiledRows = compiled.rows.map((row) => `<tr><td>${esc(row.name)}</td><td>${brl.format(row.currentProjection)}</td><td>${row.historicalAverage ? brl.format(row.historicalAverage) : 'Sem histórico'}</td><td>${signedPct(row.sellerTrend)}</td><td>${signedPct(row.branchTrend)}</td><td>${pct.format(row.goalRate)}</td><td>${pct.format(row.metrics.efficiency)}</td><td>${esc(row.diagnosis)}</td></tr>`).join('');
+    const compiledRows = compiled.rows.map((row) => `<tr><td>${esc(row.name)}</td><td>${brl.format(row.currentProjection)}</td><td>${row.historicalAverage ? brl.format(row.historicalAverage) : 'Sem histórico'}</td><td>${signedPct(row.sellerTrend)}</td><td>${signedPct(row.branchTrend)}</td><td>${pct.format(row.goalRate)}</td><td>${efficiencyPct.format(row.metrics.efficiency)}</td><td>${esc(row.diagnosis)}</td></tr>`).join('');
     const compiledPage = `<section class="print-page">${printHeader('Compilado inteligente — Filial × Vendedores')}<div class="print-kpis"><div class="print-kpi"><span>Projeção da filial</span><strong>${brl.format(compiled.branchProjection)}</strong></div><div class="print-kpi"><span>Base histórica</span><strong>${brl.format(compiled.branchBaseline)}</strong></div><div class="print-kpi"><span>Tendência filial</span><strong>${signedPct(compiled.branchTrend)}</strong></div><div class="print-kpi"><span>Período analisado</span><strong>${compiled.period} meses</strong></div></div><table class="print-table"><thead><tr><th>Vendedor</th><th>Projeção</th><th>Média histórica</th><th>Tendência vendedor</th><th>Tendência filial</th><th>Meta</th><th>Eficiência</th><th>Diagnóstico</th></tr></thead><tbody>${compiledRows || '<tr><td colspan="8">Sem vendedores cadastrados.</td></tr>'}</tbody></table><div class="print-signatures"><div>Gestor responsável</div><div>Gerência da filial</div></div></section>`;
     const audit = db.configAudit.at(-1);
-    document.getElementById('printReport').innerHTML = `<section class="print-page">${printHeader('Gestão de Resultados — Resumo Executivo')}<div class="print-kpis"><div class="print-kpi"><span>Venda mercantil</span><strong>${brl.format(result.revenue)}</strong></div><div class="print-kpi"><span>Lucro bruto</span><strong>${brl.format(result.grossProfit)}</strong></div><div class="print-kpi"><span>Produtos elegíveis</span><strong>${brl.format(result.eligible)}</strong></div><div class="print-kpi"><span>Serviços</span><strong>${brl.format(result.services)}</strong></div><div class="print-kpi"><span>Eficiência</span><strong>${pct.format(result.efficiency)}</strong></div><div class="print-kpi"><span>Projeção mercantil</span><strong>${brl.format(result.projection)}</strong></div></div><div class="print-goals">${goals}</div><h2 class="print-section-title">Metas-base e auditoria</h2><div class="print-kpis"><div class="print-kpi"><span>Meta elegíveis</span><strong>${brl.format(num(db.eligibleGoal))}</strong></div><div class="print-kpi"><span>Meta serviços</span><strong>${brl.format(num(db.servicesGoal))}</strong></div><div class="print-kpi"><span>Meta eficiência</span><strong>${pct.format(num(db.efficiencyGoal))}</strong></div><div class="print-kpi"><span>Dias úteis</span><strong>${num(db.businessDays)}</strong></div><div class="print-kpi"><span>Responsável</span><strong>${esc(audit?.owner || db.auditOwner || 'Não informado')}</strong></div><div class="print-kpi"><span>Atualização</span><strong>${audit ? new Date(audit.at).toLocaleString('pt-BR') : 'Sem registro'}</strong></div></div><h2 class="print-section-title">Resultado semanal</h2><table class="print-table"><thead><tr><th>Semana</th><th>Mercantil</th><th>Lucro bruto</th><th>M1 conjunta</th><th>M2 conjunta</th><th>M3 conjunta</th><th>Serviços</th><th>Eficiência</th><th>Dias</th></tr></thead><tbody>${weeklyRows}</tbody></table><div class="print-signatures"><div>Gestor responsável</div><div>Gerência da filial</div></div></section><section class="print-page">${printHeader('Lançamentos Diários')}<table class="print-table"><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Lucro bruto</th><th>Elegível</th><th>Garantia</th><th>Outros</th><th>Presta-mista</th><th>Serviços</th><th>Eficiência</th><th>NFs</th><th>Ticket</th></tr></thead><tbody>${dailyRows}</tbody></table></section>${historyPage}${sellerPages}`;
+    document.getElementById('printReport').innerHTML = `<section class="print-page">${printHeader('Gestão de Resultados — Resumo Executivo')}<div class="print-kpis"><div class="print-kpi"><span>Venda mercantil</span><strong>${brl.format(result.revenue)}</strong></div><div class="print-kpi"><span>Lucro bruto</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="print-kpi"><span>Produtos elegíveis</span><strong>${brl.format(result.eligible)}</strong></div><div class="print-kpi"><span>Serviços</span><strong>${brl.format(result.services)}</strong></div><div class="print-kpi"><span>Eficiência</span><strong>${efficiencyPct.format(result.efficiency)}</strong></div><div class="print-kpi"><span>Projeção mercantil</span><strong>${brl.format(result.projection)}</strong></div></div><div class="print-goals">${goals}</div><h2 class="print-section-title">Metas-base e auditoria</h2><div class="print-kpis"><div class="print-kpi"><span>Meta elegíveis</span><strong>${brl.format(num(db.eligibleGoal))}</strong></div><div class="print-kpi"><span>Meta serviços</span><strong>${brl.format(num(db.servicesGoal))}</strong></div><div class="print-kpi"><span>Meta eficiência</span><strong>${efficiencyPct.format(num(db.efficiencyGoal))}</strong></div><div class="print-kpi"><span>Dias úteis</span><strong>${num(db.businessDays)}</strong></div><div class="print-kpi"><span>Responsável</span><strong>${esc(audit?.owner || db.auditOwner || 'Não informado')}</strong></div><div class="print-kpi"><span>Atualização</span><strong>${audit ? new Date(audit.at).toLocaleString('pt-BR') : 'Sem registro'}</strong></div></div><h2 class="print-section-title">Resultado semanal</h2><table class="print-table"><thead><tr><th>Semana</th><th>Mercantil</th><th>Lucro bruto</th><th>M1</th><th>M2</th><th>M3</th><th>Serviços</th><th>Eficiência</th><th>Dias</th></tr></thead><tbody>${weeklyRows}</tbody></table><div class="print-signatures"><div>Gestor responsável</div><div>Gerência da filial</div></div></section><section class="print-page">${printHeader('Lançamentos Diários')}<table class="print-table"><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Lucro bruto</th><th>Elegível</th><th>Garantia</th><th>Outros</th><th>Presta-mista</th><th>Serviços</th><th>Eficiência</th><th>NFs</th><th>Ticket</th></tr></thead><tbody>${dailyRows}</tbody></table></section>${historyPage}${sellerPages}`;
     if (printSellerOnlyId) document.getElementById('printReport').innerHTML = sellerPages + sellerFinancialPages;
     else document.getElementById('printReport').insertAdjacentHTML('beforeend', compiledPage + sellerFinancialPages);
   }
@@ -847,6 +999,10 @@
     renderPrint();
   });
   document.getElementById('monthQuick').addEventListener('change', (event) => switchContext(db.branch, event.target.value || monthDefault));
+  document.getElementById('dailyGoalDate').addEventListener('change', renderDailyGoalPlanner);
+  document.getElementById('dailyGoalPercent').addEventListener('input', previewDailyGoalFromPlanner);
+  document.getElementById('dailyGoalPercent').addEventListener('change', saveDailyGoalFromPlanner);
+  document.getElementById('downloadDailyGoal').addEventListener('click', () => exportDailyGoalPdf(selectedDailyGoalDate()));
   document.getElementById('saveSettings').addEventListener('click', readSettings);
   document.getElementById('month').addEventListener('change', (event) => { document.getElementById('weeks').value = automaticWeeks(event.target.value || monthDefault); });
   ['mercantileGoal', 'grossProfitGoal'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
@@ -943,6 +1099,7 @@
   });
   document.getElementById('todayBtn').addEventListener('click', () => {
     const key = isoDate(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    if (window.matchMedia('(max-width:760px)').matches && key.startsWith(`${db.month}-`)) { openDailyKey = key; renderDaily(); }
     const selector = window.matchMedia('(max-width:760px)').matches ? `.day-card[data-date="${key}"]` : `#dailyBody [data-date="${key}"]`;
     document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
