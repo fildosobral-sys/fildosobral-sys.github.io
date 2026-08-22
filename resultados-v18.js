@@ -670,12 +670,14 @@
   ];
   const nameSeed = (value) => [...String(value || '')].reduce((sum, char) => sum + char.charCodeAt(0), 0);
   function suggestedMissionTone(seller) {
+    const key = arguments[1] || selectedSellerMissionDate(), period = sellerPeriodAnalysis(seller, key);
+    if (period.hasResult) return period.positive ? 'positive' : 'support';
     const metrics = sellerMetrics(seller), hasResult = num(seller.general) > 0 || num(seller.days) > 0;
     if (!hasResult) return 'positive';
     return metrics.projection >= metrics.individualGoal || metrics.rate >= 1 ? 'positive' : 'support';
   }
   function selectedMissionTone(seller, key) {
-    return seller.missionTones?.[key] || suggestedMissionTone(seller);
+    return seller.missionTones?.[key] || suggestedMissionTone(seller, key);
   }
   function missionMessage(subject, key, tone = 'positive') {
     const day = Math.max(1, Number(String(key).slice(-2)) || 1), list = tone === 'support' ? supportMotivations : positiveMotivations;
@@ -689,6 +691,27 @@
     const serviceGoal = mercantileGoal * 0.07;
     return { key, percent, mercantileGoal, serviceGoal, metrics };
   }
+  const EFFICIENCY_TARGET = 0.07, CONVERSION_TARGET = 0.35;
+  function sellerResultPeriod(seller) {
+    if (seller.resultPeriod) return seller.resultPeriod;
+    const hasLegacyResult = num(seller.general) > 0 || num(seller.eligible) > 0 || num(seller.warranty) + num(seller.other) + num(seller.mixed) > 0 || num(seller.nfs) > 0;
+    return hasLegacyResult ? 'accumulated' : 'none';
+  }
+  function sellerPeriodAnalysis(seller, key) {
+    const mission = sellerMissionMetrics(seller, key), metrics = mission.metrics, period = sellerResultPeriod(seller);
+    const labels = { none: 'Somente meta, sem resultado', day: 'Resultado do dia', week: 'Resultado da semana', fortnight: 'Resultado da quinzena', accumulated: 'Acumulado até o momento', month: 'Fechamento do mês', custom: 'Período personalizado' };
+    const hasResult = period !== 'none';
+    const periodDays = period === 'day' ? 1 : period === 'month' ? metrics.plannedDays : Math.max(1, num(seller.days));
+    const mercantileTarget = period === 'day' ? mission.mercantileGoal : period === 'month' ? metrics.individualGoal : metrics.targetDailyAverage * periodDays;
+    const serviceTarget = period === 'day' ? mission.serviceGoal : period === 'month' ? metrics.serviceGoal : metrics.serviceTargetDailyAverage * periodDays;
+    const sales = num(seller.general), services = metrics.services, eligible = num(seller.eligible);
+    const mercantileRate = mercantileTarget ? sales / mercantileTarget : 0, serviceRate = serviceTarget ? services / serviceTarget : 0;
+    const efficiency = eligible ? services / eligible : 0, conversion = sales ? eligible / sales : 0;
+    const mercantileDifference = sales - mercantileTarget, serviceDifference = services - serviceTarget;
+    const positive = hasResult && mercantileRate >= 1 && serviceRate >= 1 && efficiency >= EFFICIENCY_TARGET && conversion >= CONVERSION_TARGET;
+    const dateRange = seller.resultStart || seller.resultEnd ? `${seller.resultStart ? new Date(`${seller.resultStart}T12:00:00`).toLocaleDateString('pt-BR') : 'início'} a ${seller.resultEnd ? new Date(`${seller.resultEnd}T12:00:00`).toLocaleDateString('pt-BR') : 'hoje'}` : '';
+    return { ...mission, period, periodLabel: labels[period] || labels.custom, dateRange, hasResult, periodDays, mercantileTarget, serviceTarget, sales, services, eligible, mercantileRate, serviceRate, efficiency, conversion, mercantileDifference, serviceDifference, positive };
+  }
   function selectedSellerMissionDate() {
     const input = document.getElementById('sellerMissionDate');
     const first = `${db.month}-01`, last = `${db.month}-${String(monthParts().days).padStart(2, '0')}`;
@@ -697,13 +720,17 @@
     input.min = first; input.max = last; return input.value;
   }
   function renderSellerMission(seller) {
-    const key = selectedSellerMissionDate(), mission = sellerMissionMetrics(seller, key);
-    const suggested = suggestedMissionTone(seller), tone = selectedMissionTone(seller, key), message = missionMessage(seller, key, tone);
+    const key = selectedSellerMissionDate(), mission = sellerMissionMetrics(seller, key), analysis = sellerPeriodAnalysis(seller, key);
+    const suggested = suggestedMissionTone(seller, key), tone = selectedMissionTone(seller, key), message = missionMessage(seller, key, tone);
     document.getElementById('sellerMissionSummary').innerHTML = [
       ['Percentual do dia', mission.percent ? `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : 'Não informado'],
       ['Meta mercantil do dia', brl.format(mission.mercantileGoal)], ['Serviços do dia (7%)', brl.format(mission.serviceGoal)],
       ['Dias planejados do vendedor', mission.metrics.plannedDays], ['Meta média mercantil/dia', brl.format(mission.metrics.targetDailyAverage)], ['Meta média serviços/dia', brl.format(mission.metrics.serviceTargetDailyAverage)]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    const preview = document.getElementById('sellerPeriodPreview');
+    preview.innerHTML = analysis.hasResult
+      ? `<strong>${esc(analysis.periodLabel)}${analysis.dateRange ? ` • ${esc(analysis.dateRange)}` : ''}</strong><br>O resultado informado será comparado com a meta proporcional de ${analysis.periodDays} dia(s).<div class="period-preview-grid"><div><span>META MERCANTIL DO PERÍODO</span><b>${brl.format(analysis.mercantileTarget)}</b></div><div><span>ATINGIMENTO MERCANTIL</span><b>${pct.format(analysis.mercantileRate)}</b></div><div><span>EFICIÊNCIA • META 7%</span><b>${analysis.eligible ? efficiencyPct.format(analysis.efficiency) : 'Não calculada'}</b></div><div><span>CONVERSÃO • META 35%</span><b>${analysis.sales ? efficiencyPct.format(analysis.conversion) : 'Não calculada'}</b></div></div>`
+      : `<strong>Imagem somente com a meta</strong><br>Nenhum resultado foi selecionado. A imagem mostrará a meta mensal, a missão do dia, as médias pela jornada individual e a mensagem motivacional.`;
     document.querySelectorAll('[data-mission-tone]').forEach((button) => button.classList.toggle('active', button.dataset.missionTone === tone));
     document.getElementById('sellerToneSuggestion').textContent = seller.missionTones?.[key] ? 'Tom escolhido manualmente para este dia' : `Sugestão automática: ${suggested === 'positive' ? 'resultado positivo' : 'apoio e recuperação'}`;
     document.getElementById('sellerMotivationPreview').innerHTML = `<strong>${tone === 'positive' ? 'Mensagem de reconhecimento' : 'Mensagem de apoio'}</strong><br>${esc(message)}<br><small>Mensagem exclusiva deste dia; não se repete durante o mês.</small>`;
@@ -711,12 +738,13 @@
   }
   async function exportSellerMissionImage(seller, key = selectedSellerMissionDate()) {
     if (!seller) return;
-    const mission = sellerMissionMetrics(seller, key), metrics = mission.metrics, tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone);
+    const analysis = sellerPeriodAnalysis(seller, key), mission = analysis, metrics = analysis.metrics;
+    const tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone);
     if (!mission.percent) { alert('Informe primeiro o percentual deste dia na meta diária da filial.'); return; }
-    const hasFollowUp = num(seller.days) > 0 || num(seller.general) > 0 || num(seller.eligible) > 0 || metrics.services > 0 || num(seller.nfs) > 0;
-    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = hasFollowUp ? 2220 : 1350;
+    const hasFollowUp = analysis.hasResult;
+    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = hasFollowUp ? 2320 : 1540;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    imageHeader(ctx, 'MISSÃO DO DIA - VENDEDOR', `${seller.name || 'Vendedor'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
+    imageHeader(ctx, hasFollowUp ? 'RESULTADO - VENDEDOR' : 'MISSÃO DO DIA - VENDEDOR', `${seller.name || 'Vendedor'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
     ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Meta individual do dia', 64, 334);
     drawCanvasMetric(ctx, 64, 365, 296, 142, 'Percentual do dia', `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
     drawCanvasMetric(ctx, 392, 365, 296, 142, 'Mercantil do dia', brl.format(mission.mercantileGoal), true);
@@ -727,30 +755,42 @@
       ['Meta média mercantil/dia', brl.format(metrics.targetDailyAverage), `Meta ÷ ${metrics.plannedDays} dias`], ['Meta média serviços/dia', brl.format(metrics.serviceTargetDailyAverage), `Meta 7% ÷ ${metrics.plannedDays} dias`], ['Dias restantes', String(metrics.remainingDays), `${num(seller.days)} dia(s) trabalhado(s)`]
     ];
     planningCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 598 + row * 174, 296, 148, label, value, index === 0, note); });
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Indicadores fixos', 64, 960);
+    drawCanvasMetric(ctx, 64, 990, 296, 132, 'Eficiência de serviços', '7,00%', true, 'Serviços ÷ venda elegível');
+    drawCanvasMetric(ctx, 392, 990, 296, 132, 'Taxa de conversão', '35,00%', false, 'Elegível ÷ mercantil total');
+    drawCanvasMetric(ctx, 720, 990, 296, 132, 'Jornada individual', `${metrics.plannedDays} dias`, false, 'Não usa os dias da filial');
     if (hasFollowUp) {
-      ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento mercantil acumulado', 64, 990);
+      const rangeNote = analysis.dateRange || `${analysis.periodDays} dia(s) considerado(s)`;
+      ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText(analysis.periodLabel, 64, 1182);
+      ctx.fillStyle = '#64748b'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(rangeNote, 64, 1210);
       const mercantileCards = [
-        ['Realizado', brl.format(num(seller.general)), pct.format(metrics.rate)], ['Falta atual', brl.format(metrics.missing), 'Para atingir a meta'], ['Dias trabalhados', String(num(seller.days)), `${metrics.remainingDays} dia(s) restante(s)`],
-        ['Média realizada/dia', brl.format(metrics.dailyAverage), 'Realizado ÷ dias trabalhados'], ['Projeção', brl.format(metrics.projection), `${metrics.projectedGap <= 0 ? 'Acima' : 'Abaixo'} ${brl.format(Math.abs(metrics.projectedGap))}`], ['Necessário/dia restante', brl.format(metrics.neededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+        ['Meta mercantil período', brl.format(analysis.mercantileTarget), `${analysis.periodDays} dia(s)`], ['Realizado mercantil', brl.format(analysis.sales), pct.format(analysis.mercantileRate)], [analysis.mercantileDifference >= 0 ? 'Acima da meta' : 'Falta mercantil', brl.format(Math.abs(analysis.mercantileDifference)), analysis.mercantileDifference >= 0 ? 'Meta superada' : 'Para atingir o período']
       ];
-      mercantileCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 1020 + row * 174, 296, 148, label, value, index === 0, note); });
-      ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento de serviços totais', 64, 1400);
+      mercantileCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1230, 296, 148, label, value, index === 1, note));
       const serviceCards = [
-        ['Serviços realizados', brl.format(metrics.services), pct.format(metrics.serviceRate)], ['Falta atual', brl.format(metrics.serviceMissing), 'Para atingir a meta 7%'], ['Dias trabalhados', String(num(seller.days)), `${metrics.remainingDays} dia(s) restante(s)`],
-        ['Média realizada/dia', brl.format(metrics.serviceDailyAverage), 'Serviços ÷ dias trabalhados'], ['Projeção', brl.format(metrics.serviceProjection), `${metrics.serviceProjectedGap <= 0 ? 'Acima' : 'Abaixo'} ${brl.format(Math.abs(metrics.serviceProjectedGap))}`], ['Necessário/dia restante', brl.format(metrics.serviceNeededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+        ['Meta serviços período', brl.format(analysis.serviceTarget), '7% da meta mercantil'], ['Serviços realizados', brl.format(analysis.services), pct.format(analysis.serviceRate)], [analysis.serviceDifference >= 0 ? 'Acima da meta serviços' : 'Falta serviços', brl.format(Math.abs(analysis.serviceDifference)), analysis.serviceDifference >= 0 ? 'Meta superada' : 'Para atingir o período']
       ];
-      serviceCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 1430 + row * 174, 296, 148, label, value, index === 0, note); });
-      drawCanvasMetric(ctx, 64, 1810, 952, 112, 'Eficiência atual', metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada', true, metrics.hasEligible ? 'Serviços totais ÷ venda elegível' : 'Informe a venda elegível acumulada');
+      serviceCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1402, 296, 148, label, value, index === 1, note));
+      const indicatorCards = [
+        ['Eficiência atual', analysis.eligible ? efficiencyPct.format(analysis.efficiency) : 'Não calculada', analysis.eligible ? `${analysis.efficiency >= EFFICIENCY_TARGET ? 'Atingiu' : 'Abaixo de'} 7%` : 'Informe venda elegível'],
+        ['Conversão atual', analysis.sales ? efficiencyPct.format(analysis.conversion) : 'Não calculada', analysis.sales ? `${analysis.conversion >= CONVERSION_TARGET ? 'Atingiu' : 'Abaixo de'} 35%` : 'Informe venda mercantil'],
+        ['Venda elegível', brl.format(analysis.eligible), 'Base da eficiência']
+      ];
+      indicatorCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1574, 296, 148, label, value, index < 2, note));
+      const projectionCards = [
+        ['Média mercantil/dia', brl.format(metrics.dailyAverage), `${num(seller.days)} dia(s) informado(s)`], ['Projeção mensal', brl.format(metrics.projection), `${metrics.plannedDays} dias planejados`], ['Necessário/dia restante', brl.format(metrics.neededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+      ];
+      projectionCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1746, 296, 148, label, value, false, note));
     }
-    const motivationY = hasFollowUp ? 1945 : 970, branchY = hasFollowUp ? 2145 : 1240, footerY = hasFollowUp ? 2185 : 1310;
+    const motivationY = hasFollowUp ? 1940 : 1180, branchY = hasFollowUp ? 2205 : 1420, footerY = hasFollowUp ? 2260 : 1490;
     ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, motivationY, 952, hasFollowUp ? 165 : 220, 26); ctx.fill();
     ctx.fillStyle = tone === 'positive' ? '#087a4b' : '#b3263b'; ctx.font = '900 22px Arial, sans-serif'; ctx.fillText(tone === 'positive' ? 'MENSAGEM DE RECONHECIMENTO' : 'MENSAGEM DE APOIO E RECUPERAÇÃO', 92, motivationY + 40);
     ctx.fillStyle = '#203a56'; ctx.font = '700 24px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 92, motivationY + 82, 884, 31, hasFollowUp ? 2 : 3);
-    if (!hasFollowUp) { ctx.fillStyle = '#526175'; ctx.font = '700 20px Arial, sans-serif'; ctx.fillText('Acompanhamento acumulado ainda não informado pelo gestor.', 92, motivationY + 178); }
+    if (!hasFollowUp) { ctx.fillStyle = '#526175'; ctx.font = '700 20px Arial, sans-serif'; ctx.fillText('Imagem de meta: nenhum resultado foi incluído neste compartilhamento.', 92, motivationY + 178); }
     ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'} • ${metrics.plannedDays} dias planejados para este vendedor`, 64, branchY);
     ctx.fillStyle = '#748296'; ctx.font = '600 17px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, footerY);
     const safeName = String(seller.name || 'vendedor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
-    await shareOrDownloadImage(canvas, `missao-diaria-${safeName || 'vendedor'}-${key}.png`, `Missão do dia - ${seller.name || 'Vendedor'}`);
+    await shareOrDownloadImage(canvas, `${hasFollowUp ? 'resultado' : 'missao-diaria'}-${safeName || 'vendedor'}-${key}.png`, `${hasFollowUp ? analysis.periodLabel : 'Missão do dia'} - ${seller.name || 'Vendedor'}`);
   }
   function sellerFinancials(seller, source = db) {
     const [year, month] = String(source.month || db.month).split('-').map(Number), calendarDays = new Date(year, month, 0).getDate();
@@ -777,7 +817,7 @@
     if (!activeSellerProfileId) return;
     const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId);
     if (!seller) { activeSellerProfileId = null; return; }
-    const metrics = sellerMetrics(seller), financial = sellerFinancials(seller), history = sellerProfileHistory(seller);
+    const metrics = sellerMetrics(seller), financial = sellerFinancials(seller), history = sellerProfileHistory(seller), period = sellerPeriodAnalysis(seller, selectedSellerMissionDate());
     const previousRates = history.filter((item) => item.month !== db.month && item.financial.mercantileRate > 0).map((item) => item.financial.mercantileRate);
     const historicalRate = average(previousRates) || financial.mercantileRate;
     const expectedMercantile = metrics.individualGoal * historicalRate, sellerShare = num(db.mercantileGoal) ? metrics.individualGoal / num(db.mercantileGoal) : 0;
@@ -790,6 +830,7 @@
       ['Falta mercantil', brl.format(metrics.missing)], ['Média mercantil/dia', brl.format(metrics.dailyAverage)], ['Projeção mercantil', brl.format(metrics.projection)], ['Necessário/dia', brl.format(metrics.neededPerDay)],
       ['Serviços acumulados', brl.format(metrics.services)], ['Meta serviços (7%)', brl.format(metrics.serviceGoal)], ['Meta média serviços/dia', brl.format(metrics.serviceTargetDailyAverage)], ['Atingimento serviços', pct.format(metrics.serviceRate)],
       ['Falta serviços', brl.format(metrics.serviceMissing)], ['Média serviços/dia', brl.format(metrics.serviceDailyAverage)], ['Projeção serviços', brl.format(metrics.serviceProjection)], ['Eficiência', metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada'],
+      ['Taxa de conversão', period.sales ? efficiencyPct.format(period.conversion) : 'Não calculada'], ['Meta fixa de conversão', '35,00%'], ['Período do resultado', period.periodLabel],
       ['Dias planejados', metrics.plannedDays], ['Dias trabalhados', num(seller.days)], ['Dias restantes', metrics.remainingDays]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     renderSellerMission(seller);
@@ -805,7 +846,7 @@
   function syncSellerRow(row) {
     if (!row) return null;
     const index = Number(row.dataset.i), seller = db.sellers[index]; if (!seller) return null;
-    const textFields = new Set(['name', 'notes', 'commitment', 'deadline']);
+    const textFields = new Set(['name', 'notes', 'commitment', 'deadline', 'resultPeriod', 'resultStart', 'resultEnd']);
     const integerFields = new Set(['nfs', 'days', 'plannedDays', 'justifiedDays']);
     row.querySelectorAll('[data-f]').forEach((element) => {
       const field = element.dataset.f;
@@ -834,7 +875,7 @@
       const isOpen = openSellerIndex === index;
       const mercTrend = metrics.projectedGap <= 0 ? `Acima ${brl.format(Math.abs(metrics.projectedGap))}` : `Abaixo ${brl.format(metrics.projectedGap)}`;
       const serviceTrend = metrics.serviceProjectedGap <= 0 ? `Acima ${brl.format(Math.abs(metrics.serviceProjectedGap))}` : `Abaixo ${brl.format(metrics.serviceProjectedGap)}`;
-      return `<article class="seller-row ${isOpen ? 'is-open' : ''}" data-i="${index}"><button class="seller-accordion-toggle" type="button" data-toggle-seller="${index}"><div class="seller-accordion-name"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${num(seller.days)} trabalhados • ${metrics.remainingDays} restantes</span></div><div class="seller-accordion-kpi"><span>Venda total</span><strong>${brl.format(num(seller.general))}</strong></div><div class="seller-accordion-kpi"><span>Serviços totais</span><strong>${brl.format(metrics.services)}</strong></div><span class="pill ${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</span><span class="seller-accordion-chevron">⌄</span></button><div class="seller-card-content" ${isOpen ? '' : 'hidden'}><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('assignedGoal', 'Meta mercantil mensal')}${money('general', 'Venda mercantil total acumulada')}${money('eligible', 'Venda elegível acumulada (base da eficiência)')}${money('warranty', 'Garantias acumuladas')}${money('other', 'Outros serviços acumulados')}${money('mixed', 'Presta-mista acumulada')}<div class="seller-service-total"><span>SERVIÇOS TOTAIS AUTOMÁTICOS</span><strong>${brl.format(metrics.services)}</strong><small>Garantias + outros serviços + presta-mista • única base da meta de serviços 7%</small></div><div class="seller-field"><label>Notas fiscais acumuladas</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias já trabalhados</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META MERCANTIL</span><strong>${count || num(seller.assignedGoal) ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>VENDA MERCANTIL TOTAL</span><strong>${brl.format(num(seller.general))}</strong></div><div class="metric"><span>VENDA ELEGÍVEL</span><strong>${brl.format(num(seller.eligible))}</strong></div><div class="metric"><span>SERVIÇOS TOTAIS</span><strong>${brl.format(metrics.services)}</strong></div><div class="metric"><span>META SERVIÇOS 7%</span><strong>${brl.format(metrics.serviceGoal)}</strong></div><div class="metric"><span>ATINGIMENTO MERCANTIL</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>ATINGIMENTO SERVIÇOS</span><strong class="${statusClass(metrics.serviceRate)}">${pct.format(metrics.serviceRate)}</strong></div><div class="metric"><span>FALTA MERCANTIL</span><strong>${brl.format(metrics.missing)}</strong></div><div class="metric"><span>FALTA SERVIÇOS</span><strong>${brl.format(metrics.serviceMissing)}</strong></div><div class="metric"><span>PROJEÇÃO MERCANTIL</span><strong>${brl.format(metrics.projection)}</strong><small>${mercTrend}</small></div><div class="metric"><span>PROJEÇÃO SERVIÇOS</span><strong>${brl.format(metrics.serviceProjection)}</strong><small>${serviceTrend}</small></div><div class="metric"><span>MÉDIA MERCANTIL/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>MÉDIA SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceDailyAverage)}</strong></div><div class="metric"><span>NECESSÁRIO MERCANTIL/DIA</span><strong>${brl.format(metrics.neededPerDay)}</strong></div><div class="metric"><span>NECESSÁRIO SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceNeededPerDay)}</strong></div><div class="metric"><span>DIAS RESTANTES</span><strong>${metrics.remainingDays}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada'}</strong><small>${metrics.hasEligible ? 'Serviços ÷ elegível' : 'Informe venda elegível'}</small></div></div></div></article>`;
+      return `<article class="seller-row ${isOpen ? 'is-open' : ''}" data-i="${index}"><button class="seller-accordion-toggle" type="button" data-toggle-seller="${index}"><div class="seller-accordion-name"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${num(seller.days)} trabalhados • ${metrics.remainingDays} restantes</span></div><div class="seller-accordion-kpi"><span>Venda total</span><strong>${brl.format(num(seller.general))}</strong></div><div class="seller-accordion-kpi"><span>Serviços totais</span><strong>${brl.format(metrics.services)}</strong></div><span class="pill ${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</span><span class="seller-accordion-chevron">⌄</span></button><div class="seller-card-content" ${isOpen ? '' : 'hidden'}><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('assignedGoal', 'Meta mercantil mensal')}${money('general', 'Venda mercantil do período / acumulada')}${money('eligible', 'Venda elegível do período (base da eficiência)')}${money('warranty', 'Garantias do período')}${money('other', 'Outros serviços do período')}${money('mixed', 'Presta-mista do período')}<div class="seller-service-total"><span>SERVIÇOS TOTAIS AUTOMÁTICOS</span><strong>${brl.format(metrics.services)}</strong><small>Garantias + outros serviços + presta-mista • única base da meta de serviços 7%</small></div><div class="seller-field"><label>Notas fiscais do período</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias já trabalhados / considerados</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META MERCANTIL</span><strong>${count || num(seller.assignedGoal) ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>VENDA MERCANTIL TOTAL</span><strong>${brl.format(num(seller.general))}</strong></div><div class="metric"><span>VENDA ELEGÍVEL</span><strong>${brl.format(num(seller.eligible))}</strong></div><div class="metric"><span>SERVIÇOS TOTAIS</span><strong>${brl.format(metrics.services)}</strong></div><div class="metric"><span>META SERVIÇOS 7%</span><strong>${brl.format(metrics.serviceGoal)}</strong></div><div class="metric"><span>ATINGIMENTO MERCANTIL</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>ATINGIMENTO SERVIÇOS</span><strong class="${statusClass(metrics.serviceRate)}">${pct.format(metrics.serviceRate)}</strong></div><div class="metric"><span>FALTA MERCANTIL</span><strong>${brl.format(metrics.missing)}</strong></div><div class="metric"><span>FALTA SERVIÇOS</span><strong>${brl.format(metrics.serviceMissing)}</strong></div><div class="metric"><span>PROJEÇÃO MERCANTIL</span><strong>${brl.format(metrics.projection)}</strong><small>${mercTrend}</small></div><div class="metric"><span>PROJEÇÃO SERVIÇOS</span><strong>${brl.format(metrics.serviceProjection)}</strong><small>${serviceTrend}</small></div><div class="metric"><span>MÉDIA MERCANTIL/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>MÉDIA SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceDailyAverage)}</strong></div><div class="metric"><span>NECESSÁRIO MERCANTIL/DIA</span><strong>${brl.format(metrics.neededPerDay)}</strong></div><div class="metric"><span>NECESSÁRIO SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceNeededPerDay)}</strong></div><div class="metric"><span>DIAS RESTANTES</span><strong>${metrics.remainingDays}</strong></div><div class="metric"><span>EFICIÊNCIA • META 7%</span><strong>${metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada'}</strong><small>${metrics.hasEligible ? 'Serviços ÷ elegível' : 'Informe venda elegível'}</small></div><div class="metric"><span>CONVERSÃO • META 35%</span><strong>${num(seller.general) ? efficiencyPct.format(num(seller.eligible) / num(seller.general)) : 'Não calculada'}</strong><small>Elegível ÷ mercantil total</small></div></div></div></article>`;
     }).join('');
     list.querySelectorAll('.seller-row').forEach((row) => {
       const index = Number(row.dataset.i), seller = db.sellers[index], head = row.querySelector('.seller-card-head'), fields = row.querySelector('.seller-fields');
@@ -842,6 +883,10 @@
       const extra = document.createElement('div'); extra.className = 'seller-finance-extra';
       extra.innerHTML = `<div class="seller-field"><label>Comissão mercantil acumulada</label><input class="money-input" inputmode="decimal" data-f="commissionMercantile" value="${num(seller.commissionMercantile) ? esc(brl.format(num(seller.commissionMercantile))) : ''}"></div><div class="seller-field"><label>Dias justificados / atestado</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="justifiedDays" value="${num(seller.justifiedDays) || ''}"></div>`;
       extra.style.display = 'contents'; fields.insertBefore(extra, fields.querySelector('.wide'));
+      const periodBlock = document.createElement('section'); periodBlock.className = 'seller-period-block';
+      periodBlock.innerHTML = `<h4>Período dos resultados informados</h4><p>Escolha “somente meta” quando ainda não houver resultado. Nos demais casos, os valores acumulados acima serão analisados dentro do período selecionado.</p><div class="seller-period-grid"><div class="seller-field"><label>Tipo de compartilhamento</label><select data-f="resultPeriod"><option value="none">Somente meta, sem resultado</option><option value="day">Resultado do dia</option><option value="week">Resultado da semana</option><option value="fortnight">Resultado da quinzena</option><option value="accumulated">Acumulado até o momento</option><option value="month">Fechamento do mês</option><option value="custom">Período personalizado</option></select></div><div class="seller-field"><label>Data inicial</label><input type="date" data-f="resultStart" value="${esc(seller.resultStart || '')}"></div><div class="seller-field"><label>Data final</label><input type="date" data-f="resultEnd" value="${esc(seller.resultEnd || '')}"></div></div><div class="seller-fixed-targets"><span>Eficiência de serviços: 7%</span><span>Taxa de conversão: 35%</span><span>Conversão: elegível ÷ mercantil total</span></div>`;
+      fields.insertBefore(periodBlock, fields.querySelector('.wide'));
+      periodBlock.querySelector('[data-f="resultPeriod"]').value = sellerResultPeriod(seller);
     });
     list.querySelectorAll('[data-toggle-seller]').forEach((button) => button.addEventListener('click', () => {
       const index = Number(button.dataset.toggleSeller); openSellerIndex = openSellerIndex === index ? null : index; renderSellers();
@@ -1401,6 +1446,7 @@
     const seller = selectedBackupSeller(); if (!seller) return;
     if (!confirm(`Zerar somente os resultados de ${seller.name || 'Vendedor'} em ${monthLabel(db.month)}? O cadastro, a meta e os outros meses serão mantidos.`)) return;
     sellerResultFields.forEach((field) => { seller[field] = 0; });
+    seller.resultPeriod = 'none'; seller.resultStart = ''; seller.resultEnd = '';
     seller.notes = ''; seller.commitment = ''; seller.deadline = ''; seller.updatedAt = new Date().toISOString();
     persist(false); renderAll(); renderSellerBackupPanel(`✓ Resultados de <strong>${esc(seller.name || 'Vendedor')}</strong> zerados somente em ${esc(monthLabel(db.month))}.`);
   });
