@@ -686,10 +686,10 @@
     return `${firstName}, ${list[index].charAt(0).toLowerCase()}${list[index].slice(1)}`;
   }
   function sellerMissionMetrics(seller, key) {
-    const metrics = sellerMetrics(seller), percent = num(dayData(key).goalPercent);
+    const metrics = sellerMetrics(seller), percent = num(dayData(key).goalPercent), branchMission = dailyGoalMetrics(key);
     const mercantileGoal = metrics.individualGoal * percent / 100;
     const serviceGoal = mercantileGoal * 0.07;
-    return { key, percent, mercantileGoal, serviceGoal, metrics };
+    return { key, percent, mercantileGoal, serviceGoal, branchMercantilePerSeller: branchMission.perSeller, branchServicePerSeller: branchMission.servicePerSeller, sellerCount: branchMission.sellerCount, metrics };
   }
   const EFFICIENCY_TARGET = 0.07, CONVERSION_TARGET = 0.35;
   function sellerResultPeriod(seller) {
@@ -704,13 +704,20 @@
     const periodDays = period === 'day' ? 1 : period === 'month' ? metrics.plannedDays : Math.max(1, num(seller.days));
     const mercantileTarget = period === 'day' ? mission.mercantileGoal : period === 'month' ? metrics.individualGoal : metrics.targetDailyAverage * periodDays;
     const serviceTarget = period === 'day' ? mission.serviceGoal : period === 'month' ? metrics.serviceGoal : metrics.serviceTargetDailyAverage * periodDays;
+    const branchMonthlyShare = mission.sellerCount ? num(db.mercantileGoal) / mission.sellerCount : 0;
+    const branchDailyAverage = branchMonthlyShare / Math.max(1, num(db.businessDays) || metrics.plannedDays);
+    const branchMercantileTarget = period === 'day' ? mission.branchMercantilePerSeller : period === 'month' ? branchMonthlyShare : branchDailyAverage * periodDays;
+    const branchServiceTarget = branchMercantileTarget * EFFICIENCY_TARGET;
     const sales = num(seller.general), services = metrics.services, eligible = num(seller.eligible);
     const mercantileRate = mercantileTarget ? sales / mercantileTarget : 0, serviceRate = serviceTarget ? services / serviceTarget : 0;
+    const branchMercantileRate = branchMercantileTarget ? sales / branchMercantileTarget : 0, branchServiceRate = branchServiceTarget ? services / branchServiceTarget : 0;
     const efficiency = eligible ? services / eligible : 0, conversion = sales ? eligible / sales : 0;
     const mercantileDifference = sales - mercantileTarget, serviceDifference = services - serviceTarget;
-    const positive = hasResult && mercantileRate >= 1 && serviceRate >= 1 && efficiency >= EFFICIENCY_TARGET && conversion >= CONVERSION_TARGET;
+    const branchMercantileDifference = sales - branchMercantileTarget, branchServiceDifference = services - branchServiceTarget;
+    const reachedEitherReference = (mercantileRate >= 1 && serviceRate >= 1) || (branchMercantileRate >= 1 && branchServiceRate >= 1);
+    const positive = hasResult && reachedEitherReference && efficiency >= EFFICIENCY_TARGET && conversion >= CONVERSION_TARGET;
     const dateRange = seller.resultStart || seller.resultEnd ? `${seller.resultStart ? new Date(`${seller.resultStart}T12:00:00`).toLocaleDateString('pt-BR') : 'início'} a ${seller.resultEnd ? new Date(`${seller.resultEnd}T12:00:00`).toLocaleDateString('pt-BR') : 'hoje'}` : '';
-    return { ...mission, period, periodLabel: labels[period] || labels.custom, dateRange, hasResult, periodDays, mercantileTarget, serviceTarget, sales, services, eligible, mercantileRate, serviceRate, efficiency, conversion, mercantileDifference, serviceDifference, positive };
+    return { ...mission, period, periodLabel: labels[period] || labels.custom, dateRange, hasResult, periodDays, mercantileTarget, serviceTarget, branchMercantileTarget, branchServiceTarget, sales, services, eligible, mercantileRate, serviceRate, branchMercantileRate, branchServiceRate, efficiency, conversion, mercantileDifference, serviceDifference, branchMercantileDifference, branchServiceDifference, positive };
   }
   function selectedSellerMissionDate() {
     const input = document.getElementById('sellerMissionDate');
@@ -724,16 +731,16 @@
     const suggested = suggestedMissionTone(seller, key), tone = selectedMissionTone(seller, key), message = missionMessage(seller, key, tone);
     document.getElementById('sellerMissionSummary').innerHTML = [
       ['Percentual do dia', mission.percent ? `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : 'Não informado'],
-      ['Meta mercantil do dia', brl.format(mission.mercantileGoal)], ['Serviços do dia (7%)', brl.format(mission.serviceGoal)],
-      ['Dias planejados do vendedor', mission.metrics.plannedDays], ['Meta média mercantil/dia', brl.format(mission.metrics.targetDailyAverage)], ['Meta média serviços/dia', brl.format(mission.metrics.serviceTargetDailyAverage)]
+      ['Filial mercantil/vendedor', mission.sellerCount ? brl.format(mission.branchMercantilePerSeller) : 'Equipe não configurada'], ['Individual mercantil', brl.format(mission.mercantileGoal)],
+      ['Filial serviços/vendedor', mission.sellerCount ? brl.format(mission.branchServicePerSeller) : 'Equipe não configurada'], ['Individual serviços', brl.format(mission.serviceGoal)], ['Metas fixas', 'Eficiência 7% • Conversão 35%']
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     const preview = document.getElementById('sellerPeriodPreview');
     preview.innerHTML = analysis.hasResult
-      ? `<strong>${esc(analysis.periodLabel)}${analysis.dateRange ? ` • ${esc(analysis.dateRange)}` : ''}</strong><br>O resultado informado será comparado com a meta proporcional de ${analysis.periodDays} dia(s).<div class="period-preview-grid"><div><span>META MERCANTIL DO PERÍODO</span><b>${brl.format(analysis.mercantileTarget)}</b></div><div><span>ATINGIMENTO MERCANTIL</span><b>${pct.format(analysis.mercantileRate)}</b></div><div><span>EFICIÊNCIA • META 7%</span><b>${analysis.eligible ? efficiencyPct.format(analysis.efficiency) : 'Não calculada'}</b></div><div><span>CONVERSÃO • META 35%</span><b>${analysis.sales ? efficiencyPct.format(analysis.conversion) : 'Não calculada'}</b></div></div>`
-      : `<strong>Imagem somente com a meta</strong><br>Nenhum resultado foi selecionado. A imagem mostrará a meta mensal, a missão do dia, as médias pela jornada individual e a mensagem motivacional.`;
+      ? `<strong>${esc(analysis.periodLabel)}${analysis.dateRange ? ` • ${esc(analysis.dateRange)}` : ''}</strong><br>O resultado será comparado com as duas referências do período escolhido.<div class="period-preview-grid"><div><span>META PELA FILIAL</span><b>${brl.format(analysis.branchMercantileTarget)}</b></div><div><span>ATINGIMENTO FILIAL</span><b>${pct2.format(analysis.branchMercantileRate)}</b></div><div><span>META INDIVIDUAL</span><b>${brl.format(analysis.mercantileTarget)}</b></div><div><span>ATINGIMENTO INDIVIDUAL</span><b>${pct2.format(analysis.mercantileRate)}</b></div></div>`
+      : `<strong>Imagem somente com a meta</strong><br>A imagem mostrará a missão da filial por vendedor, a missão individual e a mensagem motivacional, sem resultados.`;
     document.querySelectorAll('[data-mission-tone]').forEach((button) => button.classList.toggle('active', button.dataset.missionTone === tone));
     document.getElementById('sellerToneSuggestion').textContent = seller.missionTones?.[key] ? 'Tom escolhido manualmente para este dia' : `Sugestão automática: ${suggested === 'positive' ? 'resultado positivo' : 'apoio e recuperação'}`;
-    document.getElementById('sellerMotivationPreview').innerHTML = `<strong>${tone === 'positive' ? 'Mensagem de reconhecimento' : 'Mensagem de apoio'}</strong><br>${esc(message)}<br><small>Mensagem exclusiva deste dia; não se repete durante o mês.</small>`;
+    document.getElementById('sellerMotivationPreview').innerHTML = `${esc(message)}<br><small>Mensagem exclusiva deste dia; não se repete durante o mês.</small>`;
     document.getElementById('sellerMissionImage').disabled = !mission.percent;
   }
   async function exportSellerMissionImage(seller, key = selectedSellerMissionDate()) {
@@ -742,52 +749,49 @@
     const tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone);
     if (!mission.percent) { alert('Informe primeiro o percentual deste dia na meta diária da filial.'); return; }
     const hasFollowUp = analysis.hasResult;
-    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = hasFollowUp ? 2320 : 1540;
+    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = hasFollowUp ? 1970 : 1390;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     imageHeader(ctx, hasFollowUp ? 'RESULTADO - VENDEDOR' : 'MISSÃO DO DIA - VENDEDOR', `${seller.name || 'Vendedor'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Meta individual do dia', 64, 334);
-    drawCanvasMetric(ctx, 64, 365, 296, 142, 'Percentual do dia', `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
-    drawCanvasMetric(ctx, 392, 365, 296, 142, 'Mercantil do dia', brl.format(mission.mercantileGoal), true);
-    drawCanvasMetric(ctx, 720, 365, 296, 142, 'Serviços do dia 7%', brl.format(mission.serviceGoal));
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Planejamento individual', 64, 568);
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Missão do dia', 64, 334);
+    drawCanvasMetric(ctx, 64, 365, 296, 132, 'Percentual do dia', `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
+    drawCanvasMetric(ctx, 392, 365, 296, 132, 'Filial mercantil/vendedor', mission.sellerCount ? brl.format(mission.branchMercantilePerSeller) : 'Não configurada', true);
+    drawCanvasMetric(ctx, 720, 365, 296, 132, 'Individual mercantil', brl.format(mission.mercantileGoal));
+    drawCanvasMetric(ctx, 64, 519, 296, 132, 'Filial serviços/vendedor', mission.sellerCount ? brl.format(mission.branchServicePerSeller) : 'Não configurada', true);
+    drawCanvasMetric(ctx, 392, 519, 296, 132, 'Individual serviços', brl.format(mission.serviceGoal));
+    drawCanvasMetric(ctx, 720, 519, 296, 132, 'Eficiência • Conversão', '7% • 35%');
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Planejamento individual', 64, 710);
     const planningCards = [
-      ['Meta mercantil', brl.format(metrics.individualGoal), 'Meta individual cadastrada'], ['Meta serviços 7%', brl.format(metrics.serviceGoal), 'Meta consolidada de serviços'], ['Dias planejados', String(metrics.plannedDays), 'Jornada individual do vendedor'],
-      ['Meta média mercantil/dia', brl.format(metrics.targetDailyAverage), `Meta ÷ ${metrics.plannedDays} dias`], ['Meta média serviços/dia', brl.format(metrics.serviceTargetDailyAverage), `Meta 7% ÷ ${metrics.plannedDays} dias`], ['Dias restantes', String(metrics.remainingDays), `${num(seller.days)} dia(s) trabalhado(s)`]
+      ['Meta mercantil mensal', brl.format(metrics.individualGoal)], ['Meta serviços mensal 7%', brl.format(metrics.serviceGoal)],
+      ['Média mercantil diária', brl.format(metrics.targetDailyAverage)], ['Média serviços diária', brl.format(metrics.serviceTargetDailyAverage)]
     ];
-    planningCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 598 + row * 174, 296, 148, label, value, index === 0, note); });
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Indicadores fixos', 64, 960);
-    drawCanvasMetric(ctx, 64, 990, 296, 132, 'Eficiência de serviços', '7,00%', true, 'Serviços ÷ venda elegível');
-    drawCanvasMetric(ctx, 392, 990, 296, 132, 'Taxa de conversão', '35,00%', false, 'Elegível ÷ mercantil total');
-    drawCanvasMetric(ctx, 720, 990, 296, 132, 'Jornada individual', `${metrics.plannedDays} dias`, false, 'Não usa os dias da filial');
+    planningCards.forEach(([label, value], index) => { const col = index % 2, row = Math.floor(index / 2); drawCanvasMetric(ctx, 64 + col * 492, 742 + row * 150, 460, 128, label, value, index === 0); });
     if (hasFollowUp) {
-      const rangeNote = analysis.dateRange || `${analysis.periodDays} dia(s) considerado(s)`;
-      ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText(analysis.periodLabel, 64, 1182);
-      ctx.fillStyle = '#64748b'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(rangeNote, 64, 1210);
+      const rangeNote = analysis.dateRange || analysis.periodLabel;
+      ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Resultado do período', 64, 1085);
+      ctx.fillStyle = '#64748b'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(rangeNote, 64, 1114);
       const mercantileCards = [
-        ['Meta mercantil período', brl.format(analysis.mercantileTarget), `${analysis.periodDays} dia(s)`], ['Realizado mercantil', brl.format(analysis.sales), pct.format(analysis.mercantileRate)], [analysis.mercantileDifference >= 0 ? 'Acima da meta' : 'Falta mercantil', brl.format(Math.abs(analysis.mercantileDifference)), analysis.mercantileDifference >= 0 ? 'Meta superada' : 'Para atingir o período']
+        ['Mercantil realizado', brl.format(analysis.sales)],
+        [`Filial: ${analysis.branchMercantileDifference >= 0 ? 'acima' : 'falta'}`, brl.format(Math.abs(analysis.branchMercantileDifference)), `Atingiu ${pct2.format(analysis.branchMercantileRate)}`],
+        [`Individual: ${analysis.mercantileDifference >= 0 ? 'acima' : 'falta'}`, brl.format(Math.abs(analysis.mercantileDifference)), `Atingiu ${pct2.format(analysis.mercantileRate)}`]
       ];
-      mercantileCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1230, 296, 148, label, value, index === 1, note));
+      mercantileCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1135, 296, 142, label, value, index === 1, note));
       const serviceCards = [
-        ['Meta serviços período', brl.format(analysis.serviceTarget), '7% da meta mercantil'], ['Serviços realizados', brl.format(analysis.services), pct.format(analysis.serviceRate)], [analysis.serviceDifference >= 0 ? 'Acima da meta serviços' : 'Falta serviços', brl.format(Math.abs(analysis.serviceDifference)), analysis.serviceDifference >= 0 ? 'Meta superada' : 'Para atingir o período']
+        ['Serviços realizados', brl.format(analysis.services)],
+        [`Filial: ${analysis.branchServiceDifference >= 0 ? 'acima' : 'falta'}`, brl.format(Math.abs(analysis.branchServiceDifference)), `Atingiu ${pct2.format(analysis.branchServiceRate)}`],
+        [`Individual: ${analysis.serviceDifference >= 0 ? 'acima' : 'falta'}`, brl.format(Math.abs(analysis.serviceDifference)), `Atingiu ${pct2.format(analysis.serviceRate)}`]
       ];
-      serviceCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1402, 296, 148, label, value, index === 1, note));
+      serviceCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1299, 296, 142, label, value, index === 1, note));
       const indicatorCards = [
-        ['Eficiência atual', analysis.eligible ? efficiencyPct.format(analysis.efficiency) : 'Não calculada', analysis.eligible ? `${analysis.efficiency >= EFFICIENCY_TARGET ? 'Atingiu' : 'Abaixo de'} 7%` : 'Informe venda elegível'],
-        ['Conversão atual', analysis.sales ? efficiencyPct.format(analysis.conversion) : 'Não calculada', analysis.sales ? `${analysis.conversion >= CONVERSION_TARGET ? 'Atingiu' : 'Abaixo de'} 35%` : 'Informe venda mercantil'],
-        ['Venda elegível', brl.format(analysis.eligible), 'Base da eficiência']
+        ['Eficiência atual', analysis.eligible ? efficiencyPct.format(analysis.efficiency) : 'Não calculada', 'Meta 7%'],
+        ['Conversão atual', analysis.sales ? efficiencyPct.format(analysis.conversion) : 'Não calculada', 'Meta 35%'],
+        ['Situação', analysis.positive ? 'Meta atingida' : 'Abaixo da meta', analysis.positive ? 'Parabéns pelo resultado' : 'Siga firme na recuperação']
       ];
-      indicatorCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1574, 296, 148, label, value, index < 2, note));
-      const projectionCards = [
-        ['Média mercantil/dia', brl.format(metrics.dailyAverage), `${num(seller.days)} dia(s) informado(s)`], ['Projeção mensal', brl.format(metrics.projection), `${metrics.plannedDays} dias planejados`], ['Necessário/dia restante', brl.format(metrics.neededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
-      ];
-      projectionCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1746, 296, 148, label, value, false, note));
+      indicatorCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1463, 296, 142, label, value, index < 2, note));
     }
-    const motivationY = hasFollowUp ? 1940 : 1180, branchY = hasFollowUp ? 2205 : 1420, footerY = hasFollowUp ? 2260 : 1490;
-    ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, motivationY, 952, hasFollowUp ? 165 : 220, 26); ctx.fill();
-    ctx.fillStyle = tone === 'positive' ? '#087a4b' : '#b3263b'; ctx.font = '900 22px Arial, sans-serif'; ctx.fillText(tone === 'positive' ? 'MENSAGEM DE RECONHECIMENTO' : 'MENSAGEM DE APOIO E RECUPERAÇÃO', 92, motivationY + 40);
-    ctx.fillStyle = '#203a56'; ctx.font = '700 24px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 92, motivationY + 82, 884, 31, hasFollowUp ? 2 : 3);
-    if (!hasFollowUp) { ctx.fillStyle = '#526175'; ctx.font = '700 20px Arial, sans-serif'; ctx.fillText('Imagem de meta: nenhum resultado foi incluído neste compartilhamento.', 92, motivationY + 178); }
-    ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'} • ${metrics.plannedDays} dias planejados para este vendedor`, 64, branchY);
+    const motivationY = hasFollowUp ? 1650 : 1080, branchY = hasFollowUp ? 1875 : 1295, footerY = hasFollowUp ? 1920 : 1340;
+    ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, motivationY, 952, 170, 26); ctx.fill();
+    ctx.fillStyle = '#203a56'; ctx.font = '700 25px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 92, motivationY + 58, 884, 34, 3);
+    ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'}`, 64, branchY);
     ctx.fillStyle = '#748296'; ctx.font = '600 17px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, footerY);
     const safeName = String(seller.name || 'vendedor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
     await shareOrDownloadImage(canvas, `${hasFollowUp ? 'resultado' : 'missao-diaria'}-${safeName || 'vendedor'}-${key}.png`, `${hasFollowUp ? analysis.periodLabel : 'Missão do dia'} - ${seller.name || 'Vendedor'}`);
