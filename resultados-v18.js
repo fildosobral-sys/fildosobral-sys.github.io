@@ -322,6 +322,12 @@
     ctx.fillStyle = '#102a43'; ctx.font = '900 38px Arial, sans-serif'; ctx.fillText(value, x + 28, y + 93);
     if (note) { ctx.fillStyle = '#64748b'; ctx.font = '600 20px Arial, sans-serif'; ctx.fillText(note, x + 28, y + height - 22); }
   }
+  function drawWrappedCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+    const words = String(text || '').split(/\s+/); let line = '', lines = [];
+    words.forEach((word) => { const test = line ? `${line} ${word}` : word; if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = word; } else line = test; });
+    if (line) lines.push(line); lines = lines.slice(0, maxLines);
+    lines.forEach((item, index) => ctx.fillText(item, x, y + index * lineHeight));
+  }
   function canvasToBlob(canvas) {
     return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Falha ao gerar a imagem.')), 'image/png'));
   }
@@ -527,6 +533,13 @@
       const grossAvailable = hasCompleteGrossProfit(items);
       const serviceTarget = targetContext.useDaily ? num(db.mercantileGoal) * targetContext.share * 0.07 : num(db.servicesGoal) / weeks;
       const serviceRate = serviceTarget ? result.services / serviceTarget : 0;
+      const primaryTarget = weeklyTierTarget(tierGoals()[0], targetContext, weeks).mercantile;
+      const plannedDays = items.filter((item) => item.data.status !== 'off').length;
+      const sellerCount = Math.max(1, num(db.sellerCount), db.sellers.filter((seller) => seller.name?.trim()).length);
+      const salesGap = Math.max(0, primaryTarget - result.general), serviceGap = Math.max(0, serviceTarget - result.services);
+      const averageDay = result.worked ? result.general / result.worked : 0, serviceAverageDay = result.worked ? result.services / result.worked : 0;
+      const targetDay = plannedDays ? primaryTarget / plannedDays : 0, targetServiceDay = plannedDays ? serviceTarget / plannedDays : 0;
+      const paceProjection = averageDay * plannedDays, ticket = result.nfs ? result.general / result.nfs : 0;
       const goals = tierGoals().map((tier) => {
         const target = weeklyTierTarget(tier, targetContext, weeks), mercTarget = target.mercantile, grossTarget = target.grossProfit;
         const rates = tierRate(target, result.general, result.grossProfit, grossAvailable);
@@ -542,7 +555,8 @@
         : targetContext.configured
           ? `Percentuais diários incompletos (${targetContext.configured}/${targetContext.expected}); mantida a divisão mensal em ${weeks} semanas.`
           : `Meta semanal padrão: divisão mensal em ${weeks} semanas.`;
-      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><span class="pill ${primary.passed ? 'positive' : hasResults ? primary.overall >= 0.85 ? 'warning' : 'negative' : ''}">${visualText}</span></div><div class="week-metrics"><div class="metric"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(result.efficiency)}</strong></div><div class="metric"><span>DIAS PENDENTES</span><strong>${result.pendingDays}</strong></div></div><div class="hint">${targetNote}${grossAvailable ? '' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div><div class="week-goals">${goals}</div></article>`;
+      const weeklyTone = primary.passed ? 'positive' : 'support', weeklyMessage = missionMessage({ id: db.branch || 'filial', name: 'Equipe' }, items.at(-1).key, weeklyTone);
+      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><span class="pill ${primary.passed ? 'positive' : hasResults ? primary.overall >= 0.85 ? 'warning' : 'negative' : ''}">${visualText}</span></div><div class="week-metrics"><div class="metric"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(result.efficiency)}</strong></div><div class="metric"><span>DIAS PENDENTES</span><strong>${result.pendingDays}</strong></div></div><div class="week-analysis"><div class="metric"><span>MÉDIA MERCANTIL / DIA</span><strong>${brl.format(averageDay)}</strong><small>Meta/dia: ${brl.format(targetDay)}</small></div><div class="metric"><span>FALTOU / DIA</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? salesGap / plannedDays : 0)}</strong><small>Total: ${brl.format(salesGap)}</small></div><div class="metric"><span>FALTOU / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(salesGap / sellerCount)}</strong><small>${sellerCount} vendedor(es)</small></div><div class="metric"><span>PROJEÇÃO PELO RITMO</span><strong>${brl.format(paceProjection)}</strong><small>Ticket: ${brl.format(ticket)}</small></div><div class="metric"><span>MÉDIA SERVIÇOS / DIA</span><strong>${brl.format(serviceAverageDay)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)}</small></div><div class="metric"><span>SERVIÇOS: FALTOU / DIA</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? serviceGap / plannedDays : 0)}</strong><small>Total: ${brl.format(serviceGap)}</small></div><div class="metric"><span>SERVIÇOS / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(serviceGap / sellerCount)}</strong><small>Déficit médio</small></div><div class="metric"><span>NOTAS FISCAIS</span><strong>${result.nfs}</strong><small>${result.worked} dia(s) lançado(s)</small></div></div><div class="hint">${targetNote}${grossAvailable ? '' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div>${hasResults ? `<div class="week-motivation"><strong>${weeklyTone === 'positive' ? 'Reconhecimento da semana:' : 'Mensagem para a retomada:'}</strong> ${esc(weeklyMessage)}</div>` : ''}<div class="week-goals">${goals}</div></article>`;
     }).join('');
   }
 
@@ -568,6 +582,87 @@
     const grossReference = individualGoal * grossProfitRate();
     return { services, individualGoal, serviceGoal, grossReference, plannedDays, remainingDays, rate, serviceRate, ticket, efficiency, projection, serviceProjection, dailyAverage, serviceDailyAverage, missing, serviceMissing, neededPerDay, serviceNeededPerDay };
   }
+  const positiveMotivations = [
+    'Seu resultado mostra consistência. Continue firme e transforme o bom ritmo em uma grande entrega.',
+    'Parabéns pela evolução! Mantenha o foco e faça deste dia mais um passo acima.',
+    'Você está construindo um excelente caminho. Siga com energia, disciplina e confiança.',
+    'O bom resultado de hoje nasceu do seu esforço. Continue nessa pegada!',
+    'Seu desempenho inspira confiança. Preserve o ritmo e busque uma entrega ainda melhor.',
+    'Você está mostrando força comercial. Aproveite o embalo e avance com determinação.',
+    'Meta se conquista com constância, e você está no caminho certo. Vamos em frente!',
+    'Excelente ritmo! Continue cuidando de cada oportunidade e celebrando cada avanço.',
+    'Seu trabalho está aparecendo nos números. Mantenha a intensidade e vá além.',
+    'Parabéns pela entrega! Hoje é dia de repetir as boas atitudes e ampliar o resultado.',
+    'Você provou que consegue. Agora é manter a confiança e continuar crescendo.',
+    'O resultado positivo confirma sua dedicação. Siga firme, uma venda de cada vez.',
+    'Grande desempenho! Continue com atitude, presença e vontade de vencer.',
+    'Seu esforço está gerando resultado. Proteja esse ritmo e busque novas oportunidades.',
+    'Você está fazendo acontecer. Mantenha o foco e deixe seu resultado falar ainda mais alto.',
+    'Parabéns pelo avanço! Consistência hoje significa uma meta mais próxima amanhã.',
+    'O caminho está bem construído. Continue acelerando com qualidade e confiança.',
+    'Seu ritmo é positivo e merece reconhecimento. Siga forte até o fechamento.',
+    'Boa entrega! Continue transformando atendimento em confiança e confiança em resultado.',
+    'Você está vencendo o dia com trabalho. Mantenha a energia e continue avançando.',
+    'O resultado mostra que sua estratégia está funcionando. Repita o que deu certo e evolua.',
+    'Parabéns pela performance! Sua constância pode fazer deste mês um grande marco.',
+    'Você está deixando a meta cada vez mais perto. Continue firme e concentrado.',
+    'Ótimo trabalho! Preserve a disciplina e busque uma oportunidade a mais hoje.',
+    'Seu desempenho merece destaque. Continue com humildade, energia e ambição saudável.',
+    'O bom momento é fruto da sua dedicação. Aproveite e faça o dia render ainda mais.',
+    'Você está mostrando que resultado se constrói com atitude. Continue nessa direção.',
+    'Parabéns! Mantenha o padrão de excelência e siga conquistando novos resultados.',
+    'Seu avanço fortalece toda a equipe. Continue sendo protagonista da sua meta.',
+    'O ritmo está forte. Confie no processo, cuide do cliente e continue entregando.',
+    'Feche o dia com a mesma força que começou. Você está preparado para ir além.'
+  ];
+  const supportMotivations = [
+    'Um resultado abaixo do esperado não define sua capacidade. Levante a cabeça e recomece forte hoje.',
+    'Dias difíceis também fazem parte da caminhada. Confie em você e busque a próxima oportunidade.',
+    'Não carregue o peso de ontem. Hoje existe uma nova chance de fazer diferente e avançar.',
+    'Respire, reorganize o foco e siga. Sua reação de hoje pode mudar todo o resultado do mês.',
+    'O momento pede calma e atitude. Você tem capacidade para recuperar e surpreender.',
+    'Nem todo dia sai como planejado, mas todo novo dia permite uma grande retomada.',
+    'Seu potencial continua intacto. Ajuste a rota, mantenha a confiança e volte para o jogo.',
+    'Resultado é construção. Dê o próximo passo com coragem e deixe a evolução acontecer.',
+    'Não se abata pelos números atuais. Concentre-se na próxima venda e faça acontecer.',
+    'A meta ainda está viva. Trabalhe uma oportunidade por vez e confie na sua recuperação.',
+    'Você não precisa resolver tudo de uma vez. Vença o próximo atendimento e ganhe ritmo.',
+    'Transforme a pressão em direção. Foco no cliente, atitude na abordagem e confiança no fechamento.',
+    'O mês ainda oferece oportunidades. Recomece com energia e mostre sua força.',
+    'Uma fase difícil é passageira. Sua disciplina e sua atitude podem virar esse cenário.',
+    'Não permita que um resultado momentâneo diminua sua confiança. Você pode reagir.',
+    'A recuperação começa em uma decisão: acreditar, agir e persistir. Conte com a equipe.',
+    'Hoje é um novo ponto de partida. Faça o básico bem feito e recupere o ritmo.',
+    'Olhe para frente. Cada cliente é uma possibilidade real de mudar o seu dia.',
+    'Você já superou desafios antes. Use sua experiência e volte ainda mais determinado.',
+    'O resultado pode oscilar, mas sua atitude precisa permanecer forte. Siga em frente.',
+    'Sem culpa e sem medo: analise, ajuste e ataque as melhores oportunidades de hoje.',
+    'Acredite no processo. Constância e coragem transformam dias difíceis em grandes viradas.',
+    'Sua meta não exige perfeição, exige persistência. Continue tentando com inteligência.',
+    'Não desista do mês por causa de um dia. A próxima conversa pode abrir uma grande venda.',
+    'Você tem talento e capacidade. Recupere a confiança e coloque energia na próxima ação.',
+    'Toda virada começa pequena. Conquiste a primeira venda e deixe o ritmo crescer.',
+    'O cenário atual não é o resultado final. Continue trabalhando e escreva uma nova história.',
+    'Mantenha a cabeça erguida. O apoio está aqui e as oportunidades continuam chegando.',
+    'Use o resultado como orientação, não como peso. Ajuste a estratégia e avance.',
+    'Ainda há tempo para reagir. Faça deste dia o início de uma sequência positiva.',
+    'Confie na sua força. Persistência, foco e uma boa oportunidade podem mudar tudo.'
+  ];
+  const nameSeed = (value) => [...String(value || '')].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  function suggestedMissionTone(seller) {
+    const metrics = sellerMetrics(seller), hasResult = num(seller.general) > 0 || num(seller.days) > 0;
+    if (!hasResult) return 'positive';
+    return metrics.projection >= metrics.individualGoal || metrics.rate >= 1 ? 'positive' : 'support';
+  }
+  function selectedMissionTone(seller, key) {
+    return seller.missionTones?.[key] || suggestedMissionTone(seller);
+  }
+  function missionMessage(subject, key, tone = 'positive') {
+    const day = Math.max(1, Number(String(key).slice(-2)) || 1), list = tone === 'support' ? supportMotivations : positiveMotivations;
+    const index = (day - 1 + nameSeed(subject?.id || subject?.name) % list.length) % list.length;
+    const firstName = String(subject?.name || 'Equipe').trim().split(/\s+/)[0] || 'Equipe';
+    return `${firstName}, ${list[index].charAt(0).toLowerCase()}${list[index].slice(1)}`;
+  }
   function sellerMissionMetrics(seller, key) {
     const metrics = sellerMetrics(seller), percent = num(dayData(key).goalPercent);
     const mercantileGoal = metrics.individualGoal * percent / 100;
@@ -583,15 +678,19 @@
   }
   function renderSellerMission(seller) {
     const key = selectedSellerMissionDate(), mission = sellerMissionMetrics(seller, key);
+    const suggested = suggestedMissionTone(seller), tone = selectedMissionTone(seller, key), message = missionMessage(seller, key, tone);
     document.getElementById('sellerMissionSummary').innerHTML = [
       ['Percentual do dia', mission.percent ? `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : 'Não informado'],
       ['Meta mercantil do dia', brl.format(mission.mercantileGoal)], ['Serviços/garantia (7%)', brl.format(mission.serviceGoal)]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    document.querySelectorAll('[data-mission-tone]').forEach((button) => button.classList.toggle('active', button.dataset.missionTone === tone));
+    document.getElementById('sellerToneSuggestion').textContent = seller.missionTones?.[key] ? 'Tom escolhido manualmente para este dia' : `Sugestão automática: ${suggested === 'positive' ? 'resultado positivo' : 'apoio e recuperação'}`;
+    document.getElementById('sellerMotivationPreview').innerHTML = `<strong>${tone === 'positive' ? 'Mensagem de reconhecimento' : 'Mensagem de apoio'}</strong><br>${esc(message)}<br><small>Mensagem exclusiva deste dia; não se repete durante o mês.</small>`;
     document.getElementById('sellerMissionImage').disabled = !mission.percent;
   }
   async function exportSellerMissionImage(seller, key = selectedSellerMissionDate()) {
     if (!seller) return;
-    const mission = sellerMissionMetrics(seller, key), metrics = mission.metrics;
+    const mission = sellerMissionMetrics(seller, key), metrics = mission.metrics, tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone);
     if (!mission.percent) { alert('Informe primeiro o percentual deste dia na meta diária da filial.'); return; }
     const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1800;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -612,9 +711,12 @@
       ['Média serviços/dia', brl.format(metrics.serviceDailyAverage), `${num(seller.days)} dia(s) informado(s)`], ['Projeção serviços', brl.format(metrics.serviceProjection), `${metrics.plannedDays} dias planejados`], ['Necessário/dia', brl.format(metrics.serviceNeededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
     ];
     serviceCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 1036 + row * 174, 296, 148, label, value, index === 1, note); });
-    drawCanvasMetric(ctx, 64, 1420, 952, 154, 'Eficiência atual', efficiencyPct.format(metrics.efficiency), true, 'Serviços realizados ÷ venda elegível');
-    ctx.fillStyle = '#102a43'; ctx.font = '800 22px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'} • acompanhamento acumulado informado pelo gestor`, 64, 1650);
-    ctx.fillStyle = '#748296'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1750);
+    drawCanvasMetric(ctx, 64, 1400, 952, 112, 'Eficiência atual', efficiencyPct.format(metrics.efficiency), true);
+    ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, 1534, 952, 150, 26); ctx.fill();
+    ctx.fillStyle = tone === 'positive' ? '#087a4b' : '#b3263b'; ctx.font = '900 22px Arial, sans-serif'; ctx.fillText(tone === 'positive' ? 'MENSAGEM DE RECONHECIMENTO' : 'MENSAGEM DE APOIO E RECUPERAÇÃO', 92, 1572);
+    ctx.fillStyle = '#203a56'; ctx.font = '700 24px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 92, 1612, 884, 29, 2);
+    ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'} • acompanhamento informado pelo gestor`, 64, 1725);
+    ctx.fillStyle = '#748296'; ctx.font = '600 17px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1770);
     const safeName = String(seller.name || 'vendedor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
     await shareOrDownloadImage(canvas, `missao-diaria-${safeName || 'vendedor'}-${key}.png`, `Missão do dia - ${seller.name || 'Vendedor'}`);
   }
@@ -805,8 +907,92 @@
     const sellerSales = (record.sellers || []).reduce((sum, seller) => sum + num(seller.general), 0);
     return Math.max(0, dailySales || sellerSales);
   }
+  function relativeMonth(month, offset) {
+    const [year, number] = String(month || db.month).split('-').map(Number);
+    const date = new Date(year, number - 1 + offset, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }
+  function recordForMonth(month) {
+    if (month === db.month) return db;
+    const direct = vault.records?.[recordKey(db.branch, month)];
+    if (direct) return direct;
+    const branch = String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
+    return Object.values(vault.records || {}).find((record) => record.month === month && String(record.branch || '').trim().toLocaleUpperCase('pt-BR') === branch) || null;
+  }
+  function recordCalendar(record, month) {
+    const [year, number] = month.split('-').map(Number), count = new Date(year, number, 0).getDate();
+    return Array.from({ length: count }, (_, index) => {
+      const date = new Date(year, number - 1, index + 1), key = `${month}-${String(index + 1).padStart(2, '0')}`;
+      const stored = record?.daily?.[key] || {};
+      return { date, key, data: { status: date.getDay() === 0 ? 'off' : 'pending', ...stored } };
+    });
+  }
+  function recordAggregate(items, record) {
+    const days = items.map((item) => item.data || item), working = days.filter((day) => day.status !== 'off');
+    const sales = days.reduce((sum, day) => sum + num(day.general), 0), eligible = days.reduce((sum, day) => sum + num(day.eligible), 0);
+    const services = days.reduce((sum, day) => sum + num(day.warranty) + num(day.other) + num(day.mixed), 0);
+    const nfs = days.reduce((sum, day) => sum + num(day.nfs), 0), worked = days.filter((day) => day.status === 'done').length;
+    return { sales, eligible, services, nfs, worked, plannedDays: working.length, efficiency: eligible ? services / eligible : 0, ticket: nfs ? sales / nfs : 0, ecommerce: 0, returns: 0 };
+  }
+  function makePeriodPoint({ label, sublabel, stats, target, serviceTarget, sellerCount, hasData }) {
+    const sales = Math.max(0, stats.sales + num(stats.ecommerce) - num(stats.returns)), services = stats.services;
+    const plannedDays = Math.max(1, stats.plannedDays), worked = stats.worked;
+    const gap = Math.max(0, target - sales), serviceGap = Math.max(0, serviceTarget - services);
+    return { label, sublabel, sales, services, target, serviceTarget, rate: target ? sales / target : 0, serviceRate: serviceTarget ? services / serviceTarget : 0, worked, plannedDays, averageDay: worked ? sales / worked : 0, targetDay: target / plannedDays, gap, gapDay: gap / plannedDays, gapSeller: gap / Math.max(1, sellerCount), serviceAverageDay: worked ? services / worked : 0, serviceTargetDay: serviceTarget / plannedDays, serviceGap, serviceGapDay: serviceGap / plannedDays, serviceGapSeller: serviceGap / Math.max(1, sellerCount), sellerCount, ticket: stats.ticket, nfs: stats.nfs, projection: worked ? (sales / worked) * plannedDays : 0, efficiency: stats.efficiency, hasData };
+  }
+  function compiledTemporalAnalysis() {
+    const interval = document.getElementById('compiledPeriod')?.value || vault.compiledPreferences?.period || 'month';
+    const reference = document.getElementById('compiledReference')?.value || vault.compiledPreferences?.reference || db.month;
+    let points = [];
+    if (interval === 'month') {
+      const record = recordForMonth(reference), calendar = recordCalendar(record, reference), weekCount = automaticWeeks(reference);
+      points = Array.from({ length: weekCount }, (_, index) => calendar.slice(index * 7, Math.min(calendar.length, (index + 1) * 7))).filter((items) => items.length).map((items, index) => {
+        const stats = recordAggregate(items, record), working = items.filter((item) => item.data.status !== 'off');
+        const configured = working.filter((item) => num(item.data.goalPercent) > 0), share = configured.reduce((sum, item) => sum + num(item.data.goalPercent), 0) / 100;
+        const useDaily = working.length > 0 && configured.length === working.length;
+        const target = useDaily ? num(record?.mercantileGoal) * share : num(record?.mercantileGoal) / Math.max(1, num(record?.weeks) || weekCount);
+        const serviceTarget = useDaily ? num(record?.mercantileGoal) * share * 0.07 : num(record?.servicesGoal) / Math.max(1, num(record?.weeks) || weekCount);
+        const sellerCount = Math.max(1, num(record?.sellerCount), (record?.sellers || []).filter((seller) => seller.name?.trim()).length);
+        const first = items[0].date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), last = items.at(-1).date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        return makePeriodPoint({ label: `${index + 1}ª semana`, sublabel: `${first} a ${last}`, stats, target, serviceTarget, sellerCount, hasData: Boolean(record && (stats.worked || stats.sales || stats.services)) });
+      });
+    } else {
+      const length = interval === 'quarter' ? 3 : interval === 'semester' ? 6 : 12;
+      const months = Array.from({ length }, (_, index) => relativeMonth(reference, index - length + 1));
+      points = months.map((month) => {
+        const record = recordForMonth(month), stats = recordAggregate(recordCalendar(record, month), record);
+        stats.ecommerce = num(record?.ecommerce); stats.returns = num(record?.returns);
+        const target = num(record?.mercantileGoal), serviceTarget = num(record?.servicesGoal) || target * 0.07;
+        const sellerCount = Math.max(1, num(record?.sellerCount), (record?.sellers || []).filter((seller) => seller.name?.trim()).length);
+        return makePeriodPoint({ label: monthLabel(month), sublabel: record ? `${stats.worked} dia(s) lançado(s)` : 'Sem dados armazenados', stats, target, serviceTarget, sellerCount, hasData: Boolean(record && (stats.worked || stats.sales || stats.services)) });
+      });
+    }
+    const valid = points.filter((point) => point.hasData), ranked = [...valid].sort((a, b) => b.rate - a.rate);
+    const totals = valid.reduce((sum, point) => ({ sales: sum.sales + point.sales, services: sum.services + point.services, target: sum.target + point.target, serviceTarget: sum.serviceTarget + point.serviceTarget, worked: sum.worked + point.worked, gap: sum.gap + point.gap, nfs: sum.nfs + point.nfs }), { sales: 0, services: 0, target: 0, serviceTarget: 0, worked: 0, gap: 0, nfs: 0 });
+    return { interval, reference, points, valid, best: ranked[0] || null, worst: ranked.at(-1) || null, bestEfficiency: [...valid].sort((a, b) => b.efficiency - a.efficiency)[0] || null, totals };
+  }
+  function renderTemporalDashboard() {
+    const data = compiledTemporalAnalysis(), totals = data.totals;
+    const intervalName = data.interval === 'month' ? monthLabel(data.reference) : data.interval === 'quarter' ? 'trimestre móvel' : data.interval === 'semester' ? 'semestre móvel' : 'últimos 12 meses';
+    document.getElementById('periodDashboardHint').textContent = data.interval === 'month' ? `${monthLabel(data.reference)} detalhado por semanas.` : `${intervalName} encerrado em ${monthLabel(data.reference)}, detalhado por meses.`;
+    document.getElementById('periodSummary').innerHTML = [
+      ['Venda no período', brl.format(totals.sales)], ['Atingimento mercantil', totals.target ? pct.format(totals.sales / totals.target) : 'Sem meta'],
+      ['Média por dia lançado', brl.format(totals.worked ? totals.sales / totals.worked : 0)], ['Falta total', brl.format(totals.gap)]
+    ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    document.getElementById('periodHighlights').innerHTML = data.valid.length ? [
+      ['MELHOR PERÍODO', data.best.label, `${pct.format(data.best.rate)} da meta`], ['PERÍODO DE ATENÇÃO', data.worst.label, `${pct.format(data.worst.rate)} da meta`],
+      ['MAIOR EFICIÊNCIA', data.bestEfficiency.label, efficiencyPct.format(data.bestEfficiency.efficiency)]
+    ].map(([label, value, note]) => `<article class="period-highlight"><span>${label}</span><strong>${esc(value)}</strong><small>${esc(note)}</small></article>`).join('') : '<div class="empty">Ainda não há lançamentos no intervalo escolhido.</div>';
+    document.getElementById('periodChart').innerHTML = data.points.map((point) => `<article class="period-chart-row"><div class="period-chart-head"><strong>${esc(point.label)}</strong><span>${point.hasData ? `${brl.format(point.sales)} · ${pct.format(point.rate)}` : 'Sem dados'}</span></div><div class="bar-line"><label>Mercantil</label><div class="bar-track"><span class="bar-fill" style="width:${Math.min(100, point.rate * 100).toFixed(2)}%"></span></div><b>${pct.format(point.rate)}</b></div><div class="bar-line"><label>Serviços</label><div class="bar-track"><span class="bar-fill service" style="width:${Math.min(100, point.serviceRate * 100).toFixed(2)}%"></span></div><b>${pct.format(point.serviceRate)}</b></div></article>`).join('');
+    document.getElementById('periodDetailGrid').innerHTML = data.points.map((point) => {
+      const marker = data.valid.length > 1 && point === data.best ? 'best' : data.valid.length > 1 && point === data.worst ? 'worst' : '';
+      const mini = (label, value, className = '') => `<div class="period-mini"><span>${label}</span><strong class="${className}">${value}</strong></div>`;
+      return `<article class="period-detail ${marker}"><header><div><strong>${esc(point.label)}</strong><small>${esc(point.sublabel)}</small></div><div class="period-rate ${statusClass(point.rate)}">${pct.format(point.rate)}</div></header><div class="period-detail-metrics">${mini('VENDA', brl.format(point.sales))}${mini('META', brl.format(point.target))}${mini('MÉDIA / DIA', brl.format(point.averageDay))}${mini('META / DIA', brl.format(point.targetDay))}${mini('FALTA TOTAL', brl.format(point.gap), point.gap ? 'negative' : 'positive')}${mini('FALTA / DIA', brl.format(point.gapDay), point.gap ? 'negative' : 'positive')}${mini('FALTA / VENDEDOR', brl.format(point.gapSeller), point.gap ? 'negative' : 'positive')}${mini('PROJEÇÃO', brl.format(point.projection))}${mini('TICKET MÉDIO', brl.format(point.ticket))}${mini('SERVIÇOS', brl.format(point.services))}${mini('SERVIÇOS / DIA', brl.format(point.serviceAverageDay))}${mini('SERVIÇOS: FALTA / DIA', brl.format(point.serviceGapDay), point.serviceGap ? 'negative' : 'positive')}${mini('SERVIÇOS: FALTA / VEND.', brl.format(point.serviceGapSeller), point.serviceGap ? 'negative' : 'positive')}${mini('EFICIÊNCIA', efficiencyPct.format(point.efficiency))}${mini('NOTAS FISCAIS', point.nfs)}</div></article>`;
+    }).join('');
+  }
   function compiledAnalysis() {
-    const period = Math.max(1, Number(document.getElementById('compiledPeriod')?.value || vault.compiledPreferences?.period || 3));
+    const selectedPeriod = document.getElementById('compiledPeriod')?.value || vault.compiledPreferences?.period || 'month';
+    const period = selectedPeriod === 'semester' ? 6 : selectedPeriod === 'year' ? 12 : 3;
     const months = Array.from({ length: period }, (_, index) => previousMonth(db.month, index + 1));
     const branch = String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
     const historicalRecords = months.map((month) => vault.records[recordKey(db.branch, month)]).filter((record) => record && String(record.branch || '').trim().toLocaleUpperCase('pt-BR') === branch);
@@ -846,10 +1032,17 @@
   function renderCompiled() {
     const mode = document.getElementById('compiledMode'); if (!mode) return;
     const periodSelect = document.getElementById('compiledPeriod');
-    if (!periodSelect.dataset.ready) { if (vault.compiledPreferences?.period) periodSelect.value = vault.compiledPreferences.period; periodSelect.dataset.ready = '1'; }
+    const referenceInput = document.getElementById('compiledReference');
+    if (!periodSelect.dataset.ready) {
+      const savedPeriod = vault.compiledPreferences?.period;
+      periodSelect.value = ['month', 'quarter', 'semester', 'year'].includes(savedPeriod) ? savedPeriod : savedPeriod === '6' ? 'semester' : savedPeriod === '12' ? 'year' : 'month';
+      referenceInput.value = vault.compiledPreferences?.reference || db.month;
+      periodSelect.dataset.ready = '1';
+    }
     const previous = mode.value || vault.compiledPreferences?.mode || 'all';
     mode.innerHTML = '<option value="all">Filial × todos os vendedores</option>' + db.sellers.filter((seller) => seller.name?.trim()).map((seller, index) => `<option value="${esc(sellerIdentity(seller, index))}">Filial × ${esc(seller.name.trim())}</option>`).join('');
     if ([...mode.options].some((option) => option.value === previous)) mode.value = previous;
+    renderTemporalDashboard();
     const data = compiledAnalysis(), visibleRows = mode.value === 'all' ? data.rows : data.rows.filter((row) => row.id === mode.value);
     const aligned = data.rows.filter((row) => row.diagnosisClass !== 'down').length, growing = data.rows.filter((row) => row.sellerTrend > 0.025).length, attention = data.rows.filter((row) => row.diagnosisClass === 'down').length;
     document.getElementById('compiledSummary').innerHTML = [
@@ -1083,8 +1276,8 @@
     persist(false); renderGoalsHistory();
   }));
   document.getElementById('refreshGoals').addEventListener('click', renderGoalsHistory);
-  ['compiledMode', 'compiledPeriod'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
-    vault.compiledPreferences = { mode: document.getElementById('compiledMode').value, period: document.getElementById('compiledPeriod').value };
+  ['compiledMode', 'compiledPeriod', 'compiledReference'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
+    vault.compiledPreferences = { mode: document.getElementById('compiledMode').value, period: document.getElementById('compiledPeriod').value, reference: document.getElementById('compiledReference').value || db.month };
     persist(false); renderCompiled();
   }));
   document.getElementById('refreshCompiled').addEventListener('click', renderCompiled);
@@ -1092,6 +1285,11 @@
   document.getElementById('sellerMissionDate').addEventListener('change', () => {
     const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (seller) renderSellerMission(seller);
   });
+  document.querySelectorAll('[data-mission-tone]').forEach((button) => button.addEventListener('click', () => {
+    const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (!seller) return;
+    const key = selectedSellerMissionDate(); seller.missionTones = { ...(seller.missionTones || {}), [key]: button.dataset.missionTone };
+    seller.updatedAt = new Date().toISOString(); persist(false); renderSellerMission(seller);
+  }));
   document.getElementById('sellerMissionImage').addEventListener('click', () => {
     const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId); if (seller) exportSellerMissionImage(seller);
   });
