@@ -330,6 +330,14 @@
     ctx.fillStyle = '#102a43'; fitCanvasFont(ctx, value, width - 56, 900, 38, 21); ctx.fillText(value, x + 28, y + 93);
     if (note) { ctx.fillStyle = '#64748b'; fitCanvasFont(ctx, note, width - 56, 600, 20, 13); ctx.fillText(note, x + 28, y + height - 22); }
   }
+  function drawCenteredCanvasMetric(ctx, x, y, width, height, label, value, accent = false, note = '') {
+    ctx.fillStyle = accent ? '#e3f2ff' : '#f4f7fc'; roundedCanvasRect(ctx, x, y, width, height, 24); ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#64748b'; fitCanvasFont(ctx, String(label).toUpperCase(), width - 48, 800, 21, 13); ctx.fillText(String(label).toUpperCase(), x + width / 2, y + 41);
+    ctx.fillStyle = '#102a43'; fitCanvasFont(ctx, value, width - 48, 900, 37, 20); ctx.fillText(value, x + width / 2, y + 91);
+    if (note) { ctx.fillStyle = '#64748b'; fitCanvasFont(ctx, note, width - 48, 600, 18, 12); ctx.fillText(note, x + width / 2, y + height - 20); }
+    ctx.textAlign = 'left';
+  }
   function drawWrappedCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
     const words = String(text || '').split(/\s+/); let line = '', lines = [];
     words.forEach((word) => { const test = line ? `${line} ${word}` : word; if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = word; } else line = test; });
@@ -346,11 +354,12 @@
     } catch (error) { if (error.name === 'AbortError') return; }
     const anchor = document.createElement('a'); anchor.href = URL.createObjectURL(blob); anchor.download = filename; anchor.click(); setTimeout(() => URL.revokeObjectURL(anchor.href), 1200);
   }
-  function imageHeader(ctx, title, subtitle, width) {
+  function imageHeader(ctx, title, subtitle, width, centered = false) {
     const gradient = ctx.createLinearGradient(0, 0, width, 0); gradient.addColorStop(0, '#0879e8'); gradient.addColorStop(1, '#6b4ce6');
     ctx.fillStyle = gradient; roundedCanvasRect(ctx, 54, 50, width - 108, 220, 38); ctx.fill();
-    ctx.fillStyle = '#ffffff'; ctx.font = '900 53px Arial, sans-serif'; ctx.fillText(title, 92, 139);
-    ctx.font = '600 25px Arial, sans-serif'; ctx.fillText(subtitle, 92, 198);
+    const textX = centered ? width / 2 : 92; ctx.textAlign = centered ? 'center' : 'left';
+    ctx.fillStyle = '#ffffff'; ctx.font = '900 53px Arial, sans-serif'; ctx.fillText(title, textX, 139);
+    ctx.font = '600 25px Arial, sans-serif'; ctx.fillText(subtitle, textX, 198); ctx.textAlign = 'left';
   }
   async function exportDailyGoalImage(key) {
     const data = dayData(key), metrics = dailyGoalMetrics(key, data);
@@ -731,8 +740,8 @@
     const suggested = suggestedMissionTone(seller, key), tone = selectedMissionTone(seller, key), message = missionMessage(seller, key, tone);
     document.getElementById('sellerMissionSummary').innerHTML = [
       ['Percentual do dia', mission.percent ? `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : 'Não informado'],
-      ['Filial mercantil/vendedor', mission.sellerCount ? brl.format(mission.branchMercantilePerSeller) : 'Equipe não configurada'], ['Individual mercantil', brl.format(mission.mercantileGoal)],
-      ['Filial serviços/vendedor', mission.sellerCount ? brl.format(mission.branchServicePerSeller) : 'Equipe não configurada'], ['Individual serviços', brl.format(mission.serviceGoal)], ['Metas fixas', 'Eficiência 7% • Conversão 35%']
+      ['Mercantil da filial/vendedor', mission.sellerCount ? brl.format(mission.branchMercantilePerSeller) : 'Equipe não configurada'], ['Serviços da filial/vendedor', mission.sellerCount ? brl.format(mission.branchServicePerSeller) : 'Equipe não configurada'],
+      ['Eficiência', '7,00%'], ['Conversão', '35,00%'], [`${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% sobre a meta individual`, brl.format(mission.mercantileGoal)], ['Serviços individuais do dia', brl.format(mission.serviceGoal)]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     const preview = document.getElementById('sellerPeriodPreview');
     preview.innerHTML = analysis.hasResult
@@ -749,50 +758,50 @@
     const tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone);
     if (!mission.percent) { alert('Informe primeiro o percentual deste dia na meta diária da filial.'); return; }
     const hasFollowUp = analysis.hasResult;
-    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = hasFollowUp ? 1970 : 1390;
+    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = hasFollowUp ? 2000 : 1410;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    imageHeader(ctx, hasFollowUp ? 'RESULTADO - VENDEDOR' : 'MISSÃO DO DIA - VENDEDOR', `${seller.name || 'Vendedor'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Missão do dia', 64, 334);
-    drawCanvasMetric(ctx, 64, 365, 296, 132, 'Percentual do dia', `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
-    drawCanvasMetric(ctx, 392, 365, 296, 132, 'Filial mercantil/vendedor', mission.sellerCount ? brl.format(mission.branchMercantilePerSeller) : 'Não configurada', true);
-    drawCanvasMetric(ctx, 720, 365, 296, 132, 'Individual mercantil', brl.format(mission.mercantileGoal));
-    drawCanvasMetric(ctx, 64, 519, 296, 132, 'Filial serviços/vendedor', mission.sellerCount ? brl.format(mission.branchServicePerSeller) : 'Não configurada', true);
-    drawCanvasMetric(ctx, 392, 519, 296, 132, 'Individual serviços', brl.format(mission.serviceGoal));
-    drawCanvasMetric(ctx, 720, 519, 296, 132, 'Eficiência • Conversão', '7% • 35%');
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Planejamento individual', 64, 710);
-    const planningCards = [
-      ['Meta mercantil mensal', brl.format(metrics.individualGoal)], ['Meta serviços mensal 7%', brl.format(metrics.serviceGoal)],
-      ['Média mercantil diária', brl.format(metrics.targetDailyAverage)], ['Média serviços diária', brl.format(metrics.serviceTargetDailyAverage)]
-    ];
-    planningCards.forEach(([label, value], index) => { const col = index % 2, row = Math.floor(index / 2); drawCanvasMetric(ctx, 64 + col * 492, 742 + row * 150, 460, 128, label, value, index === 0); });
+    imageHeader(ctx, hasFollowUp ? 'RESULTADO - VENDEDOR' : 'MISSÃO DO DIA - VENDEDOR', `${seller.name || 'Vendedor'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width, true);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Pedido da empresa para a filial', canvas.width / 2, 334); ctx.textAlign = 'left';
+    drawCenteredCanvasMetric(ctx, 64, 365, 296, 132, 'Percentual do dia', `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
+    drawCenteredCanvasMetric(ctx, 392, 365, 296, 132, 'Mercantil por vendedor', mission.sellerCount ? brl.format(mission.branchMercantilePerSeller) : 'Não configurada', true);
+    drawCenteredCanvasMetric(ctx, 720, 365, 296, 132, 'Serviços por vendedor', mission.sellerCount ? brl.format(mission.branchServicePerSeller) : 'Não configurada', true);
+    drawCenteredCanvasMetric(ctx, 228, 519, 296, 132, 'Eficiência', '7,00%');
+    drawCenteredCanvasMetric(ctx, 556, 519, 296, 132, 'Conversão', '35,00%');
+    ctx.textAlign = 'center'; ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Meta individual do vendedor', canvas.width / 2, 710);
+    ctx.fillStyle = '#64748b'; ctx.font = '700 20px Arial, sans-serif'; ctx.fillText(`Meta mensal cadastrada: ${brl.format(metrics.individualGoal)}`, canvas.width / 2, 744); ctx.textAlign = 'left';
+    drawCenteredCanvasMetric(ctx, 64, 775, 296, 132, 'Percentual aplicado', `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
+    drawCenteredCanvasMetric(ctx, 392, 775, 296, 132, `Individual mercantil (${mission.percent.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%)`, brl.format(mission.mercantileGoal), true);
+    drawCenteredCanvasMetric(ctx, 720, 775, 296, 132, 'Serviços individuais (7%)', brl.format(mission.serviceGoal));
+    drawCenteredCanvasMetric(ctx, 228, 929, 296, 132, 'Média diária da meta mensal', brl.format(metrics.targetDailyAverage));
+    drawCenteredCanvasMetric(ctx, 556, 929, 296, 132, 'Média diária de serviços', brl.format(metrics.serviceTargetDailyAverage));
     if (hasFollowUp) {
       const rangeNote = analysis.dateRange || analysis.periodLabel;
-      ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Resultado do período', 64, 1085);
-      ctx.fillStyle = '#64748b'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(rangeNote, 64, 1114);
+      ctx.textAlign = 'center'; ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Resultado do período', canvas.width / 2, 1120);
+      ctx.fillStyle = '#64748b'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(rangeNote, canvas.width / 2, 1149); ctx.textAlign = 'left';
       const mercantileCards = [
         ['Mercantil realizado', brl.format(analysis.sales)],
         [`Filial: ${analysis.branchMercantileDifference >= 0 ? 'acima' : 'falta'}`, brl.format(Math.abs(analysis.branchMercantileDifference)), `Atingiu ${pct2.format(analysis.branchMercantileRate)}`],
         [`Individual: ${analysis.mercantileDifference >= 0 ? 'acima' : 'falta'}`, brl.format(Math.abs(analysis.mercantileDifference)), `Atingiu ${pct2.format(analysis.mercantileRate)}`]
       ];
-      mercantileCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1135, 296, 142, label, value, index === 1, note));
+      mercantileCards.forEach(([label, value, note], index) => drawCenteredCanvasMetric(ctx, 64 + index * 328, 1170, 296, 142, label, value, index === 1, note));
       const serviceCards = [
         ['Serviços realizados', brl.format(analysis.services)],
         [`Filial: ${analysis.branchServiceDifference >= 0 ? 'acima' : 'falta'}`, brl.format(Math.abs(analysis.branchServiceDifference)), `Atingiu ${pct2.format(analysis.branchServiceRate)}`],
         [`Individual: ${analysis.serviceDifference >= 0 ? 'acima' : 'falta'}`, brl.format(Math.abs(analysis.serviceDifference)), `Atingiu ${pct2.format(analysis.serviceRate)}`]
       ];
-      serviceCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1299, 296, 142, label, value, index === 1, note));
+      serviceCards.forEach(([label, value, note], index) => drawCenteredCanvasMetric(ctx, 64 + index * 328, 1334, 296, 142, label, value, index === 1, note));
       const indicatorCards = [
         ['Eficiência atual', analysis.eligible ? efficiencyPct.format(analysis.efficiency) : 'Não calculada', 'Meta 7%'],
         ['Conversão atual', analysis.sales ? efficiencyPct.format(analysis.conversion) : 'Não calculada', 'Meta 35%'],
         ['Situação', analysis.positive ? 'Meta atingida' : 'Abaixo da meta', analysis.positive ? 'Parabéns pelo resultado' : 'Siga firme na recuperação']
       ];
-      indicatorCards.forEach(([label, value, note], index) => drawCanvasMetric(ctx, 64 + index * 328, 1463, 296, 142, label, value, index < 2, note));
+      indicatorCards.forEach(([label, value, note], index) => drawCenteredCanvasMetric(ctx, 64 + index * 328, 1498, 296, 142, label, value, index < 2, note));
     }
-    const motivationY = hasFollowUp ? 1650 : 1080, branchY = hasFollowUp ? 1875 : 1295, footerY = hasFollowUp ? 1920 : 1340;
+    const motivationY = hasFollowUp ? 1685 : 1100, branchY = hasFollowUp ? 1900 : 1310, footerY = hasFollowUp ? 1940 : 1350;
     ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, motivationY, 952, 170, 26); ctx.fill();
-    ctx.fillStyle = '#203a56'; ctx.font = '700 25px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 92, motivationY + 58, 884, 34, 3);
-    ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'}`, 64, branchY);
-    ctx.fillStyle = '#748296'; ctx.font = '600 17px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, footerY);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#203a56'; ctx.font = '700 25px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, canvas.width / 2, motivationY + 58, 884, 34, 3);
+    ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'}`, canvas.width / 2, branchY);
+    ctx.fillStyle = '#748296'; ctx.font = '600 17px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, canvas.width / 2, footerY); ctx.textAlign = 'left';
     const safeName = String(seller.name || 'vendedor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
     await shareOrDownloadImage(canvas, `${hasFollowUp ? 'resultado' : 'missao-diaria'}-${safeName || 'vendedor'}-${key}.png`, `${hasFollowUp ? analysis.periodLabel : 'Missão do dia'} - ${seller.name || 'Vendedor'}`);
   }
