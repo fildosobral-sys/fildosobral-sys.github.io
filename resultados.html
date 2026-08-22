@@ -135,7 +135,8 @@
   @media(max-width:760px){.seller-accordion-toggle{grid-template-columns:1fr auto 30px}.seller-accordion-kpi{display:none}.seller-accordion-toggle .pill{font-size:10px}.seller-card-content{padding:11px}.seller-card-head input{order:0;width:100%}.seller-card-head .seller-open{order:2}.seller-card-head [data-remove]{order:1}.seller-period-grid{grid-template-columns:1fr}.seller-period-preview .period-preview-grid{grid-template-columns:1fr 1fr}}
 </style>
 
-<style id="results-weekly-charts-v40">
+<style id="results-weekly-charts-v41">
+  .week-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}.week-pending-chip{padding:6px 9px;border-radius:999px;background:#eef1f6;color:#596579;font-size:10px;font-weight:900;white-space:nowrap}.week-pending-chip.current{background:#ffedb5;color:#855800}
   .week-status-toggle{display:flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:8px 12px;font-weight:950;background:#edf1f7;color:var(--ink)}
   .week-status-toggle.positive{background:#dff6ea}.week-status-toggle.warning{background:#fff1c9}.week-status-toggle.negative{background:#ffe1e6}
   .week-status-toggle .chevron{font-size:15px;transition:transform .2s}.week-status-toggle[aria-expanded="true"] .chevron{transform:rotate(180deg)}
@@ -145,9 +146,14 @@
   .week-chart-title{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:13px}.week-chart-title strong{font-size:15px}.week-chart-title span{font-size:11px;color:var(--muted)}
   .week-donut-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.week-donut-item{text-align:center}.week-donut{--rate:0;--donut:#0879e8;width:116px;max-width:100%;aspect-ratio:1;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--donut) calc(var(--rate)*1%),#e7ecf3 0)}
   .week-donut:after{content:"";position:absolute;inset:14px;border-radius:50%;background:#fff}.week-donut strong{position:relative;z-index:1;font-size:16px}.week-donut-item>strong{display:block;font-size:12px}.week-donut-item small{display:block;margin-top:3px;color:var(--muted);font-size:10px}
-  .period-detail.achieved{border-color:#19a66a;background:#eefaf4;box-shadow:inset 4px 0 #19a66a}.period-detail.missed{border-color:#df4053;background:#fff2f4;box-shadow:inset 4px 0 #df4053}
+  .period-detail.achieved{border-color:#19a66a;background:#eefaf4;box-shadow:inset 4px 0 #19a66a}.period-detail.missed{border-color:#df4053;background:#fff2f4;box-shadow:inset 4px 0 #df4053}.period-detail.current{border-color:#e7aa20;background:#fff8df;box-shadow:inset 4px 0 #e7aa20}
   .period-mini.status-pass{background:#dff6ea;color:#075f3c}.period-mini.status-fail{background:#ffe3e7;color:#9f2033}.period-mini.status-pass span,.period-mini.status-pass strong,.period-mini.status-fail span,.period-mini.status-fail strong{color:inherit!important}
-  @media(max-width:620px){.week-top{align-items:flex-start}.week-status-toggle{padding:7px 9px;font-size:11px}.week-donut-grid{gap:7px}.week-donut{width:86px}.week-donut:after{inset:11px}.week-donut strong{font-size:12px}.week-donut-item>strong{font-size:10px}}
+  @media(max-width:620px){.week-top{align-items:flex-start}.week-head-actions{max-width:58%;gap:5px}.week-pending-chip{padding:5px 7px;font-size:9px}.week-status-toggle{padding:7px 9px;font-size:11px}.week-donut-grid{gap:7px}.week-donut{width:86px}.week-donut:after{inset:11px}.week-donut strong{font-size:12px}.week-donut-item>strong{font-size:10px}}
+</style>
+<style id="results-seller-finance-v42">
+  .seller-finance-summary{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .seller-finance-summary .metric:nth-last-child(-n+2){background:#eaf4ff}
+  .finance-entry input[type="number"]{width:100%;border:0;outline:0;background:transparent;font-weight:850}
 </style>
 </head>
 <body>
@@ -247,10 +253,12 @@
       <div class="config-section">Ganhos financeiros e projeção</div>
       <div class="finance-layout">
         <div class="finance-entry">
-          <div class="field"><label for="profileCommissionMercantile">Comissão mercantil acumulada</label><input class="money-input" id="profileCommissionMercantile" inputmode="decimal" type="text"></div>
+          <div class="field"><label for="profileCommissionMercantileRate">Comissão sobre venda mercantil (%)</label><input id="profileCommissionMercantileRate" inputmode="decimal" type="number" min="0" max="100" step="0.01"></div>
+          <div class="field"><label for="profileCommissionServiceRate">Comissão sobre serviços (%)</label><input id="profileCommissionServiceRate" inputmode="decimal" type="number" min="0" max="100" step="0.01"></div>
+          <div class="field"><label for="profileRestDays">Dias de repouso remunerado</label><input id="profileRestDays" type="number" min="0" max="31" step="1"></div>
           <div class="field"><label for="profileJustifiedDays">Dias justificados / atestado</label><input id="profileJustifiedDays" type="number" min="0" max="31" step="1"></div>
           <button class="btn primary" id="saveSellerFinance">Salvar dados financeiros</button>
-          <p class="hint">A comissão dos serviços é calculada automaticamente em 5%. O descanso remunerado considera os dias úteis planejados e os demais dias do mês.</p>
+          <p class="hint">As duas taxas são manuais. Repousos e atestados entram na projeção pela média diária das comissões.</p>
         </div>
         <div class="finance-results" id="sellerFinanceResults"></div>
       </div>
@@ -395,7 +403,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v18.js?v=40"></script>
+<script src="resultados-v18.js?v=42"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
