@@ -30,13 +30,27 @@
     const [year, number] = month.split('-').map(Number);
     return new Date(year, number - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   };
-  const automaticWeeks = (month) => {
+  const automaticWeekEnds = (month) => {
     const [year, number] = String(month || monthDefault).split('-').map(Number);
-    return Math.max(4, Math.min(5, Math.ceil(new Date(year, number, 0).getDate() / 7)));
+    const days = new Date(year, number, 0).getDate(), firstDay = new Date(year, number - 1, 1).getDay();
+    const mondayOffset = (firstDay + 6) % 7;
+    const ends = [], firstEnd = Math.min(days, 7 - mondayOffset);
+    for (let end = firstEnd; end < days; end += 7) ends.push(end);
+    if (ends.at(-1) !== days) ends.push(days);
+    return ends;
   };
+  const normalizeWeekEnds = (month, raw) => {
+    const [year, number] = String(month || monthDefault).split('-').map(Number), days = new Date(year, number, 0).getDate();
+    const source = Array.isArray(raw) ? raw : String(raw || '').split(/[,;\s]+/);
+    const ends = [...new Set(source.map((value) => Math.round(num(value))).filter((value) => value >= 1 && value <= days))].sort((a, b) => a - b);
+    if (!ends.length) return [];
+    if (ends.at(-1) !== days) ends.push(days);
+    return ends;
+  };
+  const automaticWeeks = (month) => automaticWeekEnds(month).length;
   const recordKey = (branch, month) => `${String(branch || 'SEM FILIAL').trim().toUpperCase()}|${month}`;
   const baseRecord = (branch = '', month = monthDefault) => ({
-    branch, month, businessDays: 25, weeks: automaticWeeks(month),
+    branch, month, businessDays: 25, weeks: automaticWeeks(month), weekEnds: [],
     mercantileGoal: 1220000, grossProfitGoal: 407000,
     eligibleGoal: 0, eligibleGoalConfirmed: false, servicesGoal: 60000, efficiencyGoal: 0.055,
     goals: [1220000, 1220000, 1281000],
@@ -48,9 +62,10 @@
   const normalizeRecord = (raw = {}) => {
     const legacyGoal = Array.isArray(raw.goals) ? num(raw.goals[0]) : 0;
     const mercantileGoal = num(raw.mercantileGoal) || legacyGoal || 1220000;
+    const weekEnds = normalizeWeekEnds(raw.month || monthDefault, raw.weekEnds);
     return {
       ...baseRecord(raw.branch || '', raw.month || monthDefault), ...raw,
-      weeks: automaticWeeks(raw.month || monthDefault),
+      weeks: weekEnds.length || automaticWeeks(raw.month || monthDefault), weekEnds,
       mercantileGoal,
       grossProfitGoal: num(raw.grossProfitGoal) || 407000,
       eligibleGoal: num(raw.eligibleGoal) === 1090300 && !raw.eligibleGoalConfirmed ? 0 : num(raw.eligibleGoal),
@@ -80,7 +95,7 @@
   }
   function configSnapshot(source = db) {
     return {
-      businessDays: num(source.businessDays), weeks: num(source.weeks), sellerCount: num(source.sellerCount),
+      businessDays: num(source.businessDays), weeks: num(source.weeks), weekEnds: normalizeWeekEnds(source.month, source.weekEnds), sellerCount: num(source.sellerCount),
       mercantileGoal: num(source.mercantileGoal), grossProfitGoal: num(source.grossProfitGoal), eligibleGoal: num(source.eligibleGoal),
       servicesGoal: num(source.servicesGoal), efficiencyGoal: num(source.efficiencyGoal), warrantyGoal: num(source.warrantyGoal), warrantyWeekly: num(source.warrantyWeekly)
     };
@@ -129,7 +144,7 @@
   function carryRecord(branch, month) {
     return normalizeRecord({
       ...baseRecord(branch, month),
-      businessDays: db.businessDays, weeks: db.weeks,
+      businessDays: db.businessDays, weeks: automaticWeeks(month), weekEnds: [],
       mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal,
       eligibleGoal: db.eligibleGoal, servicesGoal: db.servicesGoal, efficiencyGoal: db.efficiencyGoal,
       warrantyGoal: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly,
@@ -525,8 +540,27 @@
   }
 
   function weekBuckets() {
-    const days = allDays();
-    return Array.from({ length: automaticWeeks(db.month) }, (_, index) => days.slice(index * 7, Math.min(days.length, (index + 1) * 7))).filter((items) => items.length);
+    return calendarWeekBuckets(allDays(), db.weekEnds);
+  }
+  function calendarWeekBuckets(days, customEnds = []) {
+    const ends = normalizeWeekEnds(days[0]?.key?.slice(0, 7) || db.month, customEnds);
+    if (ends.length) {
+      const buckets = ends.map(() => []);
+      days.forEach((item) => {
+        const day = item.date.getDate(), found = ends.findIndex((end) => day <= end), index = found < 0 ? buckets.length - 1 : found;
+        buckets[index].push(item);
+      });
+      return buckets.filter((items) => items.length);
+    }
+    const buckets = [], keys = [];
+    days.forEach((item) => {
+      const monday = new Date(item.date); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+      const key = `${monday.getFullYear()}-${monday.getMonth() + 1}-${monday.getDate()}`;
+      let index = keys.indexOf(key);
+      if (index < 0) { keys.push(key); buckets.push([]); index = buckets.length - 1; }
+      buckets[index].push(item);
+    });
+    return buckets;
   }
   function weekStats(items) {
     const result = aggregate(items.map((item) => item.data));
@@ -537,15 +571,17 @@
   }
   function weekTargetContext(items) {
     const workingDays = items.filter((item) => item.data.status !== 'off');
+    const monthWorkingDays = allDays().filter((item) => item.data.status !== 'off').length;
     const configuredDays = workingDays.filter((item) => num(item.data.goalPercent) > 0);
     const share = configuredDays.reduce((sum, item) => sum + num(item.data.goalPercent), 0) / 100;
-    return { share, configured: configuredDays.length, expected: workingDays.length, useDaily: workingDays.length > 0 && configuredDays.length === workingDays.length };
+    return { share, plannedShare: monthWorkingDays ? workingDays.length / monthWorkingDays : 0, configured: configuredDays.length, expected: workingDays.length, useDaily: workingDays.length > 0 && configuredDays.length === workingDays.length };
   }
   function weeklyTierTarget(tier, context, weeks) {
+    const share = context.useDaily ? context.share : context.plannedShare || 1 / weeks;
     return {
       ...tier,
-      mercantile: context.useDaily ? tier.mercantile * context.share : tier.mercantile / weeks,
-      grossProfit: context.useDaily ? tier.grossProfit * context.share : tier.grossProfit / weeks
+      mercantile: tier.mercantile * share,
+      grossProfit: tier.grossProfit * share
     };
   }
   function renderWeekly() {
@@ -553,7 +589,7 @@
     document.getElementById('weeklyGrid').innerHTML = weekBuckets().map((items, index) => {
       const result = weekStats(items), targetContext = weekTargetContext(items);
       const grossAvailable = hasCompleteGrossProfit(items);
-      const serviceTarget = targetContext.useDaily ? num(db.mercantileGoal) * targetContext.share * 0.07 : num(db.servicesGoal) / weeks;
+      const serviceTarget = targetContext.useDaily ? num(db.mercantileGoal) * targetContext.share * 0.07 : num(db.servicesGoal) * targetContext.plannedShare;
       const serviceRate = serviceTarget ? result.services / serviceTarget : 0;
       const primaryTarget = weeklyTierTarget(tierGoals()[0], targetContext, weeks).mercantile;
       const plannedDays = items.filter((item) => item.data.status !== 'off').length;
@@ -575,8 +611,8 @@
       const targetNote = targetContext.useDaily
         ? `Meta semanal calculada pela soma dos percentuais diários: ${pct2.format(targetContext.share)} da meta mensal.`
         : targetContext.configured
-          ? `Percentuais diários incompletos (${targetContext.configured}/${targetContext.expected}); mantida a divisão mensal em ${weeks} semanas.`
-          : `Meta semanal padrão: divisão mensal em ${weeks} semanas.`;
+          ? `Percentuais diários incompletos (${targetContext.configured}/${targetContext.expected}); meta proporcional aos dias úteis desta semana.`
+          : 'Meta proporcional aos dias úteis da semana, sempre de segunda-feira a domingo.';
       const weeklyTone = primary.passed ? 'positive' : 'support', weeklyMessage = missionMessage({ id: db.branch || 'filial', name: 'Equipe' }, items.at(-1).key, weeklyTone);
       return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><span class="pill ${primary.passed ? 'positive' : hasResults ? primary.overall >= 0.85 ? 'warning' : 'negative' : ''}">${visualText}</span></div><div class="week-metrics"><div class="metric"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(result.efficiency)}</strong></div><div class="metric"><span>DIAS PENDENTES</span><strong>${result.pendingDays}</strong></div></div><div class="week-analysis"><div class="metric"><span>MÉDIA MERCANTIL / DIA</span><strong>${brl.format(averageDay)}</strong><small>Meta/dia: ${brl.format(targetDay)}</small></div><div class="metric"><span>FALTOU / DIA</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? salesGap / plannedDays : 0)}</strong><small>Total: ${brl.format(salesGap)}</small></div><div class="metric"><span>FALTOU / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(salesGap / sellerCount)}</strong><small>${sellerCount} vendedor(es)</small></div><div class="metric"><span>PROJEÇÃO PELO RITMO</span><strong>${brl.format(paceProjection)}</strong><small>Ticket: ${brl.format(ticket)}</small></div><div class="metric"><span>MÉDIA SERVIÇOS / DIA</span><strong>${brl.format(serviceAverageDay)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)}</small></div><div class="metric"><span>SERVIÇOS: FALTOU / DIA</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? serviceGap / plannedDays : 0)}</strong><small>Total: ${brl.format(serviceGap)}</small></div><div class="metric"><span>SERVIÇOS / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(serviceGap / sellerCount)}</strong><small>Déficit médio</small></div><div class="metric"><span>NOTAS FISCAIS</span><strong>${result.nfs}</strong><small>${result.worked} dia(s) lançado(s)</small></div></div><div class="hint">${targetNote}${grossAvailable ? '' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div>${hasResults ? `<div class="week-motivation"><strong>${weeklyTone === 'positive' ? 'Reconhecimento da semana:' : 'Mensagem para a retomada:'}</strong> ${esc(weeklyMessage)}</div>` : ''}<div class="week-goals">${goals}</div></article>`;
     }).join('');
@@ -1052,13 +1088,15 @@
     const reference = document.getElementById('compiledReference')?.value || vault.compiledPreferences?.reference || db.month;
     let points = [];
     if (interval === 'month') {
-      const record = recordForMonth(reference), calendar = recordCalendar(record, reference), weekCount = automaticWeeks(reference);
-      points = Array.from({ length: weekCount }, (_, index) => calendar.slice(index * 7, Math.min(calendar.length, (index + 1) * 7))).filter((items) => items.length).map((items, index) => {
+      const record = recordForMonth(reference), calendar = recordCalendar(record, reference), buckets = calendarWeekBuckets(calendar, record?.weekEnds), weekCount = buckets.length;
+      const monthWorkingDays = calendar.filter((item) => item.data.status !== 'off').length;
+      points = buckets.map((items, index) => {
         const stats = recordAggregate(items, record), working = items.filter((item) => item.data.status !== 'off');
         const configured = working.filter((item) => num(item.data.goalPercent) > 0), share = configured.reduce((sum, item) => sum + num(item.data.goalPercent), 0) / 100;
         const useDaily = working.length > 0 && configured.length === working.length;
-        const target = useDaily ? num(record?.mercantileGoal) * share : num(record?.mercantileGoal) / Math.max(1, num(record?.weeks) || weekCount);
-        const serviceTarget = useDaily ? num(record?.mercantileGoal) * share * 0.07 : num(record?.servicesGoal) / Math.max(1, num(record?.weeks) || weekCount);
+        const plannedShare = monthWorkingDays ? working.length / monthWorkingDays : 1 / Math.max(1, weekCount);
+        const target = num(record?.mercantileGoal) * (useDaily ? share : plannedShare);
+        const serviceTarget = useDaily ? num(record?.mercantileGoal) * share * 0.07 : num(record?.servicesGoal) * plannedShare;
         const sellerCount = Math.max(1, num(record?.sellerCount), (record?.sellers || []).filter((seller) => seller.name?.trim()).length);
         const first = items[0].date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), last = items.at(-1).date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
         return makePeriodPoint({ label: `${index + 1}ª semana`, sublabel: `${first} a ${last}`, stats, target, serviceTarget, sellerCount, hasData: Boolean(record && (stats.worked || stats.sales || stats.services)) });
@@ -1270,6 +1308,7 @@
     Object.entries(plain).forEach(([id, value]) => { document.getElementById(id).value = value; });
     Object.entries(money).forEach(([id, value]) => { const input = document.getElementById(id); input.value = brl.format(num(value)); bindMoneyBehavior(input); });
     if (!num(db.eligibleGoal)) document.getElementById('eligibleGoalInput').value = '';
+    document.getElementById('weekEndsInput').value = (db.weekEnds?.length ? db.weekEnds : automaticWeekEnds(db.month)).join(', ');
     document.getElementById('monthQuick').value = db.month;
     document.getElementById('grossProfitRateInput').value = pct2.format(grossProfitRate());
     renderTierPreview(); renderAuditList();
@@ -1282,9 +1321,11 @@
     list.innerHTML = history.length ? history.map((entry, index) => `<article class="audit-item"><strong>${new Date(entry.at).toLocaleString('pt-BR')} • ${esc(entry.owner || 'Responsável não informado')}</strong><div>${esc(entry.source || 'Sem referência')} ${entry.note ? `• ${esc(entry.note)}` : ''}</div><div class="muted">Mercantil ${brl.format(num(entry.values?.mercantileGoal))} • Lucro bruto ${brl.format(num(entry.values?.grossProfitGoal))} • Elegíveis ${brl.format(num(entry.values?.eligibleGoal))} • Serviços ${brl.format(num(entry.values?.servicesGoal))} • Eficiência ${pct2.format(num(entry.values?.efficiencyGoal))}</div>${index === 0 ? '<span class="goal-hit-badge">Configuração vigente</span>' : ''}</article>`).join('') : '<div class="empty">A primeira alteração desta competência criará o registro de auditoria.</div>';
   }
   function readSettings() {
+    const selectedMonth = document.getElementById('month').value || monthDefault;
+    const weekEnds = normalizeWeekEnds(selectedMonth, document.getElementById('weekEndsInput').value);
     const next = {
-      branch: document.getElementById('branch').value.trim(), month: document.getElementById('month').value || monthDefault,
-      businessDays: num(document.getElementById('businessDays').value) || 25, weeks: automaticWeeks(document.getElementById('month').value || monthDefault),
+      branch: document.getElementById('branch').value.trim(), month: selectedMonth,
+      businessDays: num(document.getElementById('businessDays').value) || 25, weeks: weekEnds.length || automaticWeeks(selectedMonth), weekEnds,
       mercantileGoal: num(document.getElementById('mercantileGoal').value), grossProfitGoal: num(document.getElementById('grossProfitGoal').value),
       eligibleGoal: num(document.getElementById('eligibleGoalInput').value), eligibleGoalConfirmed: true, servicesGoal: num(document.getElementById('servicesGoalInput').value),
       efficiencyGoal: num(document.getElementById('efficiencyGoalInput').value) / 100,
@@ -1373,7 +1414,14 @@
   document.getElementById('dailyGoalPercent').addEventListener('change', saveDailyGoalFromPlanner);
   document.getElementById('downloadDailyGoal').addEventListener('click', () => exportDailyGoalImage(selectedDailyGoalDate()));
   document.getElementById('saveSettings').addEventListener('click', readSettings);
-  document.getElementById('month').addEventListener('change', (event) => { document.getElementById('weeks').value = automaticWeeks(event.target.value || monthDefault); });
+  document.getElementById('month').addEventListener('change', (event) => {
+    const month = event.target.value || monthDefault, ends = automaticWeekEnds(month);
+    document.getElementById('weekEndsInput').value = ends.join(', '); document.getElementById('weeks').value = ends.length;
+  });
+  document.getElementById('weekEndsInput').addEventListener('input', (event) => {
+    const month = document.getElementById('month').value || monthDefault, ends = normalizeWeekEnds(month, event.target.value);
+    document.getElementById('weeks').value = ends.length || automaticWeeks(month);
+  });
   ['mercantileGoal', 'grossProfitGoal'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
     const source = { ...db, mercantileGoal: num(document.getElementById('mercantileGoal').value), grossProfitGoal: num(document.getElementById('grossProfitGoal').value) };
     renderTierPreview(source);

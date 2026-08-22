@@ -197,7 +197,7 @@
   </section>
 
   <section class="view" id="weekly">
-    <article class="panel"><div class="section-title"><div><h2>Resultado semanal</h2><div class="hint">As metas são distribuídas conforme a quantidade de semanas configurada.</div></div></div><div class="weekly-grid" id="weeklyGrid"></div></article>
+    <article class="panel"><div class="section-title"><div><h2>Resultado semanal</h2><div class="hint">Cada semana começa na segunda-feira e termina no domingo. Semanas parciais recebem meta proporcional aos dias úteis.</div></div></div><div class="weekly-grid" id="weeklyGrid"></div></article>
   </section>
 
   <section class="view" id="sellers">
@@ -254,7 +254,8 @@
         <div class="field"><label for="branch">Filial</label><input id="branch" placeholder="Ex.: Loja 28"></div>
         <div class="field"><label for="month">Competência</label><input id="month" type="month"></div>
         <div class="field"><label for="businessDays">Dias úteis planejados</label><input id="businessDays" type="number" min="1" max="31"></div>
-        <div class="field derived-field"><label for="weeks">Quantidade de semanas automática</label><input id="weeks" type="number" min="4" max="5" readonly><span class="auto-weeks-note">Calculada pela quantidade de dias da competência</span></div>
+        <div class="field derived-field"><label for="weeks">Quantidade de semanas</label><input id="weeks" type="number" min="1" max="6" readonly><span class="auto-weeks-note">Calculada pelos encerramentos definidos abaixo</span></div>
+        <div class="field wide"><label for="weekEndsInput">Dias que encerram cada semana</label><input id="weekEndsInput" type="text" inputmode="numeric" placeholder="Ex.: 2, 9, 16, 23, 31"><span class="scope-hint">Separe os dias por vírgula. Para juntar o dia 31 à semana anterior, retire o encerramento do dia 30. O último dia do mês é incluído automaticamente.</span></div>
         <div class="field"><label for="sellerCount">Quantidade de vendedores</label><input id="sellerCount" type="number" min="0" step="1"></div>
         <div class="config-section">Metas-base enviadas pela empresa</div>
         <div class="field"><label for="mercantileGoal">Meta mercantil</label><input class="money-input" inputmode="decimal" id="mercantileGoal" type="text"></div>
@@ -382,7 +383,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v18.js?v=37"></script>
+<script src="resultados-v18.js?v=39"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
