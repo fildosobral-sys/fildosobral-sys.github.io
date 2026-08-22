@@ -68,8 +68,8 @@
       weeks: weekEnds.length || automaticWeeks(raw.month || monthDefault), weekEnds,
       mercantileGoal,
       grossProfitGoal: num(raw.grossProfitGoal) || 407000,
-      eligibleGoal: num(raw.eligibleGoal) === 1090300 && !raw.eligibleGoalConfirmed ? 0 : num(raw.eligibleGoal),
-      eligibleGoalConfirmed: Boolean(raw.eligibleGoalConfirmed),
+      eligibleGoal: 0,
+      eligibleGoalConfirmed: false,
       servicesGoal: num(raw.servicesGoal) || 60000,
       efficiencyGoal: num(raw.efficiencyGoal) || 0.055,
       goals: [mercantileGoal, mercantileGoal, mercantileGoal * 1.05],
@@ -96,7 +96,7 @@
   function configSnapshot(source = db) {
     return {
       businessDays: num(source.businessDays), weeks: num(source.weeks), weekEnds: normalizeWeekEnds(source.month, source.weekEnds), sellerCount: num(source.sellerCount),
-      mercantileGoal: num(source.mercantileGoal), grossProfitGoal: num(source.grossProfitGoal), eligibleGoal: num(source.eligibleGoal),
+      mercantileGoal: num(source.mercantileGoal), grossProfitGoal: num(source.grossProfitGoal),
       servicesGoal: num(source.servicesGoal), efficiencyGoal: num(source.efficiencyGoal), warrantyGoal: num(source.warrantyGoal), warrantyWeekly: num(source.warrantyWeekly)
     };
   }
@@ -127,6 +127,7 @@
   let openSellerIndex = null;
   let printSellerOnlyId = null;
   let openDailyKey = null;
+  let openWeeklyIndex = null;
 
   function persist(showState = true) {
     const key = recordKey(db.branch, db.month);
@@ -146,7 +147,7 @@
       ...baseRecord(branch, month),
       businessDays: db.businessDays, weeks: automaticWeeks(month), weekEnds: [],
       mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal,
-      eligibleGoal: db.eligibleGoal, servicesGoal: db.servicesGoal, efficiencyGoal: db.efficiencyGoal,
+      servicesGoal: db.servicesGoal, efficiencyGoal: db.efficiencyGoal,
       warrantyGoal: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly,
       sellerCount: db.sellerCount, auditOwner: db.auditOwner, auditSource: db.auditSource,
       sellers: db.sellers.map((seller, index) => ({ id: sellerIdentity(seller, index), name: seller.name || '', assignedGoal: num(seller.assignedGoal), plannedDays: num(seller.plannedDays) || num(db.businessDays), general: 0, eligible: 0, warranty: 0, other: 0, mixed: 0, nfs: 0, days: 0, notes: '', commitment: '', deadline: '', updatedAt: new Date().toISOString() }))
@@ -236,7 +237,7 @@
     const share = num(db.mercantileGoal) ? mercantile / num(db.mercantileGoal) : 0;
     return {
       ...db, mercantileGoal: mercantile, grossProfitGoal: mercantile * grossProfitRate(),
-      eligibleGoal: num(db.eligibleGoal) * share, servicesGoal: num(db.servicesGoal) * share,
+      servicesGoal: num(db.servicesGoal) * share,
       warrantyGoal: num(db.warrantyGoal) * share
     };
   }
@@ -436,8 +437,6 @@
     setText('grossProfitKpiLabel', scope.type === 'branch' ? 'Lucro bruto' : 'Lucro bruto de referência');
     setText('grossProfitKpi', grossAvailable ? brl.format(result.grossProfit) : 'Não informado');
     setText('grossProfitKpiSub', scope.type === 'branch' ? (grossAvailable ? `${pct.format(num(goalSource.grossProfitGoal) ? result.grossProfit / num(goalSource.grossProfitGoal) : 0)} da meta de lucro` : 'Não interfere no percentual mercantil') : `${pct2.format(grossProfitRate())} da venda mercantil`);
-    setText('eligibleGoalKpi', num(goalSource.eligibleGoal) ? brl.format(num(goalSource.eligibleGoal)) : 'Não informada');
-    setText('eligibleGoalKpiSub', num(goalSource.eligibleGoal) ? `${pct.format(result.eligible / num(goalSource.eligibleGoal))} atingido` : 'Preencha somente se a empresa enviar essa meta');
     setText('efficiencyKpi', efficiencyPct.format(result.efficiency)); setText('ticketKpi', brl.format(result.ticket));
     setText('nfKpi', `${result.nfs.toLocaleString('pt-BR')} notas fiscais • média dos tickets diários`);
     const tiers = tierGoals(goalSource), firstGoal = tiers[0].mercantile;
@@ -586,7 +585,8 @@
   }
   function renderWeekly() {
     const weeks = Math.max(1, num(db.weeks));
-    document.getElementById('weeklyGrid').innerHTML = weekBuckets().map((items, index) => {
+    const grid = document.getElementById('weeklyGrid');
+    grid.innerHTML = weekBuckets().map((items, index) => {
       const result = weekStats(items), targetContext = weekTargetContext(items);
       const grossAvailable = hasCompleteGrossProfit(items);
       const serviceTarget = targetContext.useDaily ? num(db.mercantileGoal) * targetContext.share * 0.07 : num(db.servicesGoal) * targetContext.plannedShare;
@@ -614,8 +614,23 @@
           ? `Percentuais diários incompletos (${targetContext.configured}/${targetContext.expected}); meta proporcional aos dias úteis desta semana.`
           : 'Meta proporcional aos dias úteis da semana, sempre de segunda-feira a domingo.';
       const weeklyTone = primary.passed ? 'positive' : 'support', weeklyMessage = missionMessage({ id: db.branch || 'filial', name: 'Equipe' }, items.at(-1).key, weeklyTone);
-      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><span class="pill ${primary.passed ? 'positive' : hasResults ? primary.overall >= 0.85 ? 'warning' : 'negative' : ''}">${visualText}</span></div><div class="week-metrics"><div class="metric"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(result.efficiency)}</strong></div><div class="metric"><span>DIAS PENDENTES</span><strong>${result.pendingDays}</strong></div></div><div class="week-analysis"><div class="metric"><span>MÉDIA MERCANTIL / DIA</span><strong>${brl.format(averageDay)}</strong><small>Meta/dia: ${brl.format(targetDay)}</small></div><div class="metric"><span>FALTOU / DIA</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? salesGap / plannedDays : 0)}</strong><small>Total: ${brl.format(salesGap)}</small></div><div class="metric"><span>FALTOU / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(salesGap / sellerCount)}</strong><small>${sellerCount} vendedor(es)</small></div><div class="metric"><span>PROJEÇÃO PELO RITMO</span><strong>${brl.format(paceProjection)}</strong><small>Ticket: ${brl.format(ticket)}</small></div><div class="metric"><span>MÉDIA SERVIÇOS / DIA</span><strong>${brl.format(serviceAverageDay)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)}</small></div><div class="metric"><span>SERVIÇOS: FALTOU / DIA</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? serviceGap / plannedDays : 0)}</strong><small>Total: ${brl.format(serviceGap)}</small></div><div class="metric"><span>SERVIÇOS / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(serviceGap / sellerCount)}</strong><small>Déficit médio</small></div><div class="metric"><span>NOTAS FISCAIS</span><strong>${result.nfs}</strong><small>${result.worked} dia(s) lançado(s)</small></div></div><div class="hint">${targetNote}${grossAvailable ? '' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div>${hasResults ? `<div class="week-motivation"><strong>${weeklyTone === 'positive' ? 'Reconhecimento da semana:' : 'Mensagem para a retomada:'}</strong> ${esc(weeklyMessage)}</div>` : ''}<div class="week-goals">${goals}</div></article>`;
+      const efficiencyRate = num(db.efficiencyGoal) ? result.efficiency / num(db.efficiencyGoal) : 0;
+      const mercantileStatus = hasResults ? (result.general >= primaryTarget ? 'passed' : 'failed') : '';
+      const efficiencyStatus = result.eligible > 0 ? (efficiencyRate >= 1 ? 'passed' : 'failed') : '';
+      const projectionRate = primaryTarget ? paceProjection / primaryTarget : 0;
+      const expanded = openWeeklyIndex === index;
+      const toggleStatus = primary.passed ? 'positive' : hasResults ? primary.overall >= 0.85 ? 'warning' : 'negative' : '';
+      const donut = (label, rate, value, color) => `<div class="week-donut-item"><div class="week-donut" style="--rate:${Math.min(100, Math.max(0, rate * 100)).toFixed(2)};--donut:${color}"><strong>${pct.format(rate)}</strong></div><strong>${label}</strong><small>${value}</small></div>`;
+      const chart = `<div class="week-chart-panel" ${expanded ? '' : 'hidden'}><div class="week-chart-title"><strong>Percentuais e projeção da semana</strong><span>Comparação com as metas do período</span></div><div class="week-donut-grid">${donut('Mercantil', primary.mercRate, `${brl.format(result.general)} de ${brl.format(primaryTarget)}`, primary.mercRate >= 1 ? '#169b62' : '#df4053')}${donut('Serviços', serviceRate, `${brl.format(result.services)} de ${brl.format(serviceTarget)}`, serviceRate >= 1 ? '#169b62' : '#df4053')}${donut('Projeção', projectionRate, brl.format(paceProjection), projectionRate >= 1 ? '#169b62' : '#0879e8')}</div></div>`;
+      return `<article class="week ${visualClass}"><div class="week-top"><div><div class="week-title">${index + 1}ª semana</div><div class="week-date">${items[0].date.toLocaleDateString('pt-BR')} a ${items.at(-1).date.toLocaleDateString('pt-BR')}</div></div><button type="button" class="week-status-toggle ${toggleStatus}" data-week-toggle="${index}" aria-expanded="${expanded}"><span>${hasResults ? pct.format(primary.overall) : 'Sem dados'}</span><span class="chevron">⌄</span></button></div>${chart}<div class="week-metrics"><div class="metric result-status ${mercantileStatus}"><span>VENDA MERCANTIL</span><strong>${brl.format(result.general)} · ${pct.format(primary.mercRate)}</strong></div><div class="metric"><span>LUCRO BRUTO</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="metric"><span>SERVIÇOS</span><strong class="${statusClass(serviceRate)}">${brl.format(result.services)} · ${pct.format(serviceRate)}</strong></div><div class="metric result-status ${efficiencyStatus}"><span>EFICIÊNCIA</span><strong>${result.eligible > 0 ? efficiencyPct.format(result.efficiency) : 'Não calculada'}</strong></div><div class="metric"><span>DIAS PENDENTES</span><strong>${result.pendingDays}</strong></div></div><div class="week-analysis"><div class="metric"><span>MÉDIA MERCANTIL / DIA</span><strong>${brl.format(averageDay)}</strong><small>Meta/dia: ${brl.format(targetDay)}</small></div><div class="metric"><span>FALTOU / DIA</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? salesGap / plannedDays : 0)}</strong><small>Total: ${brl.format(salesGap)}</small></div><div class="metric"><span>FALTOU / VENDEDOR</span><strong class="${salesGap ? 'negative' : 'positive'}">${brl.format(salesGap / sellerCount)}</strong><small>${sellerCount} vendedor(es)</small></div><div class="metric"><span>PROJEÇÃO PELO RITMO</span><strong>${brl.format(paceProjection)}</strong><small>Ticket: ${brl.format(ticket)}</small></div><div class="metric"><span>MÉDIA SERVIÇOS / DIA</span><strong>${brl.format(serviceAverageDay)}</strong><small>Meta/dia: ${brl.format(targetServiceDay)}</small></div><div class="metric"><span>SERVIÇOS: FALTOU / DIA</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(plannedDays ? serviceGap / plannedDays : 0)}</strong><small>Total: ${brl.format(serviceGap)}</small></div><div class="metric"><span>SERVIÇOS / VENDEDOR</span><strong class="${serviceGap ? 'negative' : 'positive'}">${brl.format(serviceGap / sellerCount)}</strong><small>Déficit médio</small></div><div class="metric"><span>NOTAS FISCAIS</span><strong>${result.nfs}</strong><small>${result.worked} dia(s) lançado(s)</small></div></div><div class="hint">${targetNote}${grossAvailable ? '' : ' • Lucro bruto não informado; percentual calculado somente pelo mercantil.'}</div>${hasResults ? `<div class="week-motivation"><strong>${weeklyTone === 'positive' ? 'Reconhecimento da semana:' : 'Mensagem para a retomada:'}</strong> ${esc(weeklyMessage)}</div>` : ''}<div class="week-goals">${goals}</div></article>`;
     }).join('');
+    grid.querySelectorAll('[data-week-toggle]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const index = Number(button.dataset.weekToggle);
+        openWeeklyIndex = openWeeklyIndex === index ? null : index;
+        renderWeekly();
+      });
+    });
   }
 
   function sellerMetrics(seller) {
@@ -995,7 +1010,7 @@
   function recordForSellerImport(branch, month) {
     const key = recordKey(branch, month);
     if (vault.records[key]) return normalizeRecord(vault.records[key]);
-    return normalizeRecord({ ...baseRecord(branch, month), businessDays: db.businessDays, weeks: db.weeks, mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal, eligibleGoal: db.eligibleGoal, eligibleGoalConfirmed: db.eligibleGoalConfirmed, servicesGoal: db.servicesGoal, efficiencyGoal: db.efficiencyGoal, warrantyGoal: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly, sellers: [] });
+    return normalizeRecord({ ...baseRecord(branch, month), businessDays: db.businessDays, weeks: db.weeks, mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal, servicesGoal: db.servicesGoal, efficiencyGoal: db.efficiencyGoal, warrantyGoal: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly, sellers: [] });
   }
   function importSellerPayload(payload, forcedSeller = null, filename = 'backup.json') {
     if (payload?.kind !== 'fs-seller-backup' || ![1, 2].includes(payload.version) || !payload.seller || !Array.isArray(payload.records)) throw new Error(`${filename}: arquivo não é um backup individual válido.`);
@@ -1130,9 +1145,10 @@
     ].map(([label, value, note]) => `<article class="period-highlight"><span>${label}</span><strong>${esc(value)}</strong><small>${esc(note)}</small></article>`).join('') : '<div class="empty">Ainda não há lançamentos no intervalo escolhido.</div>';
     document.getElementById('periodChart').innerHTML = data.points.map((point) => `<article class="period-chart-row"><div class="period-chart-head"><strong>${esc(point.label)}</strong><span>${point.hasData ? `${brl.format(point.sales)} · ${pct.format(point.rate)}` : 'Sem dados'}</span></div><div class="bar-line"><label>Mercantil</label><div class="bar-track"><span class="bar-fill" style="width:${Math.min(100, point.rate * 100).toFixed(2)}%"></span></div><b>${pct.format(point.rate)}</b></div><div class="bar-line"><label>Serviços</label><div class="bar-track"><span class="bar-fill service" style="width:${Math.min(100, point.serviceRate * 100).toFixed(2)}%"></span></div><b>${pct.format(point.serviceRate)}</b></div></article>`).join('');
     document.getElementById('periodDetailGrid').innerHTML = data.points.map((point) => {
-      const marker = data.valid.length > 1 && point === data.best ? 'best' : data.valid.length > 1 && point === data.worst ? 'worst' : '';
-      const mini = (label, value, className = '') => `<div class="period-mini"><span>${label}</span><strong class="${className}">${value}</strong></div>`;
-      return `<article class="period-detail ${marker}"><header><div><strong>${esc(point.label)}</strong><small>${esc(point.sublabel)}</small></div><div class="period-rate ${statusClass(point.rate)}">${pct.format(point.rate)}</div></header><div class="period-detail-metrics">${mini('VENDA', brl.format(point.sales))}${mini('META', brl.format(point.target))}${mini('MÉDIA / DIA', brl.format(point.averageDay))}${mini('META / DIA', brl.format(point.targetDay))}${mini('FALTA TOTAL', brl.format(point.gap), point.gap ? 'negative' : 'positive')}${mini('FALTA / DIA', brl.format(point.gapDay), point.gap ? 'negative' : 'positive')}${mini('FALTA / VENDEDOR', brl.format(point.gapSeller), point.gap ? 'negative' : 'positive')}${mini('PROJEÇÃO', brl.format(point.projection))}${mini('TICKET MÉDIO', brl.format(point.ticket))}${mini('SERVIÇOS', brl.format(point.services))}${mini('SERVIÇOS / DIA', brl.format(point.serviceAverageDay))}${mini('SERVIÇOS: FALTA / DIA', brl.format(point.serviceGapDay), point.serviceGap ? 'negative' : 'positive')}${mini('SERVIÇOS: FALTA / VEND.', brl.format(point.serviceGapSeller), point.serviceGap ? 'negative' : 'positive')}${mini('EFICIÊNCIA', efficiencyPct.format(point.efficiency))}${mini('NOTAS FISCAIS', point.nfs)}</div></article>`;
+      const marker = point.hasData ? (point.rate >= 1 ? 'achieved' : 'missed') : '';
+      const efficiencyReached = num(db.efficiencyGoal) > 0 && point.efficiency >= num(db.efficiencyGoal);
+      const mini = (label, value, className = '', boxClass = '') => `<div class="period-mini ${boxClass}"><span>${label}</span><strong class="${className}">${value}</strong></div>`;
+      return `<article class="period-detail ${marker}"><header><div><strong>${esc(point.label)}</strong><small>${esc(point.sublabel)}</small></div><div class="period-rate ${statusClass(point.rate)}">${pct.format(point.rate)}</div></header><div class="period-detail-metrics">${mini('VENDA', brl.format(point.sales), '', point.hasData ? point.rate >= 1 ? 'status-pass' : 'status-fail' : '')}${mini('META', brl.format(point.target))}${mini('MÉDIA / DIA', brl.format(point.averageDay))}${mini('META / DIA', brl.format(point.targetDay))}${mini('FALTA TOTAL', brl.format(point.gap), point.gap ? 'negative' : 'positive')}${mini('FALTA / DIA', brl.format(point.gapDay), point.gap ? 'negative' : 'positive')}${mini('FALTA / VENDEDOR', brl.format(point.gapSeller), point.gap ? 'negative' : 'positive')}${mini('PROJEÇÃO', brl.format(point.projection))}${mini('TICKET MÉDIO', brl.format(point.ticket))}${mini('SERVIÇOS', brl.format(point.services))}${mini('SERVIÇOS / DIA', brl.format(point.serviceAverageDay))}${mini('SERVIÇOS: FALTA / DIA', brl.format(point.serviceGapDay), point.serviceGap ? 'negative' : 'positive')}${mini('SERVIÇOS: FALTA / VEND.', brl.format(point.serviceGapSeller), point.serviceGap ? 'negative' : 'positive')}${mini('EFICIÊNCIA', point.hasData && point.efficiency > 0 ? efficiencyPct.format(point.efficiency) : 'Não calculada', '', point.hasData && point.efficiency > 0 ? efficiencyReached ? 'status-pass' : 'status-fail' : '')}${mini('NOTAS FISCAIS', point.nfs)}</div></article>`;
     }).join('');
   }
   function compiledAnalysis() {
@@ -1304,10 +1320,9 @@
 
   function fillSettings() {
     const plain = { branch: db.branch, month: db.month, businessDays: db.businessDays, weeks: db.weeks, sellerCount: db.sellerCount, efficiencyGoalInput: num(db.efficiencyGoal) * 100, auditOwner: db.auditOwner || '', auditSource: db.auditSource || '', auditNote: '' };
-    const money = { mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal, eligibleGoalInput: db.eligibleGoal, servicesGoalInput: db.servicesGoal, warrantyGoalInput: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly, ecommerce: db.ecommerce, returns: db.returns };
+    const money = { mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal, servicesGoalInput: db.servicesGoal, warrantyGoalInput: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly, ecommerce: db.ecommerce, returns: db.returns };
     Object.entries(plain).forEach(([id, value]) => { document.getElementById(id).value = value; });
     Object.entries(money).forEach(([id, value]) => { const input = document.getElementById(id); input.value = brl.format(num(value)); bindMoneyBehavior(input); });
-    if (!num(db.eligibleGoal)) document.getElementById('eligibleGoalInput').value = '';
     document.getElementById('weekEndsInput').value = (db.weekEnds?.length ? db.weekEnds : automaticWeekEnds(db.month)).join(', ');
     document.getElementById('monthQuick').value = db.month;
     document.getElementById('grossProfitRateInput').value = pct2.format(grossProfitRate());
@@ -1318,7 +1333,7 @@
   }
   function renderAuditList() {
     const list = document.getElementById('auditList'), history = [...db.configAudit].reverse().slice(0, 12);
-    list.innerHTML = history.length ? history.map((entry, index) => `<article class="audit-item"><strong>${new Date(entry.at).toLocaleString('pt-BR')} • ${esc(entry.owner || 'Responsável não informado')}</strong><div>${esc(entry.source || 'Sem referência')} ${entry.note ? `• ${esc(entry.note)}` : ''}</div><div class="muted">Mercantil ${brl.format(num(entry.values?.mercantileGoal))} • Lucro bruto ${brl.format(num(entry.values?.grossProfitGoal))} • Elegíveis ${brl.format(num(entry.values?.eligibleGoal))} • Serviços ${brl.format(num(entry.values?.servicesGoal))} • Eficiência ${pct2.format(num(entry.values?.efficiencyGoal))}</div>${index === 0 ? '<span class="goal-hit-badge">Configuração vigente</span>' : ''}</article>`).join('') : '<div class="empty">A primeira alteração desta competência criará o registro de auditoria.</div>';
+    list.innerHTML = history.length ? history.map((entry, index) => `<article class="audit-item"><strong>${new Date(entry.at).toLocaleString('pt-BR')} • ${esc(entry.owner || 'Responsável não informado')}</strong><div>${esc(entry.source || 'Sem referência')} ${entry.note ? `• ${esc(entry.note)}` : ''}</div><div class="muted">Mercantil ${brl.format(num(entry.values?.mercantileGoal))} • Lucro bruto ${brl.format(num(entry.values?.grossProfitGoal))} • Serviços ${brl.format(num(entry.values?.servicesGoal))} • Eficiência ${pct2.format(num(entry.values?.efficiencyGoal))}</div>${index === 0 ? '<span class="goal-hit-badge">Configuração vigente</span>' : ''}</article>`).join('') : '<div class="empty">A primeira alteração desta competência criará o registro de auditoria.</div>';
   }
   function readSettings() {
     const selectedMonth = document.getElementById('month').value || monthDefault;
@@ -1327,14 +1342,14 @@
       branch: document.getElementById('branch').value.trim(), month: selectedMonth,
       businessDays: num(document.getElementById('businessDays').value) || 25, weeks: weekEnds.length || automaticWeeks(selectedMonth), weekEnds,
       mercantileGoal: num(document.getElementById('mercantileGoal').value), grossProfitGoal: num(document.getElementById('grossProfitGoal').value),
-      eligibleGoal: num(document.getElementById('eligibleGoalInput').value), eligibleGoalConfirmed: true, servicesGoal: num(document.getElementById('servicesGoalInput').value),
+      eligibleGoal: 0, eligibleGoalConfirmed: false, servicesGoal: num(document.getElementById('servicesGoalInput').value),
       efficiencyGoal: num(document.getElementById('efficiencyGoalInput').value) / 100,
       warrantyGoal: num(document.getElementById('warrantyGoalInput').value), warrantyWeekly: num(document.getElementById('warrantyWeekly').value),
       ecommerce: num(document.getElementById('ecommerce').value), returns: num(document.getElementById('returns').value), sellerCount: Math.round(num(document.getElementById('sellerCount').value)),
       auditOwner: document.getElementById('auditOwner').value.trim(), auditSource: document.getElementById('auditSource').value.trim()
     };
     if (!next.branch) { document.getElementById('branch').classList.add('field-error'); alert('Informe a filial para salvar a configuração.'); return; }
-    if ([next.mercantileGoal, next.grossProfitGoal, next.servicesGoal, next.efficiencyGoal].some((goal) => goal <= 0)) { alert('Informe as metas-base obrigatórias enviadas pela empresa. A meta de venda elegível é opcional.'); return; }
+    if ([next.mercantileGoal, next.grossProfitGoal, next.servicesGoal, next.efficiencyGoal].some((goal) => goal <= 0)) { alert('Informe as metas-base obrigatórias enviadas pela empresa.'); return; }
     if (!next.auditOwner) { document.getElementById('auditOwner').classList.add('field-error'); alert('Informe o responsável pela configuração para manter a auditoria.'); return; }
     const contextChanged = next.branch !== db.branch || next.month !== db.month;
     if (contextChanged) {
@@ -1384,7 +1399,7 @@
     const compiledRows = compiled.rows.map((row) => `<tr><td>${esc(row.name)}</td><td>${brl.format(row.currentProjection)}</td><td>${row.historicalAverage ? brl.format(row.historicalAverage) : 'Sem histórico'}</td><td>${signedPct(row.sellerTrend)}</td><td>${signedPct(row.branchTrend)}</td><td>${pct.format(row.goalRate)}</td><td>${efficiencyPct.format(row.metrics.efficiency)}</td><td>${esc(row.diagnosis)}</td></tr>`).join('');
     const compiledPage = `<section class="print-page">${printHeader('Compilado inteligente — Filial × Vendedores')}<div class="print-kpis"><div class="print-kpi"><span>Projeção da filial</span><strong>${brl.format(compiled.branchProjection)}</strong></div><div class="print-kpi"><span>Base histórica</span><strong>${brl.format(compiled.branchBaseline)}</strong></div><div class="print-kpi"><span>Tendência filial</span><strong>${signedPct(compiled.branchTrend)}</strong></div><div class="print-kpi"><span>Período analisado</span><strong>${compiled.period} meses</strong></div></div><table class="print-table"><thead><tr><th>Vendedor</th><th>Projeção</th><th>Média histórica</th><th>Tendência vendedor</th><th>Tendência filial</th><th>Meta</th><th>Eficiência</th><th>Diagnóstico</th></tr></thead><tbody>${compiledRows || '<tr><td colspan="8">Sem vendedores cadastrados.</td></tr>'}</tbody></table><div class="print-signatures"><div>Gestor responsável</div><div>Gerência da filial</div></div></section>`;
     const audit = db.configAudit.at(-1);
-    document.getElementById('printReport').innerHTML = `<section class="print-page">${printHeader('Gestão de Resultados — Resumo Executivo')}<div class="print-kpis"><div class="print-kpi"><span>Venda mercantil</span><strong>${brl.format(result.revenue)}</strong></div><div class="print-kpi"><span>Lucro bruto</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="print-kpi"><span>Produtos elegíveis</span><strong>${brl.format(result.eligible)}</strong></div><div class="print-kpi"><span>Serviços</span><strong>${brl.format(result.services)}</strong></div><div class="print-kpi"><span>Eficiência</span><strong>${efficiencyPct.format(result.efficiency)}</strong></div><div class="print-kpi"><span>Projeção mercantil</span><strong>${brl.format(result.projection)}</strong></div></div><div class="print-goals">${goals}</div><h2 class="print-section-title">Metas-base e auditoria</h2><div class="print-kpis"><div class="print-kpi"><span>Meta elegíveis</span><strong>${brl.format(num(db.eligibleGoal))}</strong></div><div class="print-kpi"><span>Meta serviços</span><strong>${brl.format(num(db.servicesGoal))}</strong></div><div class="print-kpi"><span>Meta eficiência</span><strong>${efficiencyPct.format(num(db.efficiencyGoal))}</strong></div><div class="print-kpi"><span>Dias úteis</span><strong>${num(db.businessDays)}</strong></div><div class="print-kpi"><span>Responsável</span><strong>${esc(audit?.owner || db.auditOwner || 'Não informado')}</strong></div><div class="print-kpi"><span>Atualização</span><strong>${audit ? new Date(audit.at).toLocaleString('pt-BR') : 'Sem registro'}</strong></div></div><h2 class="print-section-title">Resultado semanal</h2><table class="print-table"><thead><tr><th>Semana</th><th>Mercantil</th><th>Lucro bruto</th><th>M1</th><th>M2</th><th>M3</th><th>Serviços</th><th>Eficiência</th><th>Dias</th></tr></thead><tbody>${weeklyRows}</tbody></table><div class="print-signatures"><div>Gestor responsável</div><div>Gerência da filial</div></div></section><section class="print-page">${printHeader('Lançamentos Diários')}<table class="print-table"><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Lucro bruto</th><th>Elegível</th><th>Garantia</th><th>Outros</th><th>Presta-mista</th><th>Serviços</th><th>Eficiência</th><th>NFs</th><th>Ticket</th></tr></thead><tbody>${dailyRows}</tbody></table></section>${historyPage}${sellerPages}`;
+    document.getElementById('printReport').innerHTML = `<section class="print-page">${printHeader('Gestão de Resultados — Resumo Executivo')}<div class="print-kpis"><div class="print-kpi"><span>Venda mercantil</span><strong>${brl.format(result.revenue)}</strong></div><div class="print-kpi"><span>Lucro bruto</span><strong>${grossAvailable ? brl.format(result.grossProfit) : 'Não informado'}</strong></div><div class="print-kpi"><span>Venda elegível (base da eficiência)</span><strong>${brl.format(result.eligible)}</strong></div><div class="print-kpi"><span>Serviços</span><strong>${brl.format(result.services)}</strong></div><div class="print-kpi"><span>Eficiência</span><strong>${efficiencyPct.format(result.efficiency)}</strong></div><div class="print-kpi"><span>Projeção mercantil</span><strong>${brl.format(result.projection)}</strong></div></div><div class="print-goals">${goals}</div><h2 class="print-section-title">Metas-base e auditoria</h2><div class="print-kpis"><div class="print-kpi"><span>Meta serviços</span><strong>${brl.format(num(db.servicesGoal))}</strong></div><div class="print-kpi"><span>Meta eficiência</span><strong>${efficiencyPct.format(num(db.efficiencyGoal))}</strong></div><div class="print-kpi"><span>Dias úteis</span><strong>${num(db.businessDays)}</strong></div><div class="print-kpi"><span>Responsável</span><strong>${esc(audit?.owner || db.auditOwner || 'Não informado')}</strong></div><div class="print-kpi"><span>Atualização</span><strong>${audit ? new Date(audit.at).toLocaleString('pt-BR') : 'Sem registro'}</strong></div></div><h2 class="print-section-title">Resultado semanal</h2><table class="print-table"><thead><tr><th>Semana</th><th>Mercantil</th><th>Lucro bruto</th><th>M1</th><th>M2</th><th>M3</th><th>Serviços</th><th>Eficiência</th><th>Dias</th></tr></thead><tbody>${weeklyRows}</tbody></table><div class="print-signatures"><div>Gestor responsável</div><div>Gerência da filial</div></div></section><section class="print-page">${printHeader('Lançamentos Diários')}<table class="print-table"><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Lucro bruto</th><th>Elegível</th><th>Garantia</th><th>Outros</th><th>Presta-mista</th><th>Serviços</th><th>Eficiência</th><th>NFs</th><th>Ticket</th></tr></thead><tbody>${dailyRows}</tbody></table></section>${historyPage}${sellerPages}`;
     if (printSellerOnlyId) document.getElementById('printReport').innerHTML = sellerPages + sellerFinancialPages;
     else document.getElementById('printReport').insertAdjacentHTML('beforeend', compiledPage + sellerFinancialPages);
   }

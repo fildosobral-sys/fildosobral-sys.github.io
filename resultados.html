@@ -135,6 +135,20 @@
   @media(max-width:760px){.seller-accordion-toggle{grid-template-columns:1fr auto 30px}.seller-accordion-kpi{display:none}.seller-accordion-toggle .pill{font-size:10px}.seller-card-content{padding:11px}.seller-card-head input{order:0;width:100%}.seller-card-head .seller-open{order:2}.seller-card-head [data-remove]{order:1}.seller-period-grid{grid-template-columns:1fr}.seller-period-preview .period-preview-grid{grid-template-columns:1fr 1fr}}
 </style>
 
+<style id="results-weekly-charts-v40">
+  .week-status-toggle{display:flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:8px 12px;font-weight:950;background:#edf1f7;color:var(--ink)}
+  .week-status-toggle.positive{background:#dff6ea}.week-status-toggle.warning{background:#fff1c9}.week-status-toggle.negative{background:#ffe1e6}
+  .week-status-toggle .chevron{font-size:15px;transition:transform .2s}.week-status-toggle[aria-expanded="true"] .chevron{transform:rotate(180deg)}
+  .metric.result-status{border:1px solid transparent}.metric.result-status.passed{background:#dff6ea!important;border-color:#72cea2;color:#075f3c}.metric.result-status.failed{background:#ffe3e7!important;border-color:#f19aa6;color:#9f2033}
+  .metric.result-status.passed span,.metric.result-status.passed strong,.metric.result-status.failed span,.metric.result-status.failed strong{color:inherit!important}
+  .week-chart-panel{margin-top:13px;padding:15px;border:1px solid #dce5f0;border-radius:16px;background:rgba(255,255,255,.9)}
+  .week-chart-title{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:13px}.week-chart-title strong{font-size:15px}.week-chart-title span{font-size:11px;color:var(--muted)}
+  .week-donut-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.week-donut-item{text-align:center}.week-donut{--rate:0;--donut:#0879e8;width:116px;max-width:100%;aspect-ratio:1;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--donut) calc(var(--rate)*1%),#e7ecf3 0)}
+  .week-donut:after{content:"";position:absolute;inset:14px;border-radius:50%;background:#fff}.week-donut strong{position:relative;z-index:1;font-size:16px}.week-donut-item>strong{display:block;font-size:12px}.week-donut-item small{display:block;margin-top:3px;color:var(--muted);font-size:10px}
+  .period-detail.achieved{border-color:#19a66a;background:#eefaf4;box-shadow:inset 4px 0 #19a66a}.period-detail.missed{border-color:#df4053;background:#fff2f4;box-shadow:inset 4px 0 #df4053}
+  .period-mini.status-pass{background:#dff6ea;color:#075f3c}.period-mini.status-fail{background:#ffe3e7;color:#9f2033}.period-mini.status-pass span,.period-mini.status-pass strong,.period-mini.status-fail span,.period-mini.status-fail strong{color:inherit!important}
+  @media(max-width:620px){.week-top{align-items:flex-start}.week-status-toggle{padding:7px 9px;font-size:11px}.week-donut-grid{gap:7px}.week-donut{width:86px}.week-donut:after{inset:11px}.week-donut strong{font-size:12px}.week-donut-item>strong{font-size:10px}}
+</style>
 </head>
 <body>
 <main class="app">
@@ -171,7 +185,6 @@
       <article class="kpi"><div class="label">Serviços totais</div><div class="value" id="servicesKpi">R$ 0,00</div><div class="sub">Garantia + outros serviços + presta-mista</div></article>
       <article class="kpi"><div class="label">Eficiência</div><div class="value" id="efficiencyKpi">0,00%</div><div class="sub">Serviços ÷ venda elegível</div></article>
       <article class="kpi"><div class="label">Ticket médio</div><div class="value" id="ticketKpi">R$ 0,00</div><div class="sub" id="nfKpi">0 notas fiscais</div></article>
-      <article class="kpi"><div class="label">Meta de venda elegível</div><div class="value" id="eligibleGoalKpi">Não informada</div><div class="sub" id="eligibleGoalKpiSub">Meta opcional</div></article>
     </div>
     <div class="goal-grid" id="goalGrid"></div>
     <div class="section-grid">
@@ -260,7 +273,6 @@
         <div class="config-section">Metas-base enviadas pela empresa</div>
         <div class="field"><label for="mercantileGoal">Meta mercantil</label><input class="money-input" inputmode="decimal" id="mercantileGoal" type="text"></div>
         <div class="field"><label for="grossProfitGoal">Meta de lucro bruto</label><input class="money-input" inputmode="decimal" id="grossProfitGoal" type="text"></div>
-        <div class="field"><label for="eligibleGoalInput">Meta de venda elegível (opcional)</label><input class="money-input" inputmode="decimal" id="eligibleGoalInput" type="text"></div>
         <div class="field"><label for="servicesGoalInput">Meta mensal de serviços</label><input class="money-input" inputmode="decimal" id="servicesGoalInput" type="text"></div>
         <div class="field"><label for="efficiencyGoalInput">Meta de eficiência (%)</label><input inputmode="decimal" id="efficiencyGoalInput" type="number" min="0" max="100" step="0.01"></div>
         <div class="field derived-field"><label for="grossProfitRateInput">Percentual lucro bruto / meta mercantil</label><input id="grossProfitRateInput" type="text" readonly><span class="scope-hint">Calculado automaticamente pelas duas metas acima</span></div>
@@ -383,7 +395,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v18.js?v=39"></script>
+<script src="resultados-v18.js?v=40"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
