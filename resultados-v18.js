@@ -38,7 +38,7 @@
   const baseRecord = (branch = '', month = monthDefault) => ({
     branch, month, businessDays: 25, weeks: automaticWeeks(month),
     mercantileGoal: 1220000, grossProfitGoal: 407000,
-    eligibleGoal: 1090300, servicesGoal: 60000, efficiencyGoal: 0.055,
+    eligibleGoal: 0, eligibleGoalConfirmed: false, servicesGoal: 60000, efficiencyGoal: 0.055,
     goals: [1220000, 1220000, 1281000],
     warrantyGoal: 81200, warrantyWeekly: 13300,
     ecommerce: 0, returns: 0, sellerCount: 0,
@@ -53,7 +53,8 @@
       weeks: automaticWeeks(raw.month || monthDefault),
       mercantileGoal,
       grossProfitGoal: num(raw.grossProfitGoal) || 407000,
-      eligibleGoal: num(raw.eligibleGoal) || 1090300,
+      eligibleGoal: num(raw.eligibleGoal) === 1090300 && !raw.eligibleGoalConfirmed ? 0 : num(raw.eligibleGoal),
+      eligibleGoalConfirmed: Boolean(raw.eligibleGoalConfirmed),
       servicesGoal: num(raw.servicesGoal) || 60000,
       efficiencyGoal: num(raw.efficiencyGoal) || 0.055,
       goals: [mercantileGoal, mercantileGoal, mercantileGoal * 1.05],
@@ -293,6 +294,8 @@
     document.getElementById('dailyGoalTeam').innerHTML = metrics.sellerCount
       ? `<strong>Média automática por vendedor:</strong> ${brl.format(metrics.perSeller)} de mercantil e ${brl.format(metrics.servicePerSeller)} de serviços/garantia (7%) para cada um, considerando ${metrics.sellerCount} vendedor(es).`
       : '<strong>Equipe ainda não configurada.</strong> Informe a quantidade de vendedores em Configuração ou cadastre os nomes na aba Vendedores.';
+    const key = selectedDailyGoalDate(), greeting = timeGreeting(), message = missionMessage({ id: db.branch || 'filial', name: 'Equipe' }, key, 'positive');
+    document.getElementById('dailyGoalMotivation').innerHTML = `<strong>${greeting}, equipe!</strong><br>${esc(message)}<br><small>Mensagem exclusiva para ${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR')}.</small>`;
     document.getElementById('downloadDailyGoal').disabled = !metrics.percent;
   }
   function renderDailyGoalPlanner() {
@@ -352,7 +355,8 @@
     const goalRate = metrics.branchGoal ? num(data.general) / metrics.branchGoal : 0;
     const serviceRate = metrics.serviceGoal ? services / metrics.serviceGoal : 0;
     const ticket = num(data.nfs) ? num(data.general) / num(data.nfs) : 0;
-    const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1350;
+    const greeting = timeGreeting(), motivationalText = missionMessage({ id: db.branch || 'filial', name: 'Equipe' }, key, 'positive');
+    const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1600;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     imageHeader(ctx, 'META DO DIA - FILIAL', `${db.branch || 'Filial não informada'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
     ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Missão do dia', 64, 334);
@@ -370,7 +374,11 @@
       ['Ticket médio', brl.format(ticket), `${num(data.nfs)} nota(s)`], ['Situação', data.status === 'done' ? 'Lançado' : data.status === 'off' ? 'Não trabalha' : 'Pendente', 'Atualização do dia']
     ];
     results.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 846 + row * 174, 296, 148, label, value, index === 0, note); });
-    ctx.fillStyle = '#748296'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1315);
+    ctx.fillStyle = '#edf7ff'; roundedCanvasRect(ctx, 64, 1205, 952, 270, 28); ctx.fill();
+    ctx.fillStyle = '#0879e8'; ctx.font = '900 30px Arial, sans-serif'; ctx.fillText(`${greeting}, equipe!`, 94, 1260);
+    ctx.fillStyle = '#203a56'; ctx.font = '800 25px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 94, 1310, 882, 34, 4);
+    ctx.fillStyle = '#526175'; ctx.font = '700 20px Arial, sans-serif'; ctx.fillText('Vamos juntos cumprir a missão do dia!', 94, 1435);
+    ctx.fillStyle = '#748296'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1560);
     const safeBranch = String(db.branch || 'filial').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
     await shareOrDownloadImage(canvas, `meta-diaria-${safeBranch || 'filial'}-${key}.png`, `Meta do dia - ${date.toLocaleDateString('pt-BR')}`);
   }
@@ -399,8 +407,8 @@
     setText('grossProfitKpiLabel', scope.type === 'branch' ? 'Lucro bruto' : 'Lucro bruto de referência');
     setText('grossProfitKpi', grossAvailable ? brl.format(result.grossProfit) : 'Não informado');
     setText('grossProfitKpiSub', scope.type === 'branch' ? (grossAvailable ? `${pct.format(num(goalSource.grossProfitGoal) ? result.grossProfit / num(goalSource.grossProfitGoal) : 0)} da meta de lucro` : 'Não interfere no percentual mercantil') : `${pct2.format(grossProfitRate())} da venda mercantil`);
-    setText('eligibleGoalKpi', brl.format(num(goalSource.eligibleGoal)));
-    setText('eligibleGoalKpiSub', `${pct.format(num(goalSource.eligibleGoal) ? result.eligible / num(goalSource.eligibleGoal) : 0)} atingido`);
+    setText('eligibleGoalKpi', num(goalSource.eligibleGoal) ? brl.format(num(goalSource.eligibleGoal)) : 'Não informada');
+    setText('eligibleGoalKpiSub', num(goalSource.eligibleGoal) ? `${pct.format(result.eligible / num(goalSource.eligibleGoal))} atingido` : 'Preencha somente se a empresa enviar essa meta');
     setText('efficiencyKpi', efficiencyPct.format(result.efficiency)); setText('ticketKpi', brl.format(result.ticket));
     setText('nfKpi', `${result.nfs.toLocaleString('pt-BR')} notas fiscais • média dos tickets diários`);
     const tiers = tierGoals(goalSource), firstGoal = tiers[0].mercantile;
@@ -581,6 +589,10 @@
     const serviceNeededPerDay = remainingDays ? serviceMissing / remainingDays : 0;
     const grossReference = individualGoal * grossProfitRate();
     return { services, individualGoal, serviceGoal, grossReference, plannedDays, remainingDays, rate, serviceRate, ticket, efficiency, projection, serviceProjection, dailyAverage, serviceDailyAverage, missing, serviceMissing, neededPerDay, serviceNeededPerDay };
+  }
+  function timeGreeting(moment = new Date()) {
+    const hour = moment.getHours();
+    return hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   }
   const positiveMotivations = [
     'Seu resultado mostra consistência. Continue firme e transforme o bom ritmo em uma grande entrega.',
@@ -852,7 +864,7 @@
   function recordForSellerImport(branch, month) {
     const key = recordKey(branch, month);
     if (vault.records[key]) return normalizeRecord(vault.records[key]);
-    return normalizeRecord({ ...baseRecord(branch, month), businessDays: db.businessDays, weeks: db.weeks, mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal, eligibleGoal: db.eligibleGoal, servicesGoal: db.servicesGoal, efficiencyGoal: db.efficiencyGoal, warrantyGoal: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly, sellers: [] });
+    return normalizeRecord({ ...baseRecord(branch, month), businessDays: db.businessDays, weeks: db.weeks, mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal, eligibleGoal: db.eligibleGoal, eligibleGoalConfirmed: db.eligibleGoalConfirmed, servicesGoal: db.servicesGoal, efficiencyGoal: db.efficiencyGoal, warrantyGoal: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly, sellers: [] });
   }
   function importSellerPayload(payload, forcedSeller = null, filename = 'backup.json') {
     if (payload?.kind !== 'fs-seller-backup' || ![1, 2].includes(payload.version) || !payload.seller || !Array.isArray(payload.records)) throw new Error(`${filename}: arquivo não é um backup individual válido.`);
@@ -1162,6 +1174,7 @@
     const money = { mercantileGoal: db.mercantileGoal, grossProfitGoal: db.grossProfitGoal, eligibleGoalInput: db.eligibleGoal, servicesGoalInput: db.servicesGoal, warrantyGoalInput: db.warrantyGoal, warrantyWeekly: db.warrantyWeekly, ecommerce: db.ecommerce, returns: db.returns };
     Object.entries(plain).forEach(([id, value]) => { document.getElementById(id).value = value; });
     Object.entries(money).forEach(([id, value]) => { const input = document.getElementById(id); input.value = brl.format(num(value)); bindMoneyBehavior(input); });
+    if (!num(db.eligibleGoal)) document.getElementById('eligibleGoalInput').value = '';
     document.getElementById('monthQuick').value = db.month;
     document.getElementById('grossProfitRateInput').value = pct2.format(grossProfitRate());
     renderTierPreview(); renderAuditList();
@@ -1178,14 +1191,14 @@
       branch: document.getElementById('branch').value.trim(), month: document.getElementById('month').value || monthDefault,
       businessDays: num(document.getElementById('businessDays').value) || 25, weeks: automaticWeeks(document.getElementById('month').value || monthDefault),
       mercantileGoal: num(document.getElementById('mercantileGoal').value), grossProfitGoal: num(document.getElementById('grossProfitGoal').value),
-      eligibleGoal: num(document.getElementById('eligibleGoalInput').value), servicesGoal: num(document.getElementById('servicesGoalInput').value),
+      eligibleGoal: num(document.getElementById('eligibleGoalInput').value), eligibleGoalConfirmed: true, servicesGoal: num(document.getElementById('servicesGoalInput').value),
       efficiencyGoal: num(document.getElementById('efficiencyGoalInput').value) / 100,
       warrantyGoal: num(document.getElementById('warrantyGoalInput').value), warrantyWeekly: num(document.getElementById('warrantyWeekly').value),
       ecommerce: num(document.getElementById('ecommerce').value), returns: num(document.getElementById('returns').value), sellerCount: Math.round(num(document.getElementById('sellerCount').value)),
       auditOwner: document.getElementById('auditOwner').value.trim(), auditSource: document.getElementById('auditSource').value.trim()
     };
     if (!next.branch) { document.getElementById('branch').classList.add('field-error'); alert('Informe a filial para salvar a configuração.'); return; }
-    if ([next.mercantileGoal, next.grossProfitGoal, next.eligibleGoal, next.servicesGoal, next.efficiencyGoal].some((goal) => goal <= 0)) { alert('Informe todas as metas-base enviadas pela empresa.'); return; }
+    if ([next.mercantileGoal, next.grossProfitGoal, next.servicesGoal, next.efficiencyGoal].some((goal) => goal <= 0)) { alert('Informe as metas-base obrigatórias enviadas pela empresa. A meta de venda elegível é opcional.'); return; }
     if (!next.auditOwner) { document.getElementById('auditOwner').classList.add('field-error'); alert('Informe o responsável pela configuração para manter a auditoria.'); return; }
     const contextChanged = next.branch !== db.branch || next.month !== db.month;
     if (contextChanged) {

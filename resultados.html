@@ -161,7 +161,7 @@
       <article class="kpi"><div class="label">Serviços</div><div class="value" id="servicesKpi">R$ 0,00</div><div class="sub">Garantia + outros + presta-mista</div></article>
       <article class="kpi"><div class="label">Eficiência</div><div class="value" id="efficiencyKpi">0,00%</div><div class="sub">Serviços ÷ venda elegível</div></article>
       <article class="kpi"><div class="label">Ticket médio</div><div class="value" id="ticketKpi">R$ 0,00</div><div class="sub" id="nfKpi">0 notas fiscais</div></article>
-      <article class="kpi"><div class="label">Produtos elegíveis</div><div class="value" id="eligibleGoalKpi">R$ 0,00</div><div class="sub" id="eligibleGoalKpiSub">Meta configurada</div></article>
+      <article class="kpi"><div class="label">Meta de venda elegível</div><div class="value" id="eligibleGoalKpi">Não informada</div><div class="sub" id="eligibleGoalKpiSub">Meta opcional</div></article>
     </div>
     <div class="goal-grid" id="goalGrid"></div>
     <div class="section-grid">
@@ -181,6 +181,7 @@
         </div>
         <div class="daily-goal-summary" id="dailyGoalSummary"></div>
         <div class="daily-goal-team" id="dailyGoalTeam"></div>
+        <div class="seller-motivation-preview" id="dailyGoalMotivation"></div>
       </section>
       <div class="validation-box" id="dailyValidation"></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Lucro bruto</th><th>Elegível</th><th>Garantia</th><th>Outros serviços</th><th>Presta-mista</th><th>Subtotal serviços</th><th>Eficiência</th><th>NFs</th><th>Ticket médio</th></tr></thead><tbody id="dailyBody"></tbody></table></div><div class="daily-cards" id="dailyCards"></div></article>
   </section>
@@ -247,7 +248,7 @@
         <div class="config-section">Metas-base enviadas pela empresa</div>
         <div class="field"><label for="mercantileGoal">Meta mercantil</label><input class="money-input" inputmode="decimal" id="mercantileGoal" type="text"></div>
         <div class="field"><label for="grossProfitGoal">Meta de lucro bruto</label><input class="money-input" inputmode="decimal" id="grossProfitGoal" type="text"></div>
-        <div class="field"><label for="eligibleGoalInput">Meta de produtos elegíveis</label><input class="money-input" inputmode="decimal" id="eligibleGoalInput" type="text"></div>
+        <div class="field"><label for="eligibleGoalInput">Meta de venda elegível (opcional)</label><input class="money-input" inputmode="decimal" id="eligibleGoalInput" type="text"></div>
         <div class="field"><label for="servicesGoalInput">Meta mensal de serviços</label><input class="money-input" inputmode="decimal" id="servicesGoalInput" type="text"></div>
         <div class="field"><label for="efficiencyGoalInput">Meta de eficiência (%)</label><input inputmode="decimal" id="efficiencyGoalInput" type="number" min="0" max="100" step="0.01"></div>
         <div class="field derived-field"><label for="grossProfitRateInput">Percentual lucro bruto / meta mercantil</label><input id="grossProfitRateInput" type="text" readonly><span class="scope-hint">Calculado automaticamente pelas duas metas acima</span></div>
@@ -370,7 +371,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v18.js?v=31"></script>
+<script src="resultados-v18.js?v=32"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
