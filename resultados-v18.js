@@ -320,11 +320,15 @@
     const r = Math.min(radius, width / 2, height / 2);
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + width, y, x + width, y + height, r); ctx.arcTo(x + width, y + height, x, y + height, r); ctx.arcTo(x, y + height, x, y, r); ctx.arcTo(x, y, x + width, y, r); ctx.closePath();
   }
+  function fitCanvasFont(ctx, text, maxWidth, weight = 800, startSize = 23, minSize = 14) {
+    let size = startSize; ctx.font = `${weight} ${size}px Arial, sans-serif`;
+    while (size > minSize && ctx.measureText(String(text)).width > maxWidth) { size -= 1; ctx.font = `${weight} ${size}px Arial, sans-serif`; }
+  }
   function drawCanvasMetric(ctx, x, y, width, height, label, value, accent = false, note = '') {
     ctx.fillStyle = accent ? '#e3f2ff' : '#f4f7fc'; roundedCanvasRect(ctx, x, y, width, height, 24); ctx.fill();
-    ctx.fillStyle = '#64748b'; ctx.font = '800 23px Arial, sans-serif'; ctx.fillText(String(label).toUpperCase(), x + 28, y + 42);
-    ctx.fillStyle = '#102a43'; ctx.font = '900 38px Arial, sans-serif'; ctx.fillText(value, x + 28, y + 93);
-    if (note) { ctx.fillStyle = '#64748b'; ctx.font = '600 20px Arial, sans-serif'; ctx.fillText(note, x + 28, y + height - 22); }
+    ctx.fillStyle = '#64748b'; fitCanvasFont(ctx, String(label).toUpperCase(), width - 56, 800, 23, 14); ctx.fillText(String(label).toUpperCase(), x + 28, y + 42);
+    ctx.fillStyle = '#102a43'; fitCanvasFont(ctx, value, width - 56, 900, 38, 21); ctx.fillText(value, x + 28, y + 93);
+    if (note) { ctx.fillStyle = '#64748b'; fitCanvasFont(ctx, note, width - 56, 600, 20, 13); ctx.fillText(note, x + 28, y + height - 22); }
   }
   function drawWrappedCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
     const words = String(text || '').split(/\s+/); let line = '', lines = [];
@@ -583,6 +587,8 @@
     const serviceProjection = num(seller.days) ? (services / num(seller.days)) * plannedDays : 0;
     const dailyAverage = num(seller.days) ? num(seller.general) / num(seller.days) : 0;
     const serviceDailyAverage = num(seller.days) ? services / num(seller.days) : 0;
+    const targetDailyAverage = plannedDays ? individualGoal / plannedDays : 0;
+    const serviceTargetDailyAverage = plannedDays ? serviceGoal / plannedDays : 0;
     const missing = Math.max(0, individualGoal - num(seller.general));
     const serviceMissing = Math.max(0, serviceGoal - services);
     const remainingDays = Math.max(0, plannedDays - num(seller.days));
@@ -590,7 +596,7 @@
     const serviceNeededPerDay = remainingDays ? serviceMissing / remainingDays : 0;
     const projectedGap = individualGoal - projection, serviceProjectedGap = serviceGoal - serviceProjection;
     const grossReference = individualGoal * grossProfitRate();
-    return { services, individualGoal, serviceGoal, grossReference, plannedDays, remainingDays, rate, serviceRate, ticket, hasEligible, efficiency, projection, serviceProjection, projectedGap, serviceProjectedGap, dailyAverage, serviceDailyAverage, missing, serviceMissing, neededPerDay, serviceNeededPerDay };
+    return { services, individualGoal, serviceGoal, grossReference, plannedDays, remainingDays, rate, serviceRate, ticket, hasEligible, efficiency, projection, serviceProjection, projectedGap, serviceProjectedGap, dailyAverage, serviceDailyAverage, targetDailyAverage, serviceTargetDailyAverage, missing, serviceMissing, neededPerDay, serviceNeededPerDay };
   }
   function timeGreeting(moment = new Date()) {
     const hour = moment.getHours();
@@ -695,7 +701,8 @@
     const suggested = suggestedMissionTone(seller), tone = selectedMissionTone(seller, key), message = missionMessage(seller, key, tone);
     document.getElementById('sellerMissionSummary').innerHTML = [
       ['Percentual do dia', mission.percent ? `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : 'Não informado'],
-      ['Meta mercantil do dia', brl.format(mission.mercantileGoal)], ['Serviços/garantia (7%)', brl.format(mission.serviceGoal)]
+      ['Meta mercantil do dia', brl.format(mission.mercantileGoal)], ['Serviços do dia (7%)', brl.format(mission.serviceGoal)],
+      ['Dias planejados do vendedor', mission.metrics.plannedDays], ['Meta média mercantil/dia', brl.format(mission.metrics.targetDailyAverage)], ['Meta média serviços/dia', brl.format(mission.metrics.serviceTargetDailyAverage)]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     document.querySelectorAll('[data-mission-tone]').forEach((button) => button.classList.toggle('active', button.dataset.missionTone === tone));
     document.getElementById('sellerToneSuggestion').textContent = seller.missionTones?.[key] ? 'Tom escolhido manualmente para este dia' : `Sugestão automática: ${suggested === 'positive' ? 'resultado positivo' : 'apoio e recuperação'}`;
@@ -706,31 +713,42 @@
     if (!seller) return;
     const mission = sellerMissionMetrics(seller, key), metrics = mission.metrics, tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone);
     if (!mission.percent) { alert('Informe primeiro o percentual deste dia na meta diária da filial.'); return; }
-    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1800;
+    const hasFollowUp = num(seller.days) > 0 || num(seller.general) > 0 || num(seller.eligible) > 0 || metrics.services > 0 || num(seller.nfs) > 0;
+    const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = hasFollowUp ? 2220 : 1350;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     imageHeader(ctx, 'MISSÃO DO DIA - VENDEDOR', `${seller.name || 'Vendedor'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
     ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Meta individual do dia', 64, 334);
     drawCanvasMetric(ctx, 64, 365, 296, 142, 'Percentual do dia', `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`);
     drawCanvasMetric(ctx, 392, 365, 296, 142, 'Mercantil do dia', brl.format(mission.mercantileGoal), true);
-    drawCanvasMetric(ctx, 720, 365, 296, 142, 'Serviços/garantia 7%', brl.format(mission.serviceGoal));
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento mercantil acumulado', 64, 568);
-    const mercantileCards = [
-      ['Meta mensal', brl.format(metrics.individualGoal), 'Meta individual cadastrada'], ['Realizado', brl.format(num(seller.general)), pct.format(metrics.rate)], ['Falta', brl.format(metrics.missing), 'Para atingir a meta'],
-      ['Média por dia', brl.format(metrics.dailyAverage), `${num(seller.days)} dia(s) trabalhado(s)`], ['Projeção', brl.format(metrics.projection), `${metrics.projectedGap <= 0 ? 'Acima' : 'Abaixo'} ${brl.format(Math.abs(metrics.projectedGap))}`], ['Necessário/dia', brl.format(metrics.neededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+    drawCanvasMetric(ctx, 720, 365, 296, 142, 'Serviços do dia 7%', brl.format(mission.serviceGoal));
+    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Planejamento individual', 64, 568);
+    const planningCards = [
+      ['Meta mercantil', brl.format(metrics.individualGoal), 'Meta individual cadastrada'], ['Meta serviços 7%', brl.format(metrics.serviceGoal), 'Meta consolidada de serviços'], ['Dias planejados', String(metrics.plannedDays), 'Jornada individual do vendedor'],
+      ['Meta média mercantil/dia', brl.format(metrics.targetDailyAverage), `Meta ÷ ${metrics.plannedDays} dias`], ['Meta média serviços/dia', brl.format(metrics.serviceTargetDailyAverage), `Meta 7% ÷ ${metrics.plannedDays} dias`], ['Dias restantes', String(metrics.remainingDays), `${num(seller.days)} dia(s) trabalhado(s)`]
     ];
-    mercantileCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 598 + row * 174, 296, 148, label, value, index === 1, note); });
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento de serviços', 64, 1006);
-    const serviceCards = [
-      ['Meta serviços (7%)', brl.format(metrics.serviceGoal), 'Sobre a meta mercantil'], ['Serviços realizados', brl.format(metrics.services), pct.format(metrics.serviceRate)], ['Falta em serviços', brl.format(metrics.serviceMissing), 'Para atingir 7%'],
-      ['Média serviços/dia', brl.format(metrics.serviceDailyAverage), `${num(seller.days)} dia(s) trabalhado(s)`], ['Projeção serviços', brl.format(metrics.serviceProjection), `${metrics.serviceProjectedGap <= 0 ? 'Acima' : 'Abaixo'} ${brl.format(Math.abs(metrics.serviceProjectedGap))}`], ['Necessário/dia', brl.format(metrics.serviceNeededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
-    ];
-    serviceCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 1036 + row * 174, 296, 148, label, value, index === 1, note); });
-    drawCanvasMetric(ctx, 64, 1400, 952, 112, 'Eficiência atual', metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada', true, metrics.hasEligible ? '' : 'Informe a venda elegível acumulada');
-    ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, 1534, 952, 150, 26); ctx.fill();
-    ctx.fillStyle = tone === 'positive' ? '#087a4b' : '#b3263b'; ctx.font = '900 22px Arial, sans-serif'; ctx.fillText(tone === 'positive' ? 'MENSAGEM DE RECONHECIMENTO' : 'MENSAGEM DE APOIO E RECUPERAÇÃO', 92, 1572);
-    ctx.fillStyle = '#203a56'; ctx.font = '700 24px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 92, 1612, 884, 29, 2);
-    ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'} • acompanhamento informado pelo gestor`, 64, 1725);
-    ctx.fillStyle = '#748296'; ctx.font = '600 17px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1770);
+    planningCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 598 + row * 174, 296, 148, label, value, index === 0, note); });
+    if (hasFollowUp) {
+      ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento mercantil acumulado', 64, 990);
+      const mercantileCards = [
+        ['Realizado', brl.format(num(seller.general)), pct.format(metrics.rate)], ['Falta atual', brl.format(metrics.missing), 'Para atingir a meta'], ['Dias trabalhados', String(num(seller.days)), `${metrics.remainingDays} dia(s) restante(s)`],
+        ['Média realizada/dia', brl.format(metrics.dailyAverage), 'Realizado ÷ dias trabalhados'], ['Projeção', brl.format(metrics.projection), `${metrics.projectedGap <= 0 ? 'Acima' : 'Abaixo'} ${brl.format(Math.abs(metrics.projectedGap))}`], ['Necessário/dia restante', brl.format(metrics.neededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+      ];
+      mercantileCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 1020 + row * 174, 296, 148, label, value, index === 0, note); });
+      ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento de serviços totais', 64, 1400);
+      const serviceCards = [
+        ['Serviços realizados', brl.format(metrics.services), pct.format(metrics.serviceRate)], ['Falta atual', brl.format(metrics.serviceMissing), 'Para atingir a meta 7%'], ['Dias trabalhados', String(num(seller.days)), `${metrics.remainingDays} dia(s) restante(s)`],
+        ['Média realizada/dia', brl.format(metrics.serviceDailyAverage), 'Serviços ÷ dias trabalhados'], ['Projeção', brl.format(metrics.serviceProjection), `${metrics.serviceProjectedGap <= 0 ? 'Acima' : 'Abaixo'} ${brl.format(Math.abs(metrics.serviceProjectedGap))}`], ['Necessário/dia restante', brl.format(metrics.serviceNeededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+      ];
+      serviceCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 1430 + row * 174, 296, 148, label, value, index === 0, note); });
+      drawCanvasMetric(ctx, 64, 1810, 952, 112, 'Eficiência atual', metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada', true, metrics.hasEligible ? 'Serviços totais ÷ venda elegível' : 'Informe a venda elegível acumulada');
+    }
+    const motivationY = hasFollowUp ? 1945 : 970, branchY = hasFollowUp ? 2145 : 1240, footerY = hasFollowUp ? 2185 : 1310;
+    ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, motivationY, 952, hasFollowUp ? 165 : 220, 26); ctx.fill();
+    ctx.fillStyle = tone === 'positive' ? '#087a4b' : '#b3263b'; ctx.font = '900 22px Arial, sans-serif'; ctx.fillText(tone === 'positive' ? 'MENSAGEM DE RECONHECIMENTO' : 'MENSAGEM DE APOIO E RECUPERAÇÃO', 92, motivationY + 40);
+    ctx.fillStyle = '#203a56'; ctx.font = '700 24px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 92, motivationY + 82, 884, 31, hasFollowUp ? 2 : 3);
+    if (!hasFollowUp) { ctx.fillStyle = '#526175'; ctx.font = '700 20px Arial, sans-serif'; ctx.fillText('Acompanhamento acumulado ainda não informado pelo gestor.', 92, motivationY + 178); }
+    ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'} • ${metrics.plannedDays} dias planejados para este vendedor`, 64, branchY);
+    ctx.fillStyle = '#748296'; ctx.font = '600 17px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, footerY);
     const safeName = String(seller.name || 'vendedor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
     await shareOrDownloadImage(canvas, `missao-diaria-${safeName || 'vendedor'}-${key}.png`, `Missão do dia - ${seller.name || 'Vendedor'}`);
   }
@@ -768,9 +786,9 @@
     document.getElementById('sellerProfileTitle').textContent = seller.name || 'Vendedor sem nome';
     document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • ${financial.plannedDays} dias úteis + ${financial.restDays} descansos`;
     document.getElementById('sellerProfileKpis').innerHTML = [
-      ['Venda mercantil total', brl.format(num(seller.general))], ['Venda elegível (base eficiência)', brl.format(num(seller.eligible))], ['Meta mercantil', brl.format(metrics.individualGoal)], ['Atingimento mercantil', pct.format(metrics.rate)],
+      ['Venda mercantil total', brl.format(num(seller.general))], ['Venda elegível (base eficiência)', brl.format(num(seller.eligible))], ['Meta mercantil', brl.format(metrics.individualGoal)], ['Meta média mercantil/dia', brl.format(metrics.targetDailyAverage)], ['Atingimento mercantil', pct.format(metrics.rate)],
       ['Falta mercantil', brl.format(metrics.missing)], ['Média mercantil/dia', brl.format(metrics.dailyAverage)], ['Projeção mercantil', brl.format(metrics.projection)], ['Necessário/dia', brl.format(metrics.neededPerDay)],
-      ['Serviços acumulados', brl.format(metrics.services)], ['Meta serviços (7%)', brl.format(metrics.serviceGoal)], ['Atingimento serviços', pct.format(metrics.serviceRate)],
+      ['Serviços acumulados', brl.format(metrics.services)], ['Meta serviços (7%)', brl.format(metrics.serviceGoal)], ['Meta média serviços/dia', brl.format(metrics.serviceTargetDailyAverage)], ['Atingimento serviços', pct.format(metrics.serviceRate)],
       ['Falta serviços', brl.format(metrics.serviceMissing)], ['Média serviços/dia', brl.format(metrics.serviceDailyAverage)], ['Projeção serviços', brl.format(metrics.serviceProjection)], ['Eficiência', metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada'],
       ['Dias planejados', metrics.plannedDays], ['Dias trabalhados', num(seller.days)], ['Dias restantes', metrics.remainingDays]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
@@ -783,6 +801,18 @@
     const historyRow = (item) => `<tr><td>${esc(monthLabel(item.month))}</td><td>${brl.format(num(item.seller.general))}</td><td>${brl.format(item.services)}</td><td>${brl.format(item.ticket)}</td><td>${brl.format(item.financial.mercantileCommission)}</td><td>${brl.format(item.financial.serviceCommission)}</td><td>${brl.format(item.financial.dsr)}</td><td>${brl.format(item.financial.total)}</td><td>${pct2.format(item.financial.mercantileRate)}</td></tr>`;
     document.getElementById('sellerProfileHistoryBody').innerHTML = history.length ? history.map(historyRow).join('') : '<tr><td colspan="9">Nenhum histórico disponível.</td></tr>';
     document.getElementById('sellerProfileHistoryCards').innerHTML = history.length ? history.map((item) => `<article class="compiled-card"><header><strong>${esc(monthLabel(item.month))}</strong><span class="trend-badge stable">${pct2.format(item.financial.mercantileRate)}</span></header><div class="compiled-card-grid"><div class="metric"><span>VENDA</span><strong>${brl.format(num(item.seller.general))}</strong></div><div class="metric"><span>SERVIÇOS</span><strong>${brl.format(item.services)}</strong></div><div class="metric"><span>DSR</span><strong>${brl.format(item.financial.dsr)}</strong></div><div class="metric"><span>GANHO TOTAL</span><strong>${brl.format(item.financial.total)}</strong></div></div></article>`).join('') : '<div class="empty">Nenhum histórico disponível.</div>';
+  }
+  function syncSellerRow(row) {
+    if (!row) return null;
+    const index = Number(row.dataset.i), seller = db.sellers[index]; if (!seller) return null;
+    const textFields = new Set(['name', 'notes', 'commitment', 'deadline']);
+    const integerFields = new Set(['nfs', 'days', 'plannedDays', 'justifiedDays']);
+    row.querySelectorAll('[data-f]').forEach((element) => {
+      const field = element.dataset.f;
+      seller[field] = textFields.has(field) ? element.value : integerFields.has(field) ? Math.round(num(element.value)) : num(element.value);
+    });
+    seller.updatedAt = new Date().toISOString();
+    return { index, seller };
   }
   function renderSellers() {
     const branch = calculate(), sellerSales = db.sellers.reduce((sum, seller) => sum + num(seller.general), 0);
@@ -818,18 +848,16 @@
     }));
     list.querySelectorAll('.money-input').forEach(bindMoneyBehavior);
     list.querySelectorAll('[data-f]').forEach((element) => element.addEventListener('change', (event) => {
-      const index = Number(event.target.closest('[data-i]').dataset.i), field = event.target.dataset.f;
-      const textFields = new Set(['name', 'notes', 'commitment', 'deadline']);
-      db.sellers[index][field] = textFields.has(field) ? event.target.value : field === 'nfs' || field === 'days' || field === 'plannedDays' || field === 'justifiedDays' ? Math.round(num(event.target.value)) : num(event.target.value);
-      db.sellers[index].updatedAt = new Date().toISOString();
+      const field = event.target.dataset.f; syncSellerRow(event.target.closest('[data-i]'));
       persist(); renderSellers(); renderScopeSelector(); renderCompiled(); if (field === 'name') renderGoalsHistory(); if (activeScope !== 'branch') renderOverview();
     }));
     list.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', () => {
       if (confirm('Excluir este vendedor da competência atual?')) { db.sellers.splice(Number(button.dataset.remove), 1); openSellerIndex = null; activeScope = 'branch'; persist(); renderSellers(); renderScopeSelector(); renderOverview(); }
     }));
     list.querySelectorAll('[data-open-seller]').forEach((button) => button.addEventListener('click', () => {
-      const seller = db.sellers[Number(button.dataset.openSeller)]; if (!seller) return;
-      activeSellerProfileId = sellerIdentity(seller, Number(button.dataset.openSeller)); activeScope = `seller:${button.dataset.openSeller}`;
+      const synced = syncSellerRow(button.closest('[data-i]')); if (!synced) return; persist(false);
+      const { seller, index } = synced;
+      activeSellerProfileId = sellerIdentity(seller, index); activeScope = `seller:${index}`;
       renderSellerProfile(); renderScopeSelector(); showView('sellerProfile');
     }));
   }
