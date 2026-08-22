@@ -773,8 +773,8 @@
   }
   function sellerPeriodAnalysis(seller, key) {
     const mission = sellerMissionMetrics(seller, key), metrics = mission.metrics, period = sellerResultPeriod(seller);
-    const labels = { none: 'Somente meta, sem resultado', day: 'Resultado do dia', week: 'Resultado da semana', fortnight: 'Resultado da quinzena', accumulated: 'Acumulado até o momento', month: 'Fechamento do mês', custom: 'Período personalizado' };
-    const hasResult = period !== 'none';
+    const labels = { goalMonth: 'Meta do mês, sem resultado', none: 'Meta do dia, sem resultado', day: 'Resultado do dia', week: 'Resultado da semana', fortnight: 'Resultado da quinzena', accumulated: 'Acumulado até o momento', month: 'Fechamento do mês', custom: 'Período personalizado' };
+    const hasResult = period !== 'none' && period !== 'goalMonth';
     const periodDays = period === 'day' ? 1 : period === 'month' ? metrics.plannedDays : Math.max(1, num(seller.days));
     const mercantileTarget = period === 'day' ? mission.mercantileGoal : period === 'month' ? metrics.individualGoal : metrics.targetDailyAverage * periodDays;
     const serviceTarget = period === 'day' ? mission.serviceGoal : period === 'month' ? metrics.serviceGoal : metrics.serviceTargetDailyAverage * periodDays;
@@ -802,27 +802,70 @@
   }
   function renderSellerMission(seller) {
     const key = selectedSellerMissionDate(), mission = sellerMissionMetrics(seller, key), analysis = sellerPeriodAnalysis(seller, key);
-    const financial = sellerFinancials(seller);
+    const financial = sellerFinancials(seller), financialComparison = sellerFinancialComparison(seller, analysis.period);
     const suggested = suggestedMissionTone(seller, key), tone = selectedMissionTone(seller, key), message = missionMessage(seller, key, tone);
-    document.getElementById('sellerMissionSummary').innerHTML = [
+    const isMonthlyGoal = analysis.period === 'goalMonth';
+    const summaryItems = isMonthlyGoal ? [
+      ['Meta mercantil mensal', brl.format(mission.metrics.individualGoal)], ['Meta mensal de serviços (7%)', brl.format(mission.metrics.serviceGoal)],
+      ['Eficiência de serviços', '7,00%'], ['Taxa de conversão', '35,00%'],
+      ['Ganho se bater as metas', brl.format(financial.targetTotal)], [financialComparison.currentLabel, brl.format(financialComparison.current)], [financialComparison.gapLabel, brl.format(Math.abs(financialComparison.gap))]
+    ] : [
       ['Percentual do dia', mission.percent ? `${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` : 'Não informado'],
       ['Mercantil da filial/vendedor', mission.sellerCount ? brl.format(mission.branchMercantilePerSeller) : 'Equipe não configurada'], ['Serviços da filial/vendedor', mission.sellerCount ? brl.format(mission.branchServicePerSeller) : 'Equipe não configurada'],
       ['Eficiência', '7,00%'], ['Conversão', '35,00%'], [`${mission.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% sobre a meta individual`, brl.format(mission.mercantileGoal)], ['Serviços individuais do dia', brl.format(mission.serviceGoal)],
-      ['Ganho se bater as metas', brl.format(financial.targetTotal)], ['Projeção financeira atual', brl.format(financial.projectedTotal)]
-    ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+      ['Ganho se bater as metas', brl.format(financial.targetTotal)], [financialComparison.currentLabel, brl.format(financialComparison.current)], [financialComparison.gapLabel, brl.format(Math.abs(financialComparison.gap))]
+    ];
+    document.getElementById('sellerMissionSummary').innerHTML = summaryItems.map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
+    document.getElementById('sellerMissionSectionTitle').textContent = isMonthlyGoal ? 'Meta do mês do vendedor' : 'Missão do dia do vendedor';
+    document.getElementById('sellerMissionDateField').hidden = isMonthlyGoal;
     const preview = document.getElementById('sellerPeriodPreview');
     preview.innerHTML = analysis.hasResult
-      ? `<strong>${esc(analysis.periodLabel)}${analysis.dateRange ? ` • ${esc(analysis.dateRange)}` : ''}</strong><br>O resultado será comparado com as duas referências do período escolhido.<div class="period-preview-grid"><div><span>META PELA FILIAL</span><b>${brl.format(analysis.branchMercantileTarget)}</b></div><div><span>ATINGIMENTO FILIAL</span><b>${pct2.format(analysis.branchMercantileRate)}</b></div><div><span>META INDIVIDUAL</span><b>${brl.format(analysis.mercantileTarget)}</b></div><div><span>ATINGIMENTO INDIVIDUAL</span><b>${pct2.format(analysis.mercantileRate)}</b></div></div>`
-      : `<strong>Imagem somente com a meta</strong><br>A imagem mostrará a missão da filial por vendedor, a missão individual e a mensagem motivacional, sem resultados.`;
+      ? `<strong>${esc(analysis.periodLabel)}${analysis.dateRange ? ` • ${esc(analysis.dateRange)}` : ''}</strong><br>${analysis.period === 'month' ? 'Fechamento comparado com a meta mensal completa.' : `Projeção proporcional a ${analysis.periodDays} dia(s) trabalhado(s), de ${analysis.metrics.plannedDays} planejado(s).`}<div class="period-preview-grid"><div><span>META PELA FILIAL</span><b>${brl.format(analysis.branchMercantileTarget)}</b></div><div><span>ATINGIMENTO FILIAL</span><b>${pct2.format(analysis.branchMercantileRate)}</b></div><div><span>META INDIVIDUAL</span><b>${brl.format(analysis.mercantileTarget)}</b></div><div><span>ATINGIMENTO INDIVIDUAL</span><b>${pct2.format(analysis.mercantileRate)}</b></div><div><span>${financialComparison.currentLabel.toUpperCase()}</span><b>${brl.format(financialComparison.current)}</b></div><div><span>${financialComparison.gapLabel.toUpperCase()}</span><b>${brl.format(Math.abs(financialComparison.gap))}</b></div></div>`
+      : isMonthlyGoal
+        ? `<strong>Imagem da meta do mês</strong><br>Serão mostradas as metas mensais mercantil e de serviços, os indicadores fixos e as projeções financeiras. O percentual e as missões do dia não aparecerão.`
+        : `<strong>Imagem da meta do dia</strong><br>A imagem mostrará o percentual do dia, a missão da filial por vendedor, a missão individual e a mensagem motivacional, sem resultados.`;
     document.querySelectorAll('[data-mission-tone]').forEach((button) => button.classList.toggle('active', button.dataset.missionTone === tone));
     document.getElementById('sellerToneSuggestion').textContent = seller.missionTones?.[key] ? 'Tom escolhido manualmente para este dia' : `Sugestão automática: ${suggested === 'positive' ? 'resultado positivo' : 'apoio e recuperação'}`;
     document.getElementById('sellerMotivationPreview').innerHTML = `${esc(message)}<br><small>Mensagem exclusiva deste dia; não se repete durante o mês.</small>`;
-    document.getElementById('sellerMissionImage').disabled = !mission.percent;
+    document.getElementById('sellerMissionImage').disabled = !isMonthlyGoal && !mission.percent;
+    document.getElementById('sellerMissionImage').textContent = isMonthlyGoal ? 'Baixar / compartilhar meta do mês' : 'Baixar / compartilhar missão em imagem';
+  }
+  async function exportSellerMonthlyGoalImage(seller, key, analysis, financial) {
+    const metrics = analysis.metrics, tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone);
+    const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1510;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const [year, month] = String(db.month).split('-').map(Number);
+    imageHeader(ctx, 'META DO MÊS - VENDEDOR', `${seller.name || 'Vendedor'}  |  ${new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`, canvas.width);
+
+    ctx.fillStyle = '#f5f2ff'; roundedCanvasRect(ctx, 54, 305, 972, 365, 30); ctx.fill();
+    ctx.fillStyle = '#6b4ce6'; roundedCanvasRect(ctx, 76, 331, 9, 36, 5); ctx.fill();
+    ctx.fillStyle = '#102a43'; ctx.font = '900 30px Arial, sans-serif'; ctx.fillText('META INDIVIDUAL DO VENDEDOR', 102, 359);
+    drawCanvasMetric(ctx, 64, 390, 460, 132, 'Meta mercantil mensal', brl.format(metrics.individualGoal), true);
+    drawCanvasMetric(ctx, 556, 390, 460, 132, 'Meta mensal de serviços (7%)', brl.format(metrics.serviceGoal));
+    drawCanvasMetric(ctx, 64, 542, 460, 102, 'Eficiência de serviços', '7,00%');
+    drawCanvasMetric(ctx, 556, 542, 460, 102, 'Taxa de conversão', '35,00%');
+
+    ctx.fillStyle = '#effaf5'; roundedCanvasRect(ctx, 54, 705, 972, 360, 30); ctx.fill();
+    ctx.fillStyle = '#169b62'; roundedCanvasRect(ctx, 76, 731, 9, 36, 5); ctx.fill();
+    ctx.fillStyle = '#102a43'; ctx.font = '900 29px Arial, sans-serif'; ctx.fillText('PROJEÇÃO FINANCEIRA', 102, 759);
+    drawCanvasMetric(ctx, 64, 790, 460, 132, 'Ganho se bater as metas', brl.format(financial.targetTotal), true, 'Inclui comissões, repousos e atestados');
+    drawCanvasMetric(ctx, 556, 790, 460, 132, 'Projeção no ritmo atual', brl.format(financial.projectedTotal), false, num(seller.days) ? `${num(seller.days)} dia(s) considerado(s)` : 'Aguardando resultados');
+    drawCanvasMetric(ctx, 64, 942, 296, 98, 'Comissão mercantil', pct2.format(financial.mercantileRate));
+    drawCanvasMetric(ctx, 392, 942, 296, 98, 'Comissão de serviços', pct2.format(financial.serviceRate));
+    drawCanvasMetric(ctx, 720, 942, 296, 98, 'Repousos + atestados', `${financial.paidDays} dia(s)`);
+
+    ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, 1105, 952, 190, 26); ctx.fill();
+    ctx.fillStyle = '#203a56'; ctx.font = '700 25px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 94, 1163, 884, 34, 3);
+    ctx.fillStyle = '#102a43'; ctx.font = '800 20px Arial, sans-serif'; ctx.fillText(`${db.branch || 'Filial não informada'}`, 64, 1360);
+    ctx.fillStyle = '#748296'; ctx.font = '600 17px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1400);
+    const safeName = String(seller.name || 'vendedor').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+    await shareOrDownloadImage(canvas, `meta-mensal-${safeName || 'vendedor'}-${db.month}.png`, `Meta do mês - ${seller.name || 'Vendedor'}`);
   }
   async function exportSellerMissionImage(seller, key = selectedSellerMissionDate()) {
     if (!seller) return;
     const analysis = sellerPeriodAnalysis(seller, key), mission = analysis, metrics = analysis.metrics, financial = sellerFinancials(seller);
-    const tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone);
+    const tone = selectedMissionTone(seller, key), motivationalText = missionMessage(seller, key, tone), financialComparison = sellerFinancialComparison(seller, analysis.period);
+    if (analysis.period === 'goalMonth') { await exportSellerMonthlyGoalImage(seller, key, analysis, financial); return; }
     if (!mission.percent) { alert('Informe primeiro o percentual deste dia na meta diária da filial.'); return; }
     const hasFollowUp = analysis.hasResult;
     const date = new Date(`${key}T12:00:00`), canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = hasFollowUp ? 2210 : 1660;
@@ -852,8 +895,8 @@
     ctx.fillStyle = '#169b62'; roundedCanvasRect(ctx, 76, 1136, 9, 36, 5); ctx.fill();
     ctx.fillStyle = '#102a43'; ctx.font = '900 29px Arial, sans-serif'; ctx.fillText('PROJEÇÃO FINANCEIRA', 102, 1164);
     drawCanvasMetric(ctx, 64, 1182, 296, 130, 'Ganho se bater as metas', brl.format(financial.targetTotal), true, `Merc. ${pct2.format(financial.mercantileRate)} • Serv. ${pct2.format(financial.serviceRate)}`);
-    drawCanvasMetric(ctx, 392, 1182, 296, 130, 'Projeção no ritmo atual', brl.format(financial.projectedTotal), false, num(seller.days) ? `${num(seller.days)} dia(s) considerado(s)` : 'Aguardando resultados');
-    drawCanvasMetric(ctx, 720, 1182, 296, 130, 'Repousos + atestados', `${financial.paidDays} dia(s)`, false, 'Incluídos nas projeções');
+    drawCanvasMetric(ctx, 392, 1182, 296, 130, financialComparison.currentLabel, brl.format(financialComparison.current), false, num(seller.days) ? `${num(seller.days)} de ${financial.plannedDays} dia(s)` : 'Aguardando resultados');
+    drawCanvasMetric(ctx, 720, 1182, 296, 130, financialComparison.gapLabel, brl.format(Math.abs(financialComparison.gap)), false, financialComparison.gapNote);
     if (hasFollowUp) {
       const rangeNote = analysis.dateRange || analysis.periodLabel;
       ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('RESULTADO DO PERÍODO', 64, 1400);
@@ -908,6 +951,17 @@
     const targetPaid = plannedDays ? targetSubtotal / plannedDays * paidDays : 0, targetTotal = targetSubtotal + targetPaid;
     return { services, serviceCommission, mercantileCommission, commissionSubtotal, plannedDays, automaticRestDays, restDays, justifiedDays, paidDays, dsr, total, projectedSubtotal, projectedDsr, projectedTotal, mercantileRate, serviceRate, targetMercantileCommission, targetServiceCommission, targetSubtotal, targetPaid, targetTotal };
   }
+  function sellerFinancialComparison(seller, period = sellerResultPeriod(seller)) {
+    const financial = sellerFinancials(seller), isClosure = period === 'month';
+    const current = isClosure ? financial.total : financial.projectedTotal;
+    const gap = financial.targetTotal - current;
+    return {
+      ...financial, isClosure, current, gap,
+      currentLabel: isClosure ? 'Ganho apurado no fechamento' : 'Projeção financeira atual',
+      gapLabel: isClosure ? (gap > 0.005 ? 'Quanto deixou de ganhar' : 'Diferença no fechamento') : 'Diferença financeira projetada',
+      gapNote: gap > 0.005 ? 'Abaixo do potencial das metas' : gap < -0.005 ? 'Acima do potencial das metas' : 'Projeção financeira atendida'
+    };
+  }
   function sellerProfileHistory(seller) {
     const id = sellerIdentity(seller, db.sellers.indexOf(seller)), name = seller.name || '';
     const branch = String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
@@ -922,7 +976,7 @@
     if (!activeSellerProfileId) return;
     const seller = db.sellers.find((item, index) => sellerIdentity(item, index) === activeSellerProfileId);
     if (!seller) { activeSellerProfileId = null; return; }
-    const metrics = sellerMetrics(seller), financial = sellerFinancials(seller), history = sellerProfileHistory(seller), period = sellerPeriodAnalysis(seller, selectedSellerMissionDate());
+    const metrics = sellerMetrics(seller), financial = sellerFinancials(seller), history = sellerProfileHistory(seller), period = sellerPeriodAnalysis(seller, selectedSellerMissionDate()), financialComparison = sellerFinancialComparison(seller, period.period);
     const expectedTotal = financial.targetTotal;
     document.getElementById('sellerProfileTitle').textContent = seller.name || 'Vendedor sem nome';
     document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • ${financial.plannedDays} dias úteis + ${financial.restDays} descansos`;
@@ -939,7 +993,7 @@
     document.getElementById('profileCommissionServiceRate').value = Object.prototype.hasOwnProperty.call(seller, 'commissionServiceRate') ? num(seller.commissionServiceRate) : 5;
     document.getElementById('profileRestDays').value = financial.restDays;
     document.getElementById('profileJustifiedDays').value = num(seller.justifiedDays) || '';
-    document.getElementById('sellerFinanceResults').innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL • ${pct2.format(financial.mercantileRate)}</span><strong>${brl.format(financial.mercantileCommission)}</strong></div><div class="metric"><span>COMISSÃO SERVIÇOS • ${pct2.format(financial.serviceRate)}</span><strong>${brl.format(financial.serviceCommission)}</strong></div><div class="metric"><span>SUBTOTAL COMISSÕES</span><strong>${brl.format(financial.commissionSubtotal)}</strong></div><div class="metric"><span>REPOUSOS + ATESTADOS ESTIMADOS</span><strong>${brl.format(financial.dsr)}</strong><small>${financial.restDays} repouso(s) + ${financial.justifiedDays} atestado(s)</small></div><div class="metric financial-highlight"><span>GANHO APURADO / ESTIMADO</span><strong>${brl.format(financial.total)}</strong></div><div class="metric financial-highlight"><span>PROJEÇÃO NO RITMO ATUAL</span><strong>${brl.format(financial.projectedTotal)}</strong></div><div class="metric financial-highlight"><span>GANHO SE BATER AS METAS</span><strong>${brl.format(financial.targetTotal)}</strong></div><div class="metric"><span>COMISSÃO-ALVO MERCANTIL</span><strong>${brl.format(financial.targetMercantileCommission)}</strong></div><div class="metric"><span>COMISSÃO-ALVO SERVIÇOS</span><strong>${brl.format(financial.targetServiceCommission)}</strong></div>`;
+    document.getElementById('sellerFinanceResults').innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL • ${pct2.format(financial.mercantileRate)}</span><strong>${brl.format(financial.mercantileCommission)}</strong></div><div class="metric"><span>COMISSÃO SERVIÇOS • ${pct2.format(financial.serviceRate)}</span><strong>${brl.format(financial.serviceCommission)}</strong></div><div class="metric"><span>SUBTOTAL COMISSÕES</span><strong>${brl.format(financial.commissionSubtotal)}</strong></div><div class="metric"><span>REPOUSOS + ATESTADOS ESTIMADOS</span><strong>${brl.format(financial.dsr)}</strong><small>${financial.restDays} repouso(s) + ${financial.justifiedDays} atestado(s)</small></div><div class="metric financial-highlight"><span>GANHO APURADO / ESTIMADO</span><strong>${brl.format(financial.total)}</strong></div><div class="metric financial-highlight"><span>${financialComparison.currentLabel.toUpperCase()}</span><strong>${brl.format(financialComparison.current)}</strong></div><div class="metric financial-highlight"><span>GANHO SE BATER AS METAS</span><strong>${brl.format(financial.targetTotal)}</strong></div><div class="metric financial-highlight"><span>${financialComparison.gapLabel.toUpperCase()}</span><strong>${brl.format(Math.abs(financialComparison.gap))}</strong><small>${financialComparison.gapNote}</small></div><div class="metric"><span>COMISSÃO-ALVO MERCANTIL</span><strong>${brl.format(financial.targetMercantileCommission)}</strong></div><div class="metric"><span>COMISSÃO-ALVO SERVIÇOS</span><strong>${brl.format(financial.targetServiceCommission)}</strong></div>`;
     const projectionRate = expectedTotal ? financial.projectedTotal / expectedTotal : 0;
     document.getElementById('sellerProfileDirection').innerHTML = `<strong>Leitura para a reunião:</strong> ${!financial.mercantileRate && !financial.serviceRate ? 'informe as taxas de comissão para ativar as projeções financeiras.' : financial.projectedTotal >= expectedTotal && expectedTotal ? 'a projeção financeira está dentro ou acima do ganho previsto ao bater as metas.' : expectedTotal && financial.projectedTotal ? `a projeção atual está em ${pct.format(projectionRate)} do ganho previsto ao bater as metas.` : `ao atingir as metas cadastradas, a estimativa de ganho é ${brl.format(expectedTotal)}, incluindo repousos e atestados informados.`}`;
     const historyRow = (item) => `<tr><td>${esc(monthLabel(item.month))}</td><td>${brl.format(num(item.seller.general))}</td><td>${brl.format(item.services)}</td><td>${brl.format(item.ticket)}</td><td>${brl.format(item.financial.mercantileCommission)}</td><td>${brl.format(item.financial.serviceCommission)}</td><td>${brl.format(item.financial.dsr)}</td><td>${brl.format(item.financial.total)}</td><td>${pct2.format(item.financial.mercantileRate)}</td></tr>`;
@@ -988,12 +1042,13 @@
       extra.innerHTML = `<div class="seller-field"><label>Comissão mercantil (%)</label><input inputmode="decimal" type="number" min="0" max="100" step="0.01" data-f="commissionMercantileRate" value="${num(seller.commissionMercantileRate) || ''}" placeholder="Ex.: 1,5"></div><div class="seller-field"><label>Comissão sobre serviços (%)</label><input inputmode="decimal" type="number" min="0" max="100" step="0.01" data-f="commissionServiceRate" value="${Object.prototype.hasOwnProperty.call(seller, 'commissionServiceRate') ? num(seller.commissionServiceRate) : 5}"></div><div class="seller-field"><label>Dias de repouso remunerado</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="restDays" value="${financial.restDays}"></div><div class="seller-field"><label>Dias justificados / atestado</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="justifiedDays" value="${num(seller.justifiedDays) || ''}"></div>`;
       extra.style.display = 'contents'; fields.insertBefore(extra, fields.querySelector('.wide'));
       const periodBlock = document.createElement('section'); periodBlock.className = 'seller-period-block';
-      periodBlock.innerHTML = `<h4>Período dos resultados informados</h4><p>Escolha “somente meta” quando ainda não houver resultado. Nos demais casos, os valores acumulados acima serão analisados dentro do período selecionado.</p><div class="seller-period-grid"><div class="seller-field"><label>Tipo de compartilhamento</label><select data-f="resultPeriod"><option value="none">Somente meta, sem resultado</option><option value="day">Resultado do dia</option><option value="week">Resultado da semana</option><option value="fortnight">Resultado da quinzena</option><option value="accumulated">Acumulado até o momento</option><option value="month">Fechamento do mês</option><option value="custom">Período personalizado</option></select></div><div class="seller-field"><label>Data inicial</label><input type="date" data-f="resultStart" value="${esc(seller.resultStart || '')}"></div><div class="seller-field"><label>Data final</label><input type="date" data-f="resultEnd" value="${esc(seller.resultEnd || '')}"></div></div><div class="seller-fixed-targets"><span>Eficiência de serviços: 7%</span><span>Taxa de conversão: 35%</span><span>Conversão: elegível ÷ mercantil total</span></div>`;
+      periodBlock.innerHTML = `<h4>Período dos resultados informados</h4><p>Use “Meta do mês” no início da competência, sem percentual diário. Use “Meta do dia” para compartilhar a missão calculada pelo percentual informado pela empresa.</p><div class="seller-period-grid"><div class="seller-field"><label>Tipo de compartilhamento</label><select data-f="resultPeriod"><option value="goalMonth">Meta do mês, sem resultado</option><option value="none">Meta do dia, sem resultado</option><option value="day">Resultado do dia</option><option value="week">Resultado da semana</option><option value="fortnight">Resultado da quinzena</option><option value="accumulated">Acumulado até o momento</option><option value="month">Fechamento do mês</option><option value="custom">Período personalizado</option></select></div><div class="seller-field"><label>Data inicial</label><input type="date" data-f="resultStart" value="${esc(seller.resultStart || '')}"></div><div class="seller-field"><label>Data final</label><input type="date" data-f="resultEnd" value="${esc(seller.resultEnd || '')}"></div></div><div class="seller-fixed-targets"><span>Eficiência de serviços: 7%</span><span>Taxa de conversão: 35%</span><span>Conversão: elegível ÷ mercantil total</span></div>`;
       fields.insertBefore(periodBlock, fields.querySelector('.wide'));
       periodBlock.querySelector('[data-f="resultPeriod"]').value = sellerResultPeriod(seller);
       const financeSummary = document.createElement('div'), rowFinancial = sellerFinancials(seller);
       financeSummary.className = 'seller-metrics seller-finance-summary';
-      financeSummary.innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL</span><strong>${pct2.format(rowFinancial.mercantileRate)}</strong></div><div class="metric"><span>COMISSÃO SERVIÇOS</span><strong>${pct2.format(rowFinancial.serviceRate)}</strong></div><div class="metric"><span>PROJEÇÃO FINANCEIRA ATUAL</span><strong>${brl.format(rowFinancial.projectedTotal)}</strong></div><div class="metric"><span>GANHO SE BATER AS METAS</span><strong>${brl.format(rowFinancial.targetTotal)}</strong><small>Inclui repousos e atestados</small></div>`;
+      const rowFinancialComparison = sellerFinancialComparison(seller);
+      financeSummary.innerHTML = `<div class="metric"><span>COMISSÃO MERCANTIL</span><strong>${pct2.format(rowFinancial.mercantileRate)}</strong></div><div class="metric"><span>COMISSÃO SERVIÇOS</span><strong>${pct2.format(rowFinancial.serviceRate)}</strong></div><div class="metric"><span>${rowFinancialComparison.currentLabel.toUpperCase()}</span><strong>${brl.format(rowFinancialComparison.current)}</strong></div><div class="metric"><span>GANHO SE BATER AS METAS</span><strong>${brl.format(rowFinancial.targetTotal)}</strong><small>Inclui repousos e atestados</small></div><div class="metric"><span>${rowFinancialComparison.gapLabel.toUpperCase()}</span><strong>${brl.format(Math.abs(rowFinancialComparison.gap))}</strong><small>${rowFinancialComparison.gapNote}</small></div>`;
       row.querySelector('.seller-card-content').appendChild(financeSummary);
     });
     list.querySelectorAll('[data-toggle-seller]').forEach((button) => button.addEventListener('click', () => {

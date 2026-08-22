@@ -153,6 +153,10 @@
 <style id="results-seller-finance-v42">
   .seller-finance-summary{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
   .seller-finance-summary .metric:nth-last-child(-n+2){background:#eaf4ff}
+  .seller-metrics .metric,.seller-finance-summary .metric,.seller-mission-summary .metric{min-width:0;min-height:76px;display:flex;flex-direction:column;justify-content:center}
+  .seller-metrics .metric span,.seller-finance-summary .metric span,.seller-mission-summary .metric span{min-height:27px;line-height:1.28;overflow-wrap:anywhere}
+  .seller-metrics .metric strong,.seller-finance-summary .metric strong,.seller-mission-summary .metric strong{line-height:1.18;overflow-wrap:anywhere}
+  @media(max-width:760px){.seller-metrics .metric,.seller-finance-summary .metric,.seller-mission-summary .metric{min-height:82px;padding:11px 10px}.seller-metrics .metric span,.seller-finance-summary .metric span,.seller-mission-summary .metric span{font-size:9px}}
   .finance-entry input[type="number"]{width:100%;border:0;outline:0;background:transparent;font-weight:850}
 </style>
 </head>
@@ -237,14 +241,14 @@
     <article class="panel">
       <div class="profile-head"><button class="btn" id="sellerProfileBack">← Vendedores</button><div class="profile-title"><h2 id="sellerProfileTitle">Resultado completo do vendedor</h2><p id="sellerProfileSubtitle"></p></div><button class="btn primary" id="sellerProfilePrint">Baixar imagem individual</button></div>
       <div class="profile-kpis" id="sellerProfileKpis"></div>
-      <div class="config-section">Missão do dia do vendedor</div>
+      <div class="config-section" id="sellerMissionSectionTitle">Missão do dia do vendedor</div>
       <div class="seller-mission-panel">
-        <div class="field"><label for="sellerMissionDate">Dia de referência</label><input id="sellerMissionDate" type="date"></div>
+        <div class="field" id="sellerMissionDateField"><label for="sellerMissionDate">Dia de referência</label><input id="sellerMissionDate" type="date"></div>
         <div class="seller-mission-summary" id="sellerMissionSummary"></div>
         <button class="btn primary" id="sellerMissionImage">Baixar / compartilhar missão em imagem</button>
         <div class="seller-period-preview" id="sellerPeriodPreview"></div>
         <div class="seller-motivation">
-          <div class="seller-motivation-head"><strong>Mensagem motivacional do dia</strong><span id="sellerToneSuggestion">Sugestão automática pelo ritmo atual</span></div>
+          <div class="seller-motivation-head"><strong>Mensagem motivacional</strong><span id="sellerToneSuggestion">Sugestão automática pelo ritmo atual</span></div>
           <div class="seller-tone-actions"><button class="tone-btn positive" type="button" data-mission-tone="positive">✓ Resultado positivo</button><button class="tone-btn support" type="button" data-mission-tone="support">♥ Apoio e recuperação</button></div>
           <div class="seller-motivation-preview" id="sellerMotivationPreview"></div>
         </div>
@@ -403,7 +407,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v18.js?v=42"></script>
+<script src="resultados-v18.js?v=44"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
