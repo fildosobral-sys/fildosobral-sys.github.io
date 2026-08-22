@@ -125,6 +125,15 @@
   @media(max-width:760px){.daily-goal-planner{padding:13px}.daily-goal-head{display:block}.daily-goal-head .pill{display:inline-flex;margin-top:8px}.daily-goal-controls{grid-template-columns:1fr 1fr}.day-goal-strip{grid-template-columns:1fr 1fr}.day-goal-strip .day-goal-export{grid-column:1/-1;width:100%}.daily-goal-metric strong{font-size:13px}.day-card{padding:0!important;overflow:hidden}.day-card-head{padding:12px 13px;cursor:pointer}.day-card-head select{flex:0 0 auto;max-width:145px}.day-card-content{padding:0 13px 13px;border-top:1px solid #edf1f6}.day-card-content[hidden]{display:none!important}.day-card:not(.is-open) .day-card-head{min-height:62px}.day-card:not(.is-open).today-row{box-shadow:inset 4px 0 0 #e6a700,0 7px 18px rgba(15,42,67,.05)}.day-card:not(.is-open).goal-hit{box-shadow:inset 4px 0 0 #18a66a,0 7px 18px rgba(15,42,67,.05)}.seller-mission-panel{grid-template-columns:1fr}.seller-mission-summary{grid-template-columns:1fr 1fr}.seller-mission-panel .btn{width:100%}.seller-tone-actions{flex-direction:column}.seller-motivation-head{align-items:flex-start;flex-direction:column}}
 </style>
 
+<style id="results-seller-accordion-v33">
+  .seller-list .seller-row{display:block;padding:0;overflow:hidden;border-radius:16px}
+  .seller-accordion-toggle{width:100%;display:grid;grid-template-columns:minmax(190px,1.4fr) minmax(125px,.7fr) minmax(125px,.7fr) auto 34px;gap:10px;align-items:center;padding:13px 15px;border:0;background:#fff;color:var(--ink);text-align:left}
+  .seller-accordion-toggle:hover{background:#f8fbff}.seller-row.is-open .seller-accordion-toggle{background:linear-gradient(135deg,#eef7ff,#f6f2ff);border-bottom:1px solid #dce7f4}
+  .seller-accordion-name strong{display:block;font-size:16px}.seller-accordion-name span{display:block;margin-top:3px;color:var(--muted);font-size:10px}.seller-accordion-kpi span{display:block;color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase}.seller-accordion-kpi strong{display:block;margin-top:3px;font-size:13px}.seller-accordion-chevron{width:30px;height:30px;display:grid;place-items:center;border-radius:999px;background:#edf4ff;color:#0879e8;font-size:18px;font-weight:900;transition:transform .2s}.seller-row.is-open .seller-accordion-chevron{transform:rotate(180deg)}
+  .seller-card-content{padding:13px 14px 15px}.seller-card-content[hidden]{display:none!important}.seller-service-total{grid-column:1/-1;padding:12px 14px;border-radius:13px;background:linear-gradient(135deg,#eaf8f1,#edf7ff);border:1px solid #c6ead9}.seller-service-total span{display:block;font-size:9px;color:#087a4b;font-weight:950}.seller-service-total strong{display:block;font-size:20px;color:#0d4f70;margin-top:3px}.seller-service-total small{display:block;color:#526175;margin-top:3px}.seller-metrics .metric small{display:block;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.3}
+  @media(max-width:760px){.seller-accordion-toggle{grid-template-columns:1fr auto 30px}.seller-accordion-kpi{display:none}.seller-accordion-toggle .pill{font-size:10px}.seller-card-content{padding:11px}.seller-card-head input{order:0;width:100%}.seller-card-head .seller-open{order:2}.seller-card-head [data-remove]{order:1}}
+</style>
+
 </head>
 <body>
 <main class="app">
@@ -152,13 +161,13 @@
 
   <section class="view active" id="overview">
     <div class="hero">
-      <article class="hero-main"><div class="eyebrow" id="heroEyebrow">Faturamento atual da filial</div><div class="hero-value" id="revenueHero">R$ 0,00</div><div class="hero-meta"><span><strong id="workedHero">0</strong><br>dias trabalhados</span><span><strong id="remainingHero">0</strong><br>dias restantes</span><span><strong id="dailyHero">R$ 0,00</strong><br>média por dia</span></div></article>
+      <article class="hero-main"><div class="eyebrow" id="heroEyebrow">Venda mercantil total da filial</div><div class="hero-value" id="revenueHero">R$ 0,00</div><div class="hero-meta"><span><strong id="workedHero">0</strong><br>dias trabalhados</span><span><strong id="remainingHero">0</strong><br>dias restantes</span><span><strong id="dailyHero">R$ 0,00</strong><br>média por dia</span></div></article>
       <article class="panel projection"><div class="eyebrow muted">Projeção de fechamento</div><div class="projection-value" id="projectionHero">R$ 0,00</div><div class="muted" id="projectionText">Preencha os resultados diários para calcular.</div><div class="bar"><span id="projectionBar"></span></div></article>
     </div>
     <div class="kpis">
-      <article class="kpi"><div class="label">Venda elegível</div><div class="value" id="eligibleKpi">R$ 0,00</div><div class="sub">Base para eficiência</div></article>
+      <article class="kpi"><div class="label">Venda elegível</div><div class="value" id="eligibleKpi">R$ 0,00</div><div class="sub">Usada somente como base da eficiência de serviços</div></article>
       <article class="kpi"><div class="label" id="grossProfitKpiLabel">Lucro bruto</div><div class="value" id="grossProfitKpi">R$ 0,00</div><div class="sub" id="grossProfitKpiSub">Resultado × meta do mês</div></article>
-      <article class="kpi"><div class="label">Serviços</div><div class="value" id="servicesKpi">R$ 0,00</div><div class="sub">Garantia + outros + presta-mista</div></article>
+      <article class="kpi"><div class="label">Serviços totais</div><div class="value" id="servicesKpi">R$ 0,00</div><div class="sub">Garantia + outros serviços + presta-mista</div></article>
       <article class="kpi"><div class="label">Eficiência</div><div class="value" id="efficiencyKpi">0,00%</div><div class="sub">Serviços ÷ venda elegível</div></article>
       <article class="kpi"><div class="label">Ticket médio</div><div class="value" id="ticketKpi">R$ 0,00</div><div class="sub" id="nfKpi">0 notas fiscais</div></article>
       <article class="kpi"><div class="label">Meta de venda elegível</div><div class="value" id="eligibleGoalKpi">Não informada</div><div class="sub" id="eligibleGoalKpiSub">Meta opcional</div></article>
@@ -371,7 +380,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v18.js?v=32"></script>
+<script src="resultados-v18.js?v=33"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {

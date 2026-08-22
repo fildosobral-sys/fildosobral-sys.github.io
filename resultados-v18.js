@@ -109,6 +109,7 @@
   let db = normalizeRecord(vault.records[vault.currentKey] || Object.values(vault.records)[0] || baseRecord());
   let activeScope = 'branch';
   let activeSellerProfileId = null;
+  let openSellerIndex = null;
   let printSellerOnlyId = null;
   let openDailyKey = null;
 
@@ -400,7 +401,7 @@
   function renderOverview() {
     const scope = currentScope(), result = scope.result, goalSource = scope.goals;
     const grossAvailable = scope.type !== 'branch' || hasCompleteGrossProfit();
-    setText('heroEyebrow', scope.type === 'branch' ? 'Faturamento atual da filial' : scope.type === 'all' ? 'Resultado consolidado dos vendedores' : `Resultado atual — ${scope.label}`);
+    setText('heroEyebrow', scope.type === 'branch' ? 'Venda mercantil total da filial' : scope.type === 'all' ? 'Venda mercantil total dos vendedores' : `Venda mercantil total — ${scope.label}`);
     setText('revenueHero', brl.format(result.revenue)); setText('workedHero', result.worked); setText('remainingHero', result.remaining);
     setText('dailyHero', brl.format(result.dailyAvg)); setText('projectionHero', brl.format(result.projection));
     setText('eligibleKpi', brl.format(result.eligible)); setText('servicesKpi', brl.format(result.services));
@@ -576,7 +577,7 @@
     const rate = individualGoal ? num(seller.general) / individualGoal : 0;
     const serviceRate = serviceGoal ? services / serviceGoal : 0;
     const ticket = num(seller.nfs) ? num(seller.general) / num(seller.nfs) : 0;
-    const efficiency = num(seller.eligible) ? services / num(seller.eligible) : 0;
+    const hasEligible = num(seller.eligible) > 0, efficiency = hasEligible ? services / num(seller.eligible) : 0;
     const plannedDays = num(seller.plannedDays) || num(db.businessDays);
     const projection = num(seller.days) ? (num(seller.general) / num(seller.days)) * plannedDays : 0;
     const serviceProjection = num(seller.days) ? (services / num(seller.days)) * plannedDays : 0;
@@ -587,8 +588,9 @@
     const remainingDays = Math.max(0, plannedDays - num(seller.days));
     const neededPerDay = remainingDays ? missing / remainingDays : 0;
     const serviceNeededPerDay = remainingDays ? serviceMissing / remainingDays : 0;
+    const projectedGap = individualGoal - projection, serviceProjectedGap = serviceGoal - serviceProjection;
     const grossReference = individualGoal * grossProfitRate();
-    return { services, individualGoal, serviceGoal, grossReference, plannedDays, remainingDays, rate, serviceRate, ticket, efficiency, projection, serviceProjection, dailyAverage, serviceDailyAverage, missing, serviceMissing, neededPerDay, serviceNeededPerDay };
+    return { services, individualGoal, serviceGoal, grossReference, plannedDays, remainingDays, rate, serviceRate, ticket, hasEligible, efficiency, projection, serviceProjection, projectedGap, serviceProjectedGap, dailyAverage, serviceDailyAverage, missing, serviceMissing, neededPerDay, serviceNeededPerDay };
   }
   function timeGreeting(moment = new Date()) {
     const hour = moment.getHours();
@@ -714,16 +716,16 @@
     ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento mercantil acumulado', 64, 568);
     const mercantileCards = [
       ['Meta mensal', brl.format(metrics.individualGoal), 'Meta individual cadastrada'], ['Realizado', brl.format(num(seller.general)), pct.format(metrics.rate)], ['Falta', brl.format(metrics.missing), 'Para atingir a meta'],
-      ['Média por dia', brl.format(metrics.dailyAverage), `${num(seller.days)} dia(s) informado(s)`], ['Projeção', brl.format(metrics.projection), `${metrics.plannedDays} dias planejados`], ['Necessário/dia', brl.format(metrics.neededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+      ['Média por dia', brl.format(metrics.dailyAverage), `${num(seller.days)} dia(s) trabalhado(s)`], ['Projeção', brl.format(metrics.projection), `${metrics.projectedGap <= 0 ? 'Acima' : 'Abaixo'} ${brl.format(Math.abs(metrics.projectedGap))}`], ['Necessário/dia', brl.format(metrics.neededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
     ];
     mercantileCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 598 + row * 174, 296, 148, label, value, index === 1, note); });
     ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Acompanhamento de serviços', 64, 1006);
     const serviceCards = [
       ['Meta serviços (7%)', brl.format(metrics.serviceGoal), 'Sobre a meta mercantil'], ['Serviços realizados', brl.format(metrics.services), pct.format(metrics.serviceRate)], ['Falta em serviços', brl.format(metrics.serviceMissing), 'Para atingir 7%'],
-      ['Média serviços/dia', brl.format(metrics.serviceDailyAverage), `${num(seller.days)} dia(s) informado(s)`], ['Projeção serviços', brl.format(metrics.serviceProjection), `${metrics.plannedDays} dias planejados`], ['Necessário/dia', brl.format(metrics.serviceNeededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
+      ['Média serviços/dia', brl.format(metrics.serviceDailyAverage), `${num(seller.days)} dia(s) trabalhado(s)`], ['Projeção serviços', brl.format(metrics.serviceProjection), `${metrics.serviceProjectedGap <= 0 ? 'Acima' : 'Abaixo'} ${brl.format(Math.abs(metrics.serviceProjectedGap))}`], ['Necessário/dia', brl.format(metrics.serviceNeededPerDay), `${metrics.remainingDays} dia(s) restante(s)`]
     ];
     serviceCards.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 1036 + row * 174, 296, 148, label, value, index === 1, note); });
-    drawCanvasMetric(ctx, 64, 1400, 952, 112, 'Eficiência atual', efficiencyPct.format(metrics.efficiency), true);
+    drawCanvasMetric(ctx, 64, 1400, 952, 112, 'Eficiência atual', metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada', true, metrics.hasEligible ? '' : 'Informe a venda elegível acumulada');
     ctx.fillStyle = tone === 'positive' ? '#e9f8f1' : '#fff0f2'; roundedCanvasRect(ctx, 64, 1534, 952, 150, 26); ctx.fill();
     ctx.fillStyle = tone === 'positive' ? '#087a4b' : '#b3263b'; ctx.font = '900 22px Arial, sans-serif'; ctx.fillText(tone === 'positive' ? 'MENSAGEM DE RECONHECIMENTO' : 'MENSAGEM DE APOIO E RECUPERAÇÃO', 92, 1572);
     ctx.fillStyle = '#203a56'; ctx.font = '700 24px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 92, 1612, 884, 29, 2);
@@ -766,10 +768,11 @@
     document.getElementById('sellerProfileTitle').textContent = seller.name || 'Vendedor sem nome';
     document.getElementById('sellerProfileSubtitle').textContent = `${db.branch || 'Filial não informada'} • ${monthLabel(db.month)} • ${financial.plannedDays} dias úteis + ${financial.restDays} descansos`;
     document.getElementById('sellerProfileKpis').innerHTML = [
-      ['Venda mercantil acumulada', brl.format(num(seller.general))], ['Meta mercantil', brl.format(metrics.individualGoal)], ['Atingimento mercantil', pct.format(metrics.rate)],
+      ['Venda mercantil total', brl.format(num(seller.general))], ['Venda elegível (base eficiência)', brl.format(num(seller.eligible))], ['Meta mercantil', brl.format(metrics.individualGoal)], ['Atingimento mercantil', pct.format(metrics.rate)],
       ['Falta mercantil', brl.format(metrics.missing)], ['Média mercantil/dia', brl.format(metrics.dailyAverage)], ['Projeção mercantil', brl.format(metrics.projection)], ['Necessário/dia', brl.format(metrics.neededPerDay)],
       ['Serviços acumulados', brl.format(metrics.services)], ['Meta serviços (7%)', brl.format(metrics.serviceGoal)], ['Atingimento serviços', pct.format(metrics.serviceRate)],
-      ['Falta serviços', brl.format(metrics.serviceMissing)], ['Média serviços/dia', brl.format(metrics.serviceDailyAverage)], ['Projeção serviços', brl.format(metrics.serviceProjection)], ['Eficiência', efficiencyPct.format(metrics.efficiency)]
+      ['Falta serviços', brl.format(metrics.serviceMissing)], ['Média serviços/dia', brl.format(metrics.serviceDailyAverage)], ['Projeção serviços', brl.format(metrics.serviceProjection)], ['Eficiência', metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada'],
+      ['Dias planejados', metrics.plannedDays], ['Dias trabalhados', num(seller.days)], ['Dias restantes', metrics.remainingDays]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     renderSellerMission(seller);
     const commissionInput = document.getElementById('profileCommissionMercantile'); commissionInput.value = num(seller.commissionMercantile) ? brl.format(num(seller.commissionMercantile)) : ''; bindMoneyBehavior(commissionInput);
@@ -788,7 +791,7 @@
     const assignedTotal = db.sellers.reduce((sum, seller) => sum + sellerMetrics(seller).individualGoal, 0);
     const difference = branch.general - sellerSales;
     document.getElementById('sellerSummary').innerHTML = [
-      ['Vendedores', db.sellers.length], ['Venda informada', brl.format(sellerSales)],
+      ['Vendedores', db.sellers.length], ['Venda mercantil total informada', brl.format(sellerSales)],
       ['Metas individuais', count ? brl.format(assignedTotal) : 'Não calculadas'], ['Venda geral da filial', brl.format(branch.general)]
     ].map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join('');
     const list = document.getElementById('sellerList');
@@ -798,7 +801,10 @@
     list.innerHTML = reconciliation + db.sellers.map((seller, index) => {
       const metrics = sellerMetrics(seller);
       const money = (field, label) => `<div class="seller-field"><label>${label}</label><input class="money-input" inputmode="decimal" data-f="${field}" value="${num(seller[field]) ? esc(brl.format(num(seller[field]))) : ''}"></div>`;
-      return `<article class="seller-row" data-i="${index}"><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('assignedGoal', 'Meta mercantil mensal')}${money('general', 'Venda mercantil acumulada')}${money('eligible', 'Venda elegível acumulada')}${money('warranty', 'Garantia/serviços acumulados')}${money('other', 'Outros serviços acumulados')}${money('mixed', 'Presta-mista acumulada')}<div class="seller-field"><label>Notas fiscais acumuladas</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias já trabalhados</label><input inputmode="numeric" type="number" min="0" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META MERCANTIL</span><strong>${count || num(seller.assignedGoal) ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>META SERVIÇOS 7%</span><strong>${brl.format(metrics.serviceGoal)}</strong></div><div class="metric"><span>ATINGIMENTO MERCANTIL</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>ATINGIMENTO SERVIÇOS</span><strong class="${statusClass(metrics.serviceRate)}">${pct.format(metrics.serviceRate)}</strong></div><div class="metric"><span>FALTA MERCANTIL</span><strong>${brl.format(metrics.missing)}</strong></div><div class="metric"><span>FALTA SERVIÇOS</span><strong>${brl.format(metrics.serviceMissing)}</strong></div><div class="metric"><span>PROJEÇÃO MERCANTIL</span><strong>${brl.format(metrics.projection)}</strong></div><div class="metric"><span>PROJEÇÃO SERVIÇOS</span><strong>${brl.format(metrics.serviceProjection)}</strong></div><div class="metric"><span>MÉDIA MERCANTIL/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>MÉDIA SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceDailyAverage)}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${efficiencyPct.format(metrics.efficiency)}</strong></div></div></article>`;
+      const isOpen = openSellerIndex === index;
+      const mercTrend = metrics.projectedGap <= 0 ? `Acima ${brl.format(Math.abs(metrics.projectedGap))}` : `Abaixo ${brl.format(metrics.projectedGap)}`;
+      const serviceTrend = metrics.serviceProjectedGap <= 0 ? `Acima ${brl.format(Math.abs(metrics.serviceProjectedGap))}` : `Abaixo ${brl.format(metrics.serviceProjectedGap)}`;
+      return `<article class="seller-row ${isOpen ? 'is-open' : ''}" data-i="${index}"><button class="seller-accordion-toggle" type="button" data-toggle-seller="${index}"><div class="seller-accordion-name"><strong>${esc(seller.name || `Vendedor ${index + 1}`)}</strong><span>${metrics.plannedDays} dias planejados • ${num(seller.days)} trabalhados • ${metrics.remainingDays} restantes</span></div><div class="seller-accordion-kpi"><span>Venda total</span><strong>${brl.format(num(seller.general))}</strong></div><div class="seller-accordion-kpi"><span>Serviços totais</span><strong>${brl.format(metrics.services)}</strong></div><span class="pill ${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</span><span class="seller-accordion-chevron">⌄</span></button><div class="seller-card-content" ${isOpen ? '' : 'hidden'}><div class="seller-card-head"><input data-f="name" value="${esc(seller.name || '')}" placeholder="Nome do vendedor"><button class="btn danger small" data-remove="${index}">Excluir</button></div><div class="seller-fields">${money('assignedGoal', 'Meta mercantil mensal')}${money('general', 'Venda mercantil total acumulada')}${money('eligible', 'Venda elegível acumulada (base da eficiência)')}${money('warranty', 'Garantias acumuladas')}${money('other', 'Outros serviços acumulados')}${money('mixed', 'Presta-mista acumulada')}<div class="seller-service-total"><span>SERVIÇOS TOTAIS AUTOMÁTICOS</span><strong>${brl.format(metrics.services)}</strong><small>Garantias + outros serviços + presta-mista • única base da meta de serviços 7%</small></div><div class="seller-field"><label>Notas fiscais acumuladas</label><input inputmode="numeric" type="number" min="0" step="1" data-f="nfs" value="${num(seller.nfs) || ''}"></div><div class="seller-field"><label>Dias úteis planejados</label><input inputmode="numeric" type="number" min="1" max="31" step="1" data-f="plannedDays" value="${metrics.plannedDays || ''}"></div><div class="seller-field"><label>Dias já trabalhados</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="days" value="${num(seller.days) || ''}"></div><div class="seller-field"><label>Prazo do compromisso</label><input type="date" data-f="deadline" value="${esc(seller.deadline || '')}"></div><div class="seller-field wide"><label>Direcionamento da reunião</label><textarea data-f="notes" rows="2" placeholder="Pontos discutidos e direcionamento">${esc(seller.notes || '')}</textarea></div><div class="seller-field wide"><label>Compromisso do vendedor</label><textarea data-f="commitment" rows="2" placeholder="Ação, responsável e resultado esperado">${esc(seller.commitment || '')}</textarea></div></div><div class="seller-metrics"><div class="metric"><span>META MERCANTIL</span><strong>${count || num(seller.assignedGoal) ? brl.format(metrics.individualGoal) : '—'}</strong></div><div class="metric"><span>VENDA MERCANTIL TOTAL</span><strong>${brl.format(num(seller.general))}</strong></div><div class="metric"><span>VENDA ELEGÍVEL</span><strong>${brl.format(num(seller.eligible))}</strong></div><div class="metric"><span>SERVIÇOS TOTAIS</span><strong>${brl.format(metrics.services)}</strong></div><div class="metric"><span>META SERVIÇOS 7%</span><strong>${brl.format(metrics.serviceGoal)}</strong></div><div class="metric"><span>ATINGIMENTO MERCANTIL</span><strong class="${statusClass(metrics.rate)}">${pct.format(metrics.rate)}</strong></div><div class="metric"><span>ATINGIMENTO SERVIÇOS</span><strong class="${statusClass(metrics.serviceRate)}">${pct.format(metrics.serviceRate)}</strong></div><div class="metric"><span>FALTA MERCANTIL</span><strong>${brl.format(metrics.missing)}</strong></div><div class="metric"><span>FALTA SERVIÇOS</span><strong>${brl.format(metrics.serviceMissing)}</strong></div><div class="metric"><span>PROJEÇÃO MERCANTIL</span><strong>${brl.format(metrics.projection)}</strong><small>${mercTrend}</small></div><div class="metric"><span>PROJEÇÃO SERVIÇOS</span><strong>${brl.format(metrics.serviceProjection)}</strong><small>${serviceTrend}</small></div><div class="metric"><span>MÉDIA MERCANTIL/DIA</span><strong>${brl.format(metrics.dailyAverage)}</strong></div><div class="metric"><span>MÉDIA SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceDailyAverage)}</strong></div><div class="metric"><span>NECESSÁRIO MERCANTIL/DIA</span><strong>${brl.format(metrics.neededPerDay)}</strong></div><div class="metric"><span>NECESSÁRIO SERVIÇOS/DIA</span><strong>${brl.format(metrics.serviceNeededPerDay)}</strong></div><div class="metric"><span>DIAS RESTANTES</span><strong>${metrics.remainingDays}</strong></div><div class="metric"><span>EFICIÊNCIA</span><strong>${metrics.hasEligible ? efficiencyPct.format(metrics.efficiency) : 'Não calculada'}</strong><small>${metrics.hasEligible ? 'Serviços ÷ elegível' : 'Informe venda elegível'}</small></div></div></div></article>`;
     }).join('');
     list.querySelectorAll('.seller-row').forEach((row) => {
       const index = Number(row.dataset.i), seller = db.sellers[index], head = row.querySelector('.seller-card-head'), fields = row.querySelector('.seller-fields');
@@ -807,6 +813,9 @@
       extra.innerHTML = `<div class="seller-field"><label>Comissão mercantil acumulada</label><input class="money-input" inputmode="decimal" data-f="commissionMercantile" value="${num(seller.commissionMercantile) ? esc(brl.format(num(seller.commissionMercantile))) : ''}"></div><div class="seller-field"><label>Dias justificados / atestado</label><input inputmode="numeric" type="number" min="0" max="31" step="1" data-f="justifiedDays" value="${num(seller.justifiedDays) || ''}"></div>`;
       extra.style.display = 'contents'; fields.insertBefore(extra, fields.querySelector('.wide'));
     });
+    list.querySelectorAll('[data-toggle-seller]').forEach((button) => button.addEventListener('click', () => {
+      const index = Number(button.dataset.toggleSeller); openSellerIndex = openSellerIndex === index ? null : index; renderSellers();
+    }));
     list.querySelectorAll('.money-input').forEach(bindMoneyBehavior);
     list.querySelectorAll('[data-f]').forEach((element) => element.addEventListener('change', (event) => {
       const index = Number(event.target.closest('[data-i]').dataset.i), field = event.target.dataset.f;
@@ -816,7 +825,7 @@
       persist(); renderSellers(); renderScopeSelector(); renderCompiled(); if (field === 'name') renderGoalsHistory(); if (activeScope !== 'branch') renderOverview();
     }));
     list.querySelectorAll('[data-remove]').forEach((button) => button.addEventListener('click', () => {
-      if (confirm('Excluir este vendedor da competência atual?')) { db.sellers.splice(Number(button.dataset.remove), 1); activeScope = 'branch'; persist(); renderSellers(); renderScopeSelector(); renderOverview(); }
+      if (confirm('Excluir este vendedor da competência atual?')) { db.sellers.splice(Number(button.dataset.remove), 1); openSellerIndex = null; activeScope = 'branch'; persist(); renderSellers(); renderScopeSelector(); renderOverview(); }
     }));
     list.querySelectorAll('[data-open-seller]').forEach((button) => button.addEventListener('click', () => {
       const seller = db.sellers[Number(button.dataset.openSeller)]; if (!seller) return;
@@ -1328,7 +1337,7 @@
   document.getElementById('addSeller').addEventListener('click', () => {
     const nextIndex = db.sellers.length;
     db.sellers.push({ id: `seller-${Date.now()}-${nextIndex + 1}`, name: '', assignedGoal: 0, plannedDays: num(db.businessDays), general: 0, eligible: 0, warranty: 0, other: 0, mixed: 0, nfs: 0, days: 0, notes: '', commitment: '', deadline: '', updatedAt: new Date().toISOString() });
-    persist(); renderSellers(); renderGoalsHistory(); renderScopeSelector(); renderCompiled();
+    openSellerIndex = nextIndex; persist(); renderSellers(); renderGoalsHistory(); renderScopeSelector(); renderCompiled();
   });
   document.getElementById('exportSellerBackup').addEventListener('click', () => {
     const seller = selectedBackupSeller(); if (!seller) return;
