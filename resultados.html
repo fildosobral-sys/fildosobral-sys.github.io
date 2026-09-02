@@ -159,6 +159,11 @@
   @media(max-width:760px){.seller-metrics .metric,.seller-finance-summary .metric,.seller-mission-summary .metric{min-height:82px;padding:11px 10px}.seller-metrics .metric span,.seller-finance-summary .metric span,.seller-mission-summary .metric span{font-size:9px}}
   .finance-entry input[type="number"]{width:100%;border:0;outline:0;background:transparent;font-weight:850}
 </style>
+<style id="results-distribution-ecommerce-v19">
+  .overview-detail-layout{display:grid;grid-template-columns:minmax(0,2.25fr) minmax(290px,1fr);gap:14px;margin:16px 0}.overview-detail-layout.without-ecommerce{grid-template-columns:1fr}.monthly-gap-panel,.ecommerce-panel{min-width:0}.monthly-gap-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.monthly-gap-metric{padding:12px;border:1px solid #dbe5f0;border-radius:13px;background:#f7faff}.monthly-gap-metric.services{background:#f7f4ff;border-color:#e2daf8}.monthly-gap-metric span{display:block;min-height:28px;font-size:10px;line-height:1.3;color:var(--muted);font-weight:900;text-transform:uppercase}.monthly-gap-metric strong{display:block;margin-top:5px;font-size:17px}.monthly-gap-metric small{display:block;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.35}.ecommerce-panel{background:linear-gradient(145deg,#0e3552,#0879e8);color:#fff;border:0}.ecommerce-panel .section-title{margin-bottom:10px}.ecommerce-panel .section-title h2{color:#fff}.ecommerce-panel .pill{background:rgba(255,255,255,.16);color:#fff}.commerce-total{font-size:31px;font-weight:950;letter-spacing:-.035em}.commerce-caption{margin-top:3px;color:rgba(255,255,255,.72);font-size:11px}.commerce-snapshot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:13px 0}.commerce-mini{padding:9px;border-radius:11px;background:rgba(255,255,255,.11)}.commerce-mini span{display:block;min-height:25px;color:rgba(255,255,255,.72);font-size:9px;font-weight:900;text-transform:uppercase}.commerce-mini strong{display:block;margin-top:3px;font-size:13px}.ecommerce-goal-bars{display:grid;gap:8px;margin-top:12px}.commerce-bar-row>div:first-child{display:flex;justify-content:space-between;gap:8px;font-size:11px}.commerce-bar-row .bar{height:7px;margin:5px 0;background:rgba(255,255,255,.18)}.commerce-bar-row .bar span{background:linear-gradient(90deg,#50d7aa,#fff)}.commerce-bar-row small{display:block;color:rgba(255,255,255,.68);font-size:9px}.week-analysis{grid-template-columns:repeat(5,minmax(0,1fr))}.week-analysis .metric.emphasized{background:#e9f4ff;border:1px solid #b9daf8}.week-analysis .metric.emphasized.services{background:#f1ecff;border-color:#d9ccfa}.week-analysis .metric small,.week-metrics .metric small{display:block;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.3}
+  @media(max-width:1100px){.overview-detail-layout{grid-template-columns:1fr}.monthly-gap-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.week-analysis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:560px){.monthly-gap-grid{grid-template-columns:1fr 1fr}.monthly-gap-metric{padding:10px}.monthly-gap-metric strong{font-size:14px}.commerce-snapshot{grid-template-columns:1fr 1fr}}
+</style>
 </head>
 <body>
 <main class="app">
@@ -194,7 +199,12 @@
       <article class="kpi"><div class="label" id="grossProfitKpiLabel">Lucro bruto</div><div class="value" id="grossProfitKpi">R$ 0,00</div><div class="sub" id="grossProfitKpiSub">Resultado × meta do mês</div></article>
       <article class="kpi"><div class="label">Serviços totais</div><div class="value" id="servicesKpi">R$ 0,00</div><div class="sub">Garantia + outros serviços + presta-mista</div></article>
       <article class="kpi"><div class="label">Eficiência</div><div class="value" id="efficiencyKpi">0,00%</div><div class="sub">Serviços ÷ venda elegível</div></article>
+      <article class="kpi"><div class="label">Taxa de conversão</div><div class="value" id="conversionKpi">0,00%</div><div class="sub">Venda elegível ÷ venda mercantil • meta 35%</div></article>
       <article class="kpi"><div class="label">Ticket médio</div><div class="value" id="ticketKpi">R$ 0,00</div><div class="sub" id="nfKpi">0 notas fiscais</div></article>
+    </div>
+    <div class="overview-detail-layout" id="overviewDetailLayout">
+      <article class="panel monthly-gap-panel"><div class="section-title"><div><h2>Distribuição do que falta no mês</h2><div class="hint">Mercantil e serviços, no total e divididos por dia, por vendedor e por dia de cada vendedor.</div></div><span class="pill">Meta 1</span></div><div class="monthly-gap-grid" id="monthlyGapGrid"></div></article>
+      <article class="panel ecommerce-panel" id="ecommerceOverview"><div class="section-title"><h2>Loja + e-commerce</h2><span class="pill">Visão consolidada</span></div><div class="commerce-total" id="consolidatedSalesOverview">R$ 0,00</div><div class="commerce-caption">Venda total após devoluções</div><div class="commerce-snapshot"><div class="commerce-mini"><span>Venda mercantil da loja</span><strong id="storeSalesOverview">R$ 0,00</strong></div><div class="commerce-mini"><span>Venda e-commerce</span><strong id="ecommerceSalesOverview">R$ 0,00</strong></div><div class="commerce-mini"><span>Devoluções</span><strong id="returnsOverview">R$ 0,00</strong></div><div class="commerce-mini"><span>Média total / dia</span><strong id="consolidatedDailyOverview">R$ 0,00</strong></div></div><div class="ecommerce-goal-bars" id="ecommerceGoalBars"></div></article>
     </div>
     <div class="goal-grid" id="goalGrid"></div>
     <div class="section-grid">
@@ -407,7 +417,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v18.js?v=45"></script>
+<script src="resultados-v19.js?v=46"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
