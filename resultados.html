@@ -163,6 +163,15 @@
   .overview-detail-layout{display:grid;grid-template-columns:minmax(0,2.25fr) minmax(290px,1fr);gap:14px;margin:16px 0}.overview-detail-layout.without-ecommerce{grid-template-columns:1fr}.monthly-gap-panel,.ecommerce-panel{min-width:0}.monthly-gap-panel{display:flex;flex-direction:column}.monthly-gap-grid{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;align-content:center}.monthly-gap-metric{padding:12px;border:1px solid #dbe5f0;border-radius:13px;background:#f7faff;text-align:center}.monthly-gap-metric.services{background:#f7f4ff;border-color:#e2daf8}.monthly-gap-metric span{display:block;min-height:28px;font-size:10px;line-height:1.3;color:var(--muted);font-weight:900;text-transform:uppercase}.monthly-gap-metric strong{display:block;margin-top:5px;font-size:17px}.monthly-gap-metric small{display:block;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.35}.ecommerce-panel{background:linear-gradient(145deg,#0e3552,#0879e8);color:#fff;border:0;text-align:center}.ecommerce-panel .section-title{margin-bottom:10px;text-align:left}.ecommerce-panel .section-title h2{color:#fff}.ecommerce-panel .pill{background:rgba(255,255,255,.16);color:#fff}.commerce-total{font-size:31px;font-weight:950;letter-spacing:-.035em}.commerce-caption{margin-top:3px;color:rgba(255,255,255,.72);font-size:11px}.commerce-snapshot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:13px 0}.commerce-mini{padding:10px 7px;border-radius:11px;background:rgba(255,255,255,.11);text-align:center}.commerce-mini span{display:block;min-height:25px;color:rgba(255,255,255,.72);font-size:9px;font-weight:900;text-transform:uppercase}.commerce-mini strong{display:block;margin-top:3px;font-size:12px}.ecommerce-goal-bars{display:grid;gap:8px;margin-top:12px;text-align:left}.commerce-bar-row>div:first-child{display:flex;justify-content:space-between;gap:8px;font-size:11px}.commerce-bar-row .bar{height:7px;margin:5px 0;background:rgba(255,255,255,.18)}.commerce-bar-row .bar span{background:linear-gradient(90deg,#50d7aa,#fff)}.commerce-bar-row small{display:block;color:rgba(255,255,255,.68);font-size:9px}.ecommerce-entry-card{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:14px 0;padding:15px 17px;border:1px solid #cfe2f7;border-radius:17px;background:linear-gradient(135deg,#eef7ff,#f7f3ff)}.ecommerce-entry-copy h3{margin:0 0 4px}.ecommerce-entry-copy p{margin:0;color:var(--muted);font-size:12px}.ecommerce-entry-card .field{flex:0 1 360px;box-shadow:none;background:#fff}.ecommerce-entry-card .field input{font-size:18px}.week-analysis{grid-template-columns:repeat(5,minmax(0,1fr))}.week-analysis .metric.emphasized{background:#e9f4ff;border:1px solid #b9daf8}.week-analysis .metric.emphasized.services{background:#f1ecff;border-color:#d9ccfa}.week-analysis .metric small,.week-metrics .metric small{display:block;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.3}
   @media(max-width:1100px){.overview-detail-layout{grid-template-columns:1fr}.monthly-gap-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.week-analysis{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:560px){.monthly-gap-grid{grid-template-columns:1fr 1fr}.monthly-gap-metric{padding:10px}.monthly-gap-metric strong{font-size:14px}.commerce-snapshot{grid-template-columns:1fr}.ecommerce-entry-card{align-items:stretch;flex-direction:column}.ecommerce-entry-card .field{flex:auto;width:100%}}
+  #daily table{min-width:1290px}.daily-cards .day-card-results{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:760px){.daily-cards .day-card-results{grid-template-columns:1fr 1fr}}
+</style>
+<style id="results-v22-layout">
+  .monthly-entry-stack{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}.monthly-entry-stack .ecommerce-entry-card{margin:0}.gross-profit-entry-card{border-color:#cce9df;background:linear-gradient(135deg,#effbf7,#f4f8ff)}.monthly-entry-stack .ecommerce-entry-card .field{flex:0 1 300px}
+  .tier-balance-grid,.weekly-growth-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 20px}.tier-balance-card,.weekly-growth-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:#f8faff}.tier-balance-card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.tier-balance-card header strong,.tier-balance-card header span{font-size:18px;font-weight:950}.tier-balance-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:7px 0;border-top:1px solid #e5ebf3;font-size:11px}.tier-balance-row strong{text-align:right}.tier-needed{margin-top:10px;padding:10px;border-radius:10px;background:#fff1f3}.tier-needed.positive{background:#eafaf4}.weekly-growth-card span{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase}.weekly-growth-card strong{display:block;margin:7px 0 3px;font-size:20px}.weekly-growth-card small{color:var(--muted)}
+  .bar-fill.gross{background:linear-gradient(90deg,#7257d9,#a783ed)}
+  #daily .table-wrap table{min-width:1520px}
+  @media(max-width:900px){.monthly-entry-stack,.tier-balance-grid,.weekly-growth-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -199,7 +208,7 @@
       <article class="kpi"><div class="label" id="grossProfitKpiLabel">Lucro bruto</div><div class="value" id="grossProfitKpi">R$ 0,00</div><div class="sub" id="grossProfitKpiSub">Resultado × meta do mês</div></article>
       <article class="kpi"><div class="label">Serviços totais</div><div class="value" id="servicesKpi">R$ 0,00</div><div class="sub">Garantia + outros serviços + presta-mista</div></article>
       <article class="kpi"><div class="label">Eficiência</div><div class="value" id="efficiencyKpi">0,00%</div><div class="sub">Serviços ÷ venda elegível</div></article>
-      <article class="kpi"><div class="label">Taxa de conversão</div><div class="value" id="conversionKpi">0,00%</div><div class="sub">Serviços vendidos ÷ venda elegível</div></article>
+      <article class="kpi"><div class="label">Taxa de conversão</div><div class="value" id="conversionKpi">0,00%</div><div class="sub">Quantidade de garantias ÷ quantidade elegível</div></article>
       <article class="kpi"><div class="label">Ticket médio</div><div class="value" id="ticketKpi">R$ 0,00</div><div class="sub" id="nfKpi">0 notas fiscais</div></article>
     </div>
     <div class="overview-detail-layout" id="overviewDetailLayout">
@@ -226,8 +235,11 @@
         <div class="daily-goal-team" id="dailyGoalTeam"></div>
         <div class="seller-motivation-preview" id="dailyGoalMotivation"></div>
       </section>
-      <section class="ecommerce-entry-card" aria-labelledby="ecommerceEntryTitle"><div class="ecommerce-entry-copy"><h3 id="ecommerceEntryTitle">Vendas e-commerce</h3><p>Informe apenas o valor acumulado do e-commerce nesta competência. Ele será somado à venda da loja na Visão geral.</p></div><div class="field"><label for="ecommerce">Valor do e-commerce</label><input class="money-input" inputmode="decimal" id="ecommerce" type="text"></div></section>
-      <div class="validation-box" id="dailyValidation"></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Lucro bruto</th><th>Elegível</th><th>Garantia</th><th>Outros serviços</th><th>Presta-mista</th><th>Subtotal serviços</th><th>Eficiência</th><th>NFs</th><th>Ticket médio</th></tr></thead><tbody id="dailyBody"></tbody></table></div><div class="daily-cards" id="dailyCards"></div></article>
+      <div class="monthly-entry-stack">
+        <section class="ecommerce-entry-card gross-profit-entry-card" aria-labelledby="grossProfitActualTitle"><div class="ecommerce-entry-copy"><h3 id="grossProfitActualTitle">Lucro bruto do mês</h3><p>Informe o valor acumulado da competência. Ele alimenta as análises geral, semanal e do Compilado.</p></div><div class="field"><label for="grossProfitActual">Lucro bruto acumulado</label><input class="money-input" inputmode="decimal" id="grossProfitActual" type="text"></div></section>
+        <section class="ecommerce-entry-card" aria-labelledby="ecommerceEntryTitle"><div class="ecommerce-entry-copy"><h3 id="ecommerceEntryTitle">Vendas e-commerce</h3><p>Informe apenas o valor acumulado do e-commerce nesta competência. Ele será somado à venda da loja na Visão geral.</p></div><div class="field"><label for="ecommerce">Valor do e-commerce</label><input class="money-input" inputmode="decimal" id="ecommerce" type="text"></div></section>
+      </div>
+      <div class="validation-box" id="dailyValidation"></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Venda elegível</th><th>NFs</th><th>Ticket médio</th><th>Qtd. elegível</th><th>Garantia (R$)</th><th>Outros serviços</th><th>Presta-mista</th><th>Subtotal serviços</th><th>Qtd. garantias</th><th>Taxa de conversão</th><th>Eficiência</th></tr></thead><tbody id="dailyBody"></tbody></table></div><div class="daily-cards" id="dailyCards"></div></article>
   </section>
 
   <section class="view" id="weekly">
@@ -353,6 +365,10 @@
       <div class="period-summary" id="periodSummary"></div>
       <div class="period-highlights" id="periodHighlights"></div>
       <div class="period-chart" id="periodChart"></div>
+      <div class="compiled-block-title"><div><h3>Saldo acumulado pelas três metas</h3><div class="hint">A gordura dos meses anteriores abate automaticamente o que falta no período selecionado.</div></div></div>
+      <div class="tier-balance-grid" id="periodTierDashboard"></div>
+      <div class="compiled-block-title"><div><h3>Destaques semanais do período</h3><div class="hint">Melhores crescimentos mercantil e de serviços, além da maior eficiência.</div></div></div>
+      <div class="weekly-growth-grid" id="weeklyGrowthDashboard"></div>
       <div class="period-detail-grid" id="periodDetailGrid"></div>
       <div class="compiled-block-title"><div><h3>Filial × vendedores</h3><div class="hint">Ritmo atual, histórico e pontos de atenção da equipe.</div></div></div>
       <div class="compiled-summary" id="compiledSummary"></div>
@@ -416,7 +432,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v20.js?v=47"></script>
+<script src="resultados-v22.js?v=52"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
