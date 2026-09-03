@@ -166,12 +166,13 @@
   #daily table{min-width:1290px}.daily-cards .day-card-results{grid-template-columns:repeat(4,1fr)}
   @media(max-width:760px){.daily-cards .day-card-results{grid-template-columns:1fr 1fr}}
 </style>
-<style id="results-v23-layout">
+<style id="results-v24-layout">
   .monthly-entry-stack{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}.monthly-entry-stack .ecommerce-entry-card{margin:0}.gross-profit-entry-card{border-color:#cce9df;background:linear-gradient(135deg,#effbf7,#f4f8ff)}.monthly-entry-stack .ecommerce-entry-card .field{flex:0 1 300px}
   .tier-balance-grid,.weekly-growth-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 20px}.tier-balance-card,.weekly-growth-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:#f8faff}.tier-balance-card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.tier-balance-card header strong,.tier-balance-card header span{font-size:18px;font-weight:950}.tier-balance-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:7px 0;border-top:1px solid #e5ebf3;font-size:11px}.tier-balance-row strong{text-align:right}.tier-needed{margin-top:10px;padding:10px;border-radius:10px;background:#fff1f3}.tier-needed.positive{background:#eafaf4}.weekly-growth-card span{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase}.weekly-growth-card strong{display:block;margin:7px 0 3px;font-size:20px}.weekly-growth-card small{color:var(--muted)}
   .bar-fill.gross{background:linear-gradient(90deg,#7257d9,#a783ed)}
-  #daily .table-wrap table{width:100%;min-width:1680px;table-layout:fixed}#daily .table-wrap th,#daily .table-wrap td{padding-left:6px;padding-right:6px;text-align:center;overflow:hidden}#daily .table-wrap th:first-child,#daily .table-wrap td:first-child,#daily .table-wrap th:nth-child(2),#daily .table-wrap td:nth-child(2){text-align:left}#daily .table-wrap td input,#daily .table-wrap td select{width:100%;min-width:0}#daily .table-wrap th:nth-child(13),#daily .table-wrap th:nth-child(14){font-size:10px}
-  @media(max-width:900px){.monthly-entry-stack,.tier-balance-grid,.weekly-growth-grid{grid-template-columns:1fr}}
+  #daily .table-wrap table{width:1380px!important;min-width:1380px!important;max-width:1380px;table-layout:fixed!important}#daily .table-wrap th,#daily .table-wrap td{padding-left:4px;padding-right:4px;text-align:center;overflow:hidden;text-overflow:clip;font-size:10px}#daily .table-wrap th:first-child,#daily .table-wrap td:first-child,#daily .table-wrap th:nth-child(2),#daily .table-wrap td:nth-child(2){text-align:left}#daily .table-wrap td input,#daily .table-wrap td select{width:100%!important;min-width:0!important;padding-left:5px;padding-right:5px;font-size:10.5px}#daily .table-wrap th:nth-child(13),#daily .table-wrap th:nth-child(14){font-size:9px}
+  .monthly-balance-list{display:grid;gap:18px;margin:14px 0 18px}.balance-month-card{overflow:hidden;border:1px solid #d7dfeb;border-radius:17px;background:#fff}.balance-month-title{margin:0;padding:13px 16px;text-align:center;color:#12336f;font-size:23px;font-weight:950;text-transform:uppercase;background:linear-gradient(180deg,#fff,#f7f9fd)}.balance-table-wrap{overflow:auto}.balance-table{width:100%;min-width:1080px;table-layout:auto}.balance-table th{position:static;padding:11px 8px;background:linear-gradient(135deg,#072e68,#064e91);color:#fff;text-align:center;font-size:10px}.balance-table td{padding:11px 8px;text-align:center;font-size:12px}.balance-table td:first-child{text-align:left;font-weight:950}.balance-table .indicator-icon{margin-right:7px;color:#0b55a4;font-size:17px}.balance-composition{padding:10px 15px;border-top:1px solid #dce3ed;color:#344054;font-size:12px}.balance-composition strong{color:#132a47}.carry-panel{max-width:680px;margin:4px auto 20px;overflow:hidden;border:1px solid #bcc8d8;border-radius:14px;background:#fff}.carry-panel h4{margin:0;padding:10px;text-align:center;color:#12336f;background:#f5f7fb;font-size:17px;text-transform:uppercase}.carry-row{display:grid;grid-template-columns:1.2fr 1fr}.carry-row span,.carry-row strong{padding:10px 14px;border-top:1px solid #dce3ed}.carry-row strong{text-align:right;border-left:1px solid #dce3ed}.tier-closing-title{margin:18px 0 8px}.tier-closing-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}.closing-card{padding:14px;border:1px solid var(--line);border-radius:15px;background:#f8faff}.closing-card header{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.closing-card header strong{font-size:17px}.closing-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-top:1px solid #e3e9f2;font-size:11px}.closing-row strong{text-align:right}
+  @media(max-width:900px){.monthly-entry-stack,.tier-balance-grid,.weekly-growth-grid,.tier-closing-grid{grid-template-columns:1fr}.balance-month-title{font-size:19px}}
 </style>
 </head>
 <body>
@@ -239,7 +240,7 @@
         <section class="ecommerce-entry-card gross-profit-entry-card" aria-labelledby="grossProfitActualTitle"><div class="ecommerce-entry-copy"><h3 id="grossProfitActualTitle">Lucro bruto do mês</h3><p>Informe o valor acumulado da competência. Ele alimenta as análises geral, semanal e do Compilado.</p></div><div class="field"><label for="grossProfitActual">Lucro bruto acumulado</label><input class="money-input" inputmode="decimal" id="grossProfitActual" type="text"></div></section>
         <section class="ecommerce-entry-card" aria-labelledby="ecommerceEntryTitle"><div class="ecommerce-entry-copy"><h3 id="ecommerceEntryTitle">Vendas e-commerce</h3><p>Informe apenas o valor acumulado do e-commerce nesta competência. Ele será somado à venda da loja na Visão geral.</p></div><div class="field"><label for="ecommerce">Valor do e-commerce</label><input class="money-input" inputmode="decimal" id="ecommerce" type="text"></div></section>
       </div>
-      <div class="validation-box" id="dailyValidation"></div><div class="table-wrap"><table><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Venda elegível</th><th>NFs</th><th>Ticket médio</th><th>Qtd. elegível</th><th>Garantia (R$)</th><th>Outros serviços</th><th>Presta-mista</th><th>Subtotal serviços</th><th>Qtd. garantias</th><th>Taxa de conversão</th><th>Eficiência</th></tr></thead><tbody id="dailyBody"></tbody></table></div><div class="daily-cards" id="dailyCards"></div></article>
+      <div class="validation-box" id="dailyValidation"></div><div class="table-wrap"><table><colgroup><col style="width:75px"><col style="width:105px"><col style="width:105px"><col style="width:105px"><col style="width:65px"><col style="width:90px"><col style="width:75px"><col style="width:100px"><col style="width:95px"><col style="width:85px"><col style="width:100px"><col style="width:80px"><col style="width:115px"><col style="width:80px"></colgroup><thead><tr><th>Dia</th><th>Situação</th><th>Venda mercantil</th><th>Venda elegível</th><th>NFs</th><th>Ticket médio</th><th>Qtd. elegível</th><th>Garantia (R$)</th><th>Outros serviços</th><th>Presta-mista</th><th>Subtotal serviços</th><th>Qtd. garantias</th><th>Taxa de conversão</th><th>Eficiência</th></tr></thead><tbody id="dailyBody"></tbody></table></div><div class="daily-cards" id="dailyCards"></div></article>
   </section>
 
   <section class="view" id="weekly">
@@ -365,8 +366,10 @@
       <div class="period-summary" id="periodSummary"></div>
       <div class="period-highlights" id="periodHighlights"></div>
       <div class="period-chart" id="periodChart"></div>
-      <div class="compiled-block-title"><div><h3>Saldo acumulado pelas três metas</h3><div class="hint">A gordura dos meses anteriores abate automaticamente o que falta no período selecionado.</div></div></div>
-      <div class="tier-balance-grid" id="periodTierDashboard"></div>
+      <div class="compiled-block-title"><div><h3>Balanço acumulado mês a mês</h3><div class="hint">Realizado, metas, saldo de cada mês, gordura anterior e resultado acumulado.</div></div></div>
+      <div class="monthly-balance-list" id="periodTierDashboard"></div>
+      <div class="tier-closing-title"><h3>Necessidade de fechamento pelas três metas</h3><div class="hint">Leitura geral, diária da loja e por vendedor/dia no intervalo selecionado.</div></div>
+      <div class="tier-closing-grid" id="periodTierClosing"></div>
       <div class="compiled-block-title"><div><h3>Destaques semanais do período</h3><div class="hint">Melhores crescimentos mercantil e de serviços, além da maior eficiência.</div></div></div>
       <div class="weekly-growth-grid" id="weeklyGrowthDashboard"></div>
       <div class="period-detail-grid" id="periodDetailGrid"></div>
@@ -432,7 +435,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v23.js?v=56"></script>
+<script src="resultados-v24.js?v=61"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
