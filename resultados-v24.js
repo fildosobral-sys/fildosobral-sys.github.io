@@ -134,6 +134,22 @@
   let printSellerOnlyId = null;
   let openDailyKey = null;
   let openWeeklyIndex = null;
+  let dailyExportGesture = false, dailyRenderDeferred = false, dailyGestureTimer;
+  function finishDailyExportGesture() {
+    clearTimeout(dailyGestureTimer); dailyExportGesture=false;
+    if (dailyRenderDeferred) { dailyRenderDeferred=false; renderAll(); }
+  }
+  // Blur saves data before click. Preserve the clicked button until export finishes.
+  document.addEventListener('pointerdown', event => {
+    finishDailyExportGesture();
+    if (event.target.closest('[data-daily-export], #downloadDailyGoal')) {
+      dailyExportGesture=true;
+      dailyGestureTimer=setTimeout(finishDailyExportGesture,1500);
+    }
+  },true);
+  document.addEventListener('click',()=>{if(dailyExportGesture)setTimeout(finishDailyExportGesture,0);},true);
+  document.addEventListener('pointercancel',finishDailyExportGesture,true);
+
 
   function persist(showState = true) {
     const key = recordKey(db.branch, db.month);
@@ -329,6 +345,10 @@
     const key = selectedDailyGoalDate(), greeting = timeGreeting(), message = missionMessage({ id: db.branch || 'filial', name: 'Equipe' }, key, 'positive');
     document.getElementById('dailyGoalMotivation').innerHTML = `<strong>${greeting}, equipe!</strong><br>${esc(message)}<br><small>Mensagem exclusiva para ${new Date(`${key}T12:00:00`).toLocaleDateString('pt-BR')}.</small>`;
     document.getElementById('downloadDailyGoal').disabled = !metrics.percent;
+    let achievements=document.getElementById('dailyAchievements');
+    if (!achievements) { achievements=document.createElement('div'); achievements.id='dailyAchievements'; achievements.className='daily-achievements'; document.getElementById('dailyGoalMotivation').before(achievements); }
+    achievements.innerHTML=dailyAchievement(dayData(key),metrics).map(item=>`<div class="daily-achievement ${item.state}"><span>${esc(item.label)} · meta ${esc(item.target)}</span><strong>${esc(item.value)}</strong><b>${esc(item.status)}</b><small>${esc(item.note)}</small></div>`).join('');
+
   }
   function renderDailyGoalPlanner() {
     const key = selectedDailyGoalDate(), metrics = dailyGoalMetrics(key);
@@ -394,40 +414,75 @@
     ctx.fillStyle = '#ffffff'; ctx.font = '900 53px Arial, sans-serif'; ctx.fillText(title, textX, 139);
     ctx.font = '600 25px Arial, sans-serif'; ctx.fillText(subtitle, textX, 198); ctx.textAlign = 'left';
   }
-  async function exportDailyGoalImage(key) {
-    const data = dayData(key), metrics = dailyGoalMetrics(key, data);
-    if (!metrics.percent) { alert('Informe o percentual da meta deste dia antes de baixar.'); return; }
-    const date = new Date(`${key}T12:00:00`), services = metrics.actualServices;
-    const efficiency = num(data.eligible) ? services / num(data.eligible) : 0;
-    const goalRate = metrics.branchGoal ? num(data.general) / metrics.branchGoal : 0;
-    const serviceRate = metrics.serviceGoal ? services / metrics.serviceGoal : 0;
-    const ticket = num(data.invoiceCount) ? num(data.general) / num(data.invoiceCount) : 0;
-    const greeting = timeGreeting(), motivationalText = missionMessage({ id: db.branch || 'filial', name: 'Equipe' }, key, 'positive');
-    const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1600;
-    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    imageHeader(ctx, 'META DO DIA - FILIAL', `${db.branch || 'Filial não informada'}  |  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}`, canvas.width);
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Missão do dia', 64, 334);
-    const percentText = `${metrics.percent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
-    drawCanvasMetric(ctx, 64, 365, 296, 142, 'Percentual do dia', percentText);
-    drawCanvasMetric(ctx, 392, 365, 296, 142, 'Meta mercantil', brl.format(metrics.branchGoal), true);
-    drawCanvasMetric(ctx, 720, 365, 296, 142, 'Serviços/garantia 7%', brl.format(metrics.serviceGoal));
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Média por vendedor', 64, 568);
-    drawCanvasMetric(ctx, 64, 598, 460, 154, 'Mercantil por vendedor', metrics.sellerCount ? brl.format(metrics.perSeller) : 'Equipe não cadastrada', true, metrics.sellerCount ? `${metrics.sellerCount} vendedor(es)` : '');
-    drawCanvasMetric(ctx, 556, 598, 460, 154, 'Serviços/garantia por vendedor', metrics.sellerCount ? brl.format(metrics.servicePerSeller) : 'Equipe não cadastrada', false, 'Sempre 7% da meta mercantil');
-    ctx.fillStyle = '#102a43'; ctx.font = '900 31px Arial, sans-serif'; ctx.fillText('Resultado registrado no dia', 64, 815);
-    const results = [
-      ['Venda mercantil', brl.format(num(data.general)), pct.format(goalRate)], ['Venda elegível', brl.format(num(data.eligible)), 'Base da eficiência'],
-      ['Serviços realizados', brl.format(services), `${pct.format(serviceRate)} da missão`], ['Eficiência', efficiencyPct.format(efficiency), 'Serviços ÷ elegível'],
-      ['Ticket médio', brl.format(ticket), `${num(data.invoiceCount)} NF(s)`], ['Situação', data.status === 'done' ? 'Lançado' : data.status === 'off' ? 'Não trabalha' : 'Pendente', 'Atualização do dia']
+
+  // Daily mission targets are independent of the configurable monthly efficiency target.
+  function dailyAchievement(data, metrics) {
+    const services = metrics.actualServices, eligible = num(data.eligible), quantity = num(data.nfs);
+    const efficiency = eligible ? services / eligible : null;
+    const conversion = quantity ? num(data.warrantyQty) / quantity : null;
+    const ready = data.status === 'done';
+    const build = (label, actual, target, format, base = true, rate = false) => {
+      const available = ready && base && target > 0;
+      const difference = available ? actual - target : null;
+      const passed = available && difference >= -1e-9;
+      const delta = rate ? `${(Math.abs(difference) * 100).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2})} p.p.` : brl.format(Math.abs(difference));
+      return {label, value: base ? format(actual) : 'Não calculada', target: format(target),
+        state: available ? passed ? 'passed' : 'failed' : 'pending',
+        status: available ? passed ? 'META ATINGIDA' : 'META NÃO ATINGIDA' : data.status === 'off' ? 'DIA SEM TRABALHO' : !ready ? 'AGUARDANDO LANÇAMENTO' : 'BASE NÃO INFORMADA',
+        note: available ? passed ? difference > 1e-9 ? `Acima da meta: ${delta}` : 'Meta atingida exatamente' : `Faltam ${delta}` : 'Informe os dados para comparar'};
+    };
+    return [
+      build('Venda mercantil', num(data.general), metrics.branchGoal, x => brl.format(x)),
+      build('Serviços realizados', services, metrics.serviceGoal, x => brl.format(x)),
+      build('Eficiência', efficiency, .07, x => efficiencyPct.format(x), eligible > 0, true),
+      build('Taxa de conversão', conversion, .35, x => efficiencyPct.format(x), quantity > 0, true)
     ];
-    results.forEach(([label, value, note], index) => { const col = index % 3, row = Math.floor(index / 3); drawCanvasMetric(ctx, 64 + col * 328, 846 + row * 174, 296, 148, label, value, index === 0, note); });
-    ctx.fillStyle = '#edf7ff'; roundedCanvasRect(ctx, 64, 1205, 952, 270, 28); ctx.fill();
-    ctx.fillStyle = '#0879e8'; ctx.font = '900 30px Arial, sans-serif'; ctx.fillText(`${greeting}, equipe!`, 94, 1260);
-    ctx.fillStyle = '#203a56'; ctx.font = '800 25px Arial, sans-serif'; drawWrappedCanvasText(ctx, motivationalText, 94, 1310, 882, 34, 4);
-    ctx.fillStyle = '#526175'; ctx.font = '700 20px Arial, sans-serif'; ctx.fillText('Vamos juntos cumprir a missão do dia!', 94, 1435);
-    ctx.fillStyle = '#748296'; ctx.font = '600 18px Arial, sans-serif'; ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`, 64, 1560);
-    const safeBranch = String(db.branch || 'filial').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
-    await shareOrDownloadImage(canvas, `meta-diaria-${safeBranch || 'filial'}-${key}.png`, `Meta do dia - ${date.toLocaleDateString('pt-BR')}`);
+  }
+  function downloadCanvasNow(canvas, filename) {
+    // Keep the download inside the click activation, including on mobile browsers.
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png'); link.download = filename;
+    document.body.appendChild(link); link.click(); link.remove();
+  }
+  function exportDailyGoalImage(key) {
+    try {
+      const data = dayData(key), metrics = dailyGoalMetrics(key, data);
+      if (!metrics.percent) { alert('Informe o percentual da meta deste dia antes de baixar.'); return; }
+      const date = new Date(`${key}T12:00:00`);
+      const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1900;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 1080, 1900);
+      imageHeader(ctx, 'META DO DIA - FILIAL', `${db.branch || 'Filial não informada'} | ${date.toLocaleDateString('pt-BR')}`, 1080);
+      const heading = (text, y) => {ctx.fillStyle='#102a43'; ctx.font='900 31px Arial, sans-serif'; ctx.fillText(text,64,y);};
+      heading('Missão do dia', 325);
+      drawCanvasMetric(ctx,64,350,460,140,'Meta mercantil',brl.format(metrics.branchGoal),true,`${metrics.percent.toLocaleString('pt-BR')}% da meta mensal`);
+      drawCanvasMetric(ctx,556,350,460,140,'Meta de serviços',brl.format(metrics.serviceGoal),false,'7% da meta mercantil do dia');
+      drawCanvasMetric(ctx,64,510,460,105,'Meta de eficiência','7,00%');
+      drawCanvasMetric(ctx,556,510,460,105,'Meta de conversão','35,00%');
+      heading('Média por vendedor', 668);
+      drawCanvasMetric(ctx,64,690,460,140,'Mercantil por vendedor',metrics.sellerCount ? brl.format(metrics.perSeller) : 'Equipe não cadastrada',true,`${metrics.sellerCount} vendedor(es)`);
+      drawCanvasMetric(ctx,556,690,460,140,'Serviços por vendedor',metrics.sellerCount ? brl.format(metrics.servicePerSeller) : 'Equipe não cadastrada',false,'Divisão igual pela equipe');
+      heading('Resultado registrado no dia',885);
+      dailyAchievement(data,metrics).forEach((item,index) => {
+        const x=64+(index%2)*492, y=910+Math.floor(index/2)*222;
+        const colors=item.state==='passed' ? ['#e6f7ee','#087747'] : item.state==='failed' ? ['#fff0f1','#b4233b'] : ['#f1f5f9','#526175'];
+        ctx.fillStyle=colors[0]; roundedCanvasRect(ctx,x,y,460,202,24); ctx.fill();
+        ctx.fillStyle='#526175'; fitCanvasFont(ctx,item.label.toUpperCase(),412,800,20,16); ctx.fillText(item.label.toUpperCase(),x+24,y+32);
+        ctx.fillStyle=colors[1]; fitCanvasFont(ctx,item.value,412,900,38,22); ctx.fillText(item.value,x+24,y+80);
+        ctx.font='800 19px Arial'; ctx.fillText(item.status,x+24,y+116);
+        fitCanvasFont(ctx,item.note,412,800,22,16);ctx.fillText(item.note,x+24,y+152);
+        ctx.fillStyle='#526175';ctx.font='600 18px Arial';ctx.fillText(`Meta: ${item.target}`,x+24,y+182);
+      });
+      drawCanvasMetric(ctx,64,1370,460,130,'Venda elegível',brl.format(num(data.eligible)),false,'Base da eficiência');
+      drawCanvasMetric(ctx,556,1370,460,130,'Ticket médio',num(data.invoiceCount) ? brl.format(num(data.general)/num(data.invoiceCount)) : 'Não calculado',false,`${num(data.invoiceCount)} notas fiscais | ${num(data.warrantyQty)} garantias / ${num(data.nfs)} elegíveis`);
+      ctx.fillStyle='#edf7ff';roundedCanvasRect(ctx,64,1530,952,265,28);ctx.fill();
+      ctx.fillStyle='#0879e8';ctx.font='900 30px Arial';ctx.fillText(`${timeGreeting()}, equipe!`,94,1580);
+      ctx.fillStyle='#203a56';ctx.font='800 25px Arial';
+      drawWrappedCanvasText(ctx,missionMessage({id:db.branch || 'filial',name:'Equipe'},key,'positive'),94,1630,875,34,3);
+      ctx.font='600 19px Arial';ctx.fillText('Eficiência: serviços ÷ venda elegível. Conversão: garantias ÷ qtd. elegível.',94,1760);
+      ctx.fillStyle='#748296';ctx.font='600 18px Arial';ctx.fillText(`Gerado em ${new Date().toLocaleString('pt-BR')} pela Gestão de Resultados`,64,1855);
+      const safeBranch=String(db.branch || 'filial').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-');
+      downloadCanvasNow(canvas,`meta-diaria-${safeBranch}-${key}.png`);
+    } catch(error) { console.error(error); alert('Não foi possível gerar a imagem. Tente novamente.'); }
   }
 
   function dailyIssues() {
@@ -539,7 +594,7 @@
       const classes = [disabled ? 'day-off' : '', key === todayKey ? 'today-row' : '', reached ? 'goal-hit' : ''].join(' ');
       const dailyGoal = dailyGoalMetrics(key, data);
       const integerInput = (field) => `<input data-f="${field}" inputmode="numeric" type="number" min="0" step="1" value="${num(data[field]) || ''}" ${disabled ? 'disabled' : ''}>`;
-      return `<tr class="${classes}" data-date="${key}"><td><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong><br><span class="muted">${date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>${dailyGoal.percent ? `<span class="day-goal-table-note">${dailyGoal.percent.toLocaleString('pt-BR')}% · ${brl.format(dailyGoal.branchGoal)}</span><button class="day-goal-table-btn" data-daily-export="${key}">Imagem do dia</button>` : ''}${reached ? '<br><span class="goal-hit-badge">Meta dia ✓</span>' : ''}</td><td>${statusSelect(data)}</td><td>${moneyInput('general', num(data.general), key, disabled)}</td><td>${moneyInput('eligible', num(data.eligible), key, disabled)}</td><td>${integerInput('invoiceCount')}</td><td class="derived">${brl.format(ticket)}</td><td>${integerInput('nfs')}</td><td>${moneyInput('warranty', num(data.warranty), key, disabled)}</td><td>${moneyInput('other', num(data.other), key, disabled)}</td><td>${moneyInput('mixed', num(data.mixed), key, disabled)}</td><td class="derived">${brl.format(services)}</td><td>${integerInput('warrantyQty')}</td><td class="derived">${num(data.nfs) ? efficiencyPct.format(conversion) : '—'}</td><td class="derived ${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(efficiency)}</td></tr>`;
+      return `<tr class="${classes}" data-date="${key}"><td><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</strong><br><span class="muted">${date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>${dailyGoal.percent ? `<span class="day-goal-table-note">${dailyGoal.percent.toLocaleString('pt-BR')}% · ${brl.format(dailyGoal.branchGoal)}</span><button class="day-goal-table-btn" data-daily-export="${key}">Imagem do dia</button>` : ''}${reached ? '<br><span class="goal-hit-badge">Meta dia ✓</span>' : ''}</td><td>${statusSelect(data)}</td><td>${moneyInput('general', num(data.general), key, disabled)}</td><td>${moneyInput('eligible', num(data.eligible), key, disabled)}</td><td>${integerInput('invoiceCount')}</td><td class="derived">${brl.format(ticket)}</td><td>${integerInput('nfs')}</td><td>${moneyInput('warranty', num(data.warranty), key, disabled)}</td><td>${moneyInput('other', num(data.other), key, disabled)}</td><td>${moneyInput('mixed', num(data.mixed), key, disabled)}</td><td class="derived">${brl.format(services)}</td><td>${integerInput('warrantyQty')}</td><td class="derived">${num(data.nfs) ? efficiencyPct.format(conversion) : '—'}</td><td class="derived ${statusClass(efficiency / 0.07)}">${efficiencyPct.format(efficiency)}</td></tr>`;
     }).join('');
     document.getElementById('dailyCards').innerHTML = rows.map(({ key, date, data }) => {
       const services = num(data.warranty) + num(data.other) + num(data.mixed);
@@ -549,7 +604,7 @@
       const disabled = data.status === 'off', reached = dayReachedPrimaryGoal(data);
       const dailyGoal = dailyGoalMetrics(key, data), isOpen = openDailyKey === key;
       const numberField = (field, label) => `<div class="day-card-field"><label>${label}</label><input data-f="${field}" inputmode="numeric" type="number" min="0" step="1" value="${num(data[field]) || ''}" ${disabled ? 'disabled' : ''}></div>`;
-      return `<article class="day-card ${isOpen ? 'is-open' : ''} ${disabled ? 'day-off' : ''} ${key === todayKey ? 'today-row' : ''} ${reached ? 'goal-hit' : ''}" data-date="${key}"><div class="day-card-head"><button class="day-card-toggle" type="button" aria-expanded="${isOpen}" aria-controls="day-content-${key}"><div class="day-card-title"><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</strong><span>${date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>${reached ? '<span class="goal-hit-badge">Meta dia atingida ✓</span>' : ''}</div><span class="day-card-chevron" aria-hidden="true">⌄</span></button>${statusSelect(data)}</div><div class="day-card-content" id="day-content-${key}" ${isOpen ? '' : 'hidden'}><div class="day-goal-strip"><div><label>Percentual do dia (%)</label><input data-f="goalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${dailyGoal.percent || ''}" placeholder="Ex.: 3,51"></div><div class="day-goal-mini"><span>META FILIAL</span><strong>${brl.format(dailyGoal.branchGoal)}</strong></div><div class="day-goal-mini"><span>SERVIÇOS 7%</span><strong>${brl.format(dailyGoal.serviceGoal)}</strong></div><div class="day-goal-mini"><span>POR VENDEDOR</span><strong>${dailyGoal.sellerCount ? brl.format(dailyGoal.perSeller) : '—'}</strong></div><button class="btn small day-goal-export" data-daily-export="${key}" ${dailyGoal.percent ? '' : 'disabled'}>Baixar imagem HD</button></div><div class="day-card-grid"><div class="day-card-field"><label>Venda mercantil</label>${moneyInput('general', num(data.general), key, disabled)}</div><div class="day-card-field"><label>Venda elegível</label>${moneyInput('eligible', num(data.eligible), key, disabled)}</div>${numberField('invoiceCount', 'NFs')}${numberField('nfs', 'Quantidade elegível')}<div class="day-card-field"><label>Garantia (R$)</label>${moneyInput('warranty', num(data.warranty), key, disabled)}</div><div class="day-card-field"><label>Outros serviços</label>${moneyInput('other', num(data.other), key, disabled)}</div><div class="day-card-field"><label>Presta-mista</label>${moneyInput('mixed', num(data.mixed), key, disabled)}</div>${numberField('warrantyQty', 'Quantidade de garantias')}</div><div class="day-card-results"><div><span>TICKET MÉDIO</span><strong>${brl.format(ticket)}</strong></div><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>CONVERSÃO</span><strong>${num(data.nfs) ? efficiencyPct.format(conversion) : '—'}</strong></div><div><span>EFICIÊNCIA</span><strong class="${statusClass(num(db.efficiencyGoal) ? efficiency / num(db.efficiencyGoal) : 0)}">${efficiencyPct.format(efficiency)}</strong></div></div></div></article>`;
+      return `<article class="day-card ${isOpen ? 'is-open' : ''} ${disabled ? 'day-off' : ''} ${key === todayKey ? 'today-row' : ''} ${reached ? 'goal-hit' : ''}" data-date="${key}"><div class="day-card-head"><button class="day-card-toggle" type="button" aria-expanded="${isOpen}" aria-controls="day-content-${key}"><div class="day-card-title"><strong>${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</strong><span>${date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>${reached ? '<span class="goal-hit-badge">Meta dia atingida ✓</span>' : ''}</div><span class="day-card-chevron" aria-hidden="true">⌄</span></button>${statusSelect(data)}</div><div class="day-card-content" id="day-content-${key}" ${isOpen ? '' : 'hidden'}><div class="day-goal-strip"><div><label>Percentual do dia (%)</label><input data-f="goalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="${dailyGoal.percent || ''}" placeholder="Ex.: 3,51"></div><div class="day-goal-mini"><span>META FILIAL</span><strong>${brl.format(dailyGoal.branchGoal)}</strong></div><div class="day-goal-mini"><span>SERVIÇOS 7%</span><strong>${brl.format(dailyGoal.serviceGoal)}</strong></div><div class="day-goal-mini"><span>POR VENDEDOR</span><strong>${dailyGoal.sellerCount ? brl.format(dailyGoal.perSeller) : '—'}</strong></div><button class="btn small day-goal-export" data-daily-export="${key}" ${dailyGoal.percent ? '' : 'disabled'}>Baixar imagem HD</button></div><div class="day-card-grid"><div class="day-card-field"><label>Venda mercantil</label>${moneyInput('general', num(data.general), key, disabled)}</div><div class="day-card-field"><label>Venda elegível</label>${moneyInput('eligible', num(data.eligible), key, disabled)}</div>${numberField('invoiceCount', 'NFs')}${numberField('nfs', 'Quantidade elegível')}<div class="day-card-field"><label>Garantia (R$)</label>${moneyInput('warranty', num(data.warranty), key, disabled)}</div><div class="day-card-field"><label>Outros serviços</label>${moneyInput('other', num(data.other), key, disabled)}</div><div class="day-card-field"><label>Presta-mista</label>${moneyInput('mixed', num(data.mixed), key, disabled)}</div>${numberField('warrantyQty', 'Quantidade de garantias')}</div><div class="day-card-results"><div><span>TICKET MÉDIO</span><strong>${brl.format(ticket)}</strong></div><div><span>SERVIÇOS</span><strong>${brl.format(services)}</strong></div><div><span>CONVERSÃO</span><strong>${num(data.nfs) ? efficiencyPct.format(conversion) : '—'}</strong></div><div><span>EFICIÊNCIA</span><strong class="${statusClass(efficiency / 0.07)}">${efficiencyPct.format(efficiency)}</strong></div></div></div></article>`;
     }).join('');
     bindDailyInputs(document.getElementById('dailyBody'));
     bindDailyInputs(document.getElementById('dailyCards'));
@@ -1677,12 +1732,12 @@
     else document.getElementById('printReport').insertAdjacentHTML('beforeend', compiledPage + sellerFinancialPages);
   }
 
-  function renderAll() { fillSettings(); renderScopeSelector(); renderOverview(); renderDaily(); renderWeekly(); renderSellers(); renderGoalsHistory(); renderCompiled(); renderSellerProfile(); renderPrint(); }
+  function renderAll() { if (dailyExportGesture) { dailyRenderDeferred=true; return; } if (document.getElementById("biCharts")) renderBI(); fillSettings(); renderScopeSelector(); renderOverview(); renderDaily(); renderWeekly(); renderSellers(); renderGoalsHistory(); renderCompiled(); renderSellerProfile(); renderPrint(); }
   function showView(id) {
     document.querySelectorAll('.view').forEach((view) => view.classList.toggle('active', view.id === id));
     document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === id));
     if (id === 'goalsHistory') renderGoalsHistory();
-    if (id === 'compiled') renderCompiled();
+    if (id === 'compiled') { renderCompiled(); renderBI(); }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -1868,6 +1923,291 @@
     db.sellers = db.sellers.map((seller) => ({ ...seller, general: 0, grossProfit: 0, eligible: 0, warranty: 0, warrantyQty: 0, other: 0, mixed: 0, nfs: 0, invoiceCount: 0, days: 0, notes: '', commitment: '', deadline: '' }));
     persist(); renderAll();
   });
+
+  // BI history is kept in the existing vault and therefore included in its backup.
+  const biDepartments = ['Eletrodomésticos','Móveis','Eletroportáteis','Telefonia celular','Colchões','TVs e áudio','Bicicletas','Sofás','Utilidades do lar','Cama e mesa'];
+  const biPayments = ['Carnê','Cartão de crédito','PIX','Dinheiro','Cartão de débito'];
+  const biTypes = {revenue:'Faturamento mensal',department:'Vendas por departamento',payment:'Formas de pagamento'};
+  let biImageUrl = null, biDraft = [], biSourceName = '', biBusy = false;
+  const biBranch = () => String(db.branch || '').trim().toLocaleUpperCase('pt-BR');
+  function biStrictNumber(value) {
+    const raw=String(value ?? '').trim().replace(/R\$|%|\s/g,'');
+    if (!raw || !/^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?$/.test(raw) && !/^\d+(?:\.\d+)?$/.test(raw)) return null;
+    const result=Number(raw.includes(',') ? raw.replace(/\./g,'').replace(',','.') : /^\d{1,3}(?:\.\d{3})+$/.test(raw) ? raw.replace(/\./g,'') : raw);
+    return Number.isFinite(result) && result>=0 ? result : null;
+  }
+  function biNumber(value) {return Number(value).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function biRecords() {return Array.isArray(vault.biRecords) ? vault.biRecords : [];}
+  function biStatus(message) {document.getElementById('biStatus').textContent=message;}
+  function initBI() {
+    document.getElementById('settings').insertAdjacentHTML('beforeend',`<article class="panel bi-panel" id="biImportPanel">
+      <h2>Importar gráficos do BI</h2><p>Envie uma imagem, confira os números e salve o histórico da filial. Os dados ficam neste aparelho e entram no backup geral.</p>
+      <div class="bi-form">
+        <label>Tipo de gráfico<select id="biType"><option value="department">Vendas por departamento</option><option value="payment">Formas de pagamento</option><option value="revenue">Faturamento mensal / ano a ano</option></select></label>
+        <label>Mês do gráfico<input id="biMonth" type="month" value="${esc(db.month)}"></label>
+        <label id="biUnitLabel">Unidade<select id="biUnit"><option value="brl">Reais (R$)</option><option value="percent">Percentual (%)</option></select></label>
+        <label>Fechamento<select id="biCompleteness"><option value="closed">Mês fechado</option><option value="partial" selected>Mês parcial</option></select></label>
+        <label id="biYearOneLabel" hidden>Ano das barras azuis<input id="biYearOne" type="number" min="2000" max="2100" value="${Number(db.month.slice(0,4))-1}"></label>
+        <label id="biYearTwoLabel" hidden>Ano das barras verdes<input id="biYearTwo" type="number" min="2000" max="2100" value="${Number(db.month.slice(0,4))}"></label>
+        <label id="biBaseLabel" hidden>Faturamento base dos percentuais (R$; opcional)<input id="biBase" inputmode="decimal" placeholder="Total do BI no mesmo mês"></label>
+      </div>
+      <p class="hint">Para imagens de dois anos, confira os anos das cores. Classifique meses ainda em andamento como parciais na tabela de revisão. Em gráficos com categorias diferentes, corrija os nomes sugeridos.</p>
+      <div class="bi-actions"><input id="biFile" type="file" accept="image/png,image/jpeg,image/webp"><button id="biRead" class="btn primary">Ler imagem</button><button id="biManual" class="btn">Preencher manualmente</button></div>
+      <p id="biStatus" role="status" aria-live="polite">A leitura acontece no navegador. Na primeira utilização é necessário internet para carregar o leitor.</p>
+      <img id="biPreview" class="bi-preview" alt="Imagem do BI em conferência" hidden>
+      <details id="biRawWrap" hidden><summary>Texto reconhecido na imagem</summary><pre id="biRaw"></pre></details>
+      <div id="biReview" hidden><h3>Confira antes de registrar</h3><p>A leitura pode trocar valores, categorias ou anos. Revise cada linha usando a imagem acima. Um novo envio substitui somente o mesmo tipo e mês desta filial.</p><div class="bi-review-scroll"><table class="bi-review-table"><thead><tr><th>Mês</th><th>Categoria</th><th>Valor</th><th>Fechamento</th><th>Ação</th></tr></thead><tbody id="biDraftBody"></tbody></table></div>
+        <div class="bi-actions"><button class="btn" id="biAddRow">Adicionar linha</button><button class="btn primary" id="biSave">Conferi os dados: salvar no histórico</button></div>
+      </div><div id="biSaved"></div>
+    </article>`);
+    document.getElementById('compiled').insertAdjacentHTML('beforeend',`<article class="panel bi-panel" id="biDashboard"><h2>Histórico do BI</h2><p>Faturamento, departamentos e pagamentos por período, com comparação dos mesmos meses do ano anterior.</p>
+      <div class="bi-form"><label>Período<select id="biPeriod"><option value="month">Mês</option><option value="quarter">Trimestre</option><option value="semester">Semestre</option><option value="year">Ano</option><option value="yoy">Comparativo ano a ano</option></select></label><label>Referência<input type="month" id="biReference" value="${esc(db.month)}"></label><label>Ano de comparação<input id="biCompareYear" type="number" min="2000" max="2100" value="${Number(db.month.slice(0,4))-1}"></label><label class="bi-check"><input type="checkbox" id="biIncludePartial"> Incluir meses parciais</label></div>
+      <p id="biPeriodNote" class="method-note"></p><div id="biCharts"></div></article>`);
+    const type=document.getElementById('biType'),unit=document.getElementById('biUnit');
+    function updateType() {
+      const revenue=type.value==='revenue';
+      document.getElementById('biYearOneLabel').hidden=!revenue;document.getElementById('biYearTwoLabel').hidden=!revenue;
+      unit.disabled=type.value!=='payment';
+      document.getElementById('biBaseLabel').hidden=type.value!=='payment'||unit.value!=='percent';
+    }
+    type.addEventListener('change',()=>{unit.value=type.value==='payment'?'percent':'brl';biDraft=[];renderBIDraft();updateType();});
+    unit.addEventListener('change',()=>{biDraft=[];renderBIDraft();updateType();});
+    document.getElementById('biFile').addEventListener('change',event=>{
+      const file=event.target.files[0]; if(!file)return;
+      if(biImageUrl)URL.revokeObjectURL(biImageUrl);
+      biImageUrl=URL.createObjectURL(file);biSourceName=file.name;
+      const img=document.getElementById('biPreview');img.src=biImageUrl;img.hidden=false;
+      biDraft=[];renderBIDraft();biStatus('Imagem selecionada. Clique em Ler imagem.');
+    });
+    document.getElementById('biRead').addEventListener('click',readBIImage);
+    document.getElementById('biManual').addEventListener('click',()=>{
+      biDraft=(type.value==='payment'?biPayments:type.value==='department'?biDepartments:['Faturamento']).map(label=>({month:document.getElementById('biMonth').value,label,value:'',completeness:document.getElementById('biCompleteness').value}));renderBIDraft();biStatus('Preencha os valores. Campos vazios não serão convertidos em zero.');
+    });
+    document.getElementById('biAddRow').addEventListener('click',()=>{readBIDraft();biDraft.push({month:document.getElementById('biMonth').value,label:type.value==='revenue'?'Faturamento':'',value:'',completeness:document.getElementById('biCompleteness').value});renderBIDraft();});
+    document.getElementById('biDraftBody').addEventListener('click',e=>{const button=e.target.closest('[data-bi-remove]');if(!button)return;readBIDraft();biDraft.splice(Number(button.dataset.biRemove),1);renderBIDraft();});
+    document.getElementById('biSave').addEventListener('click',saveBI);
+    ['biPeriod','biReference','biCompareYear','biIncludePartial'].forEach(id=>document.getElementById(id).addEventListener('change',renderBI));
+    updateType();renderBI();
+  }
+  function renderBIDraft() {
+    document.getElementById('biReview').hidden=!biDraft.length;
+    document.getElementById('biDraftBody').innerHTML=biDraft.map((row,index)=>`<tr><td><input aria-label="Mês da linha ${index+1}" type="month" data-bi-field="month" value="${esc(row.month)}"></td><td><input aria-label="Categoria da linha ${index+1}" data-bi-field="label" value="${esc(row.label)}"></td><td><input aria-label="Valor da linha ${index+1}" data-bi-field="value" inputmode="decimal" value="${esc(row.value)}"></td><td><select aria-label="Fechamento da linha ${index+1}" data-bi-field="completeness"><option value="closed" ${row.completeness==='closed'?'selected':''}>Fechado</option><option value="partial" ${row.completeness==='partial'?'selected':''}>Parcial</option></select></td><td><button class="btn" data-bi-remove="${index}">Remover</button></td></tr>`).join('');
+  }
+  function readBIDraft(){biDraft=[...document.querySelectorAll('#biDraftBody tr')].map(tr=>Object.fromEntries([...tr.querySelectorAll('[data-bi-field]')].map(input=>[input.dataset.biField,input.value])));}
+  let biReaderPromise;
+  function loadBIReader() {
+    if(window.Tesseract)return Promise.resolve(window.Tesseract);
+    if(!biReaderPromise)biReaderPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
+      script.onload=()=>resolve(window.Tesseract);script.onerror=()=>{script.remove();biReaderPromise=null;reject(new Error('Não foi possível carregar o leitor. Verifique a internet ou use o preenchimento manual.'));};document.head.appendChild(script);
+    });return biReaderPromise;
+  }
+  function biWords(data){return(data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(paragraph=>(paragraph.lines||[]).flatMap(line=>line.words||[])));}
+  function biCategoryName(text,names) {
+    const clean=value=>String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const key=clean(text);if(!key)return '';
+    const exact=names.find(name=>clean(name)===key);if(exact)return exact;
+    const prefix=names.filter(name=>key.length>=6&&(clean(name).startsWith(key)||key.startsWith(clean(name))));
+    return prefix.length===1?prefix[0]:text.trim();
+  }
+  function biExtractDraft(data,width,height,pixels,departmentLabels=[]) {
+    const type=document.getElementById('biType').value,unit=document.getElementById('biUnit').value;
+    const month=document.getElementById('biMonth').value,completeness=document.getElementById('biCompleteness').value;
+    const words=biWords(data),amounts=[];
+    words.forEach(word=>{
+      const match=String(word.text).match(/(?:\d{1,3}(?:\.\d{3})+|\d+)[,.]\d{2}(?!\d)\s*%?/);
+      if(!match||!word.bbox)return;
+      const numberText=match[0].replace(/\.(\d{2})(%?\s*)$/,',$1$2');
+      const value=biStrictNumber(numberText);if(value===null)return;
+      if(unit==='percent' && value>100)return;
+      const b=word.bbox; if((b.y0+b.y1)/2>height*.89)return;
+      amounts.push({value,x:(b.x0+b.x1)/2,y:b.y1});
+    });
+    (data.biUncertain||[]).forEach(b=>amounts.push({value:null,x:(b.x0+b.x1)/2,y:b.y1}));
+    amounts.sort((a,b)=>a.x-b.x);
+    if(type!=='revenue'){
+      return amounts.map((a,index)=>{
+        let label='';
+        if(type==='payment'){
+          const left=index?(amounts[index-1].x+a.x)/2:0,right=index<amounts.length-1?(a.x+amounts[index+1].x)/2:width;
+          const labelWords=words.filter(w=>/[a-zA-ZÀ-ÿ]/.test(w.text)&&w.bbox&&w.bbox.y0>height*.74&&w.bbox.y0<height*.85&&(w.bbox.x0+w.bbox.x1)/2>=left&&(w.bbox.x0+w.bbox.x1)/2<right).sort((a,b)=>a.bbox.x0-b.bbox.x0);
+          label=biCategoryName(labelWords.map(w=>w.text).join(' '),biPayments);
+        }else if(departmentLabels.length===amounts.length)label=biCategoryName(departmentLabels[index],biDepartments);
+        return {month,label,value:biNumber(a.value),completeness};
+      });
+    }
+    const monthNames=['jan','fev','mar','abr','maio','jun','jul','ago','set','out','nov','dez'];
+    const anchors=words.filter(w=>w.bbox&&w.bbox.y0>height*.65).map(w=>({name:String(w.text).toLowerCase().replace(/[^a-z]/g,''),x:(w.bbox.x0+w.bbox.x1)/2})).map(w=>({...w,index:monthNames.findIndex(n=>w.name===n||w.name===n+'.'||(n==='jun'&&w.name==='junho')||(n==='jul'&&w.name==='julho'))})).filter(w=>w.index>=0);
+    if(anchors.length<2)throw new Error('Os meses do gráfico não ficaram legíveis. Use uma imagem mais nítida ou preencha manualmente.');
+    const years=[document.getElementById('biYearOne').value,document.getElementById('biYearTwo').value];
+    const groups=new Map();
+    amounts.forEach(a=>{const closest=[...anchors].sort((b,c)=>Math.abs(b.x-a.x)-Math.abs(c.x-a.x))[0];if(!groups.has(closest.index))groups.set(closest.index,[]);groups.get(closest.index).push(a);});
+    const result=[];
+    groups.forEach((values,index)=>values.forEach((a,position)=>{
+      // Use the actual bar color below the label; all inferred years remain reviewable.
+      let blue=0,green=0;
+      if(pixels) for(let y=Math.round(a.y+4);y<height*.84;y+=3){
+        const x=Math.max(0,Math.min(width-1,Math.round(a.x))),offset=(y*width+x)*4;
+        const r=pixels[offset],g=pixels[offset+1],b=pixels[offset+2];
+        if(b-r>50&&b-g>30&&b>130)blue++;
+        if(g-r>45&&g>140&&b>100&&Math.abs(g-b)<70)green++;
+      }
+      const year=years[blue+green>3?(green>blue?1:0):Math.min(position,1)];
+      const foundMonth=`${year}-${String(index+1).padStart(2,'0')}`;
+      result.push({month:foundMonth,label:'Faturamento',value:a.value===null?'':biNumber(a.value),completeness:foundMonth>=monthDefault?'partial':'closed'});
+    }));return result.sort((a,b)=>a.month.localeCompare(b.month));
+  }
+  async function readBIImage() {
+    if(biBusy)return;
+    if(!biImageUrl){biStatus('Selecione uma imagem do BI primeiro.');return;}
+    const frozenBranch=biBranch(); biBusy=true;
+    const controls=[...document.querySelectorAll('#biImportPanel input,#biImportPanel select,#biImportPanel button')];
+    controls.forEach(control=>control.disabled=true);
+    let worker;
+    try{
+      biStatus('Carregando leitor de imagens…');const reader=await loadBIReader();
+      worker=await reader.createWorker('por',1,{logger:message=>{if(message.status==='recognizing text')biStatus(`Lendo imagem: ${Math.round(message.progress*100)}%. Aguarde…`);}});
+      await worker.setParameters({tessedit_pageseg_mode:'11'});
+      const img=document.getElementById('biPreview');await img.decode();
+      const scale=Math.min(2,3600/img.naturalWidth),canvas=document.createElement('canvas');canvas.width=Math.round(img.naturalWidth*scale);canvas.height=Math.round(img.naturalHeight*scale);
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const original=ctx.getImageData(0,0,canvas.width,canvas.height),processed=ctx.getImageData(0,0,canvas.width,canvas.height);
+      // Light text on dark BI panels becomes dark text on white for OCR.
+      for(let i=0;i<processed.data.length;i+=4){const r=processed.data[i],g=processed.data[i+1],b=processed.data[i+2];const white=Math.min(r,g,b)>155&&Math.max(r,g,b)-Math.min(r,g,b)<65;const v=white?0:255;processed.data[i]=processed.data[i+1]=processed.data[i+2]=v;}
+      ctx.putImageData(processed,0,0);
+      const response=await worker.recognize(canvas,{}, {text:true,blocks:true});
+      if(document.getElementById('biType').value==='revenue'){
+        const lines=(response.data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(p=>p.lines||[]));
+        const uncertain=lines.filter(line=>/R\$/.test(line.text)&&/\d/.test(line.text)&&line.bbox.x0>canvas.width*.09&&line.bbox.y0<canvas.height*.86&&!/(?:\d{1,3}(?:\.\d{3})+|\d+)[,.]\d{2}(?!\d)/.test(line.text));
+        if(uncertain.length){
+          biStatus('Conferindo os valores menos legíveis…');
+          await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:'0123456789.,'});
+          for(const line of uncertain){
+            const box=line.bbox,left=Math.max(0,box.x0-8),top=Math.max(0,box.y0-6),width=Math.min(canvas.width-left,box.x1-box.x0+16),height=Math.min(canvas.height-top,box.y1-box.y0+12);
+            const retry=await worker.recognize(canvas,{rectangle:{left,top,width,height}},{text:true});
+            const text=String(retry.data.text||'').trim();
+            if(/(?:\d{1,3}(?:\.\d{3})+|\d+)[,.]\d{2}(?!\d)/.test(text)){line.words=[{text,bbox:box}];line.text=text;}
+            else {response.data.biUncertain||=[];response.data.biUncertain.push(box);}
+          }
+          await worker.setParameters({tessedit_pageseg_mode:'11',tessedit_char_whitelist:''});
+        }
+      }
+      if(frozenBranch!==biBranch())throw new Error('A filial foi alterada durante a leitura. Selecione a filial correta e repita a importação.');
+      document.getElementById('biRaw').textContent=response.data.text;document.getElementById('biRawWrap').hidden=false;
+      let departmentLabels=[];
+      if(document.getElementById('biType').value==='department'){
+        biStatus('Lendo os nomes dos departamentos…');
+        const top=Math.round(canvas.height*.67),cropHeight=Math.round(canvas.height*.27),size=Math.ceil((canvas.width+cropHeight)/Math.sqrt(2));
+        const rotated=document.createElement('canvas');rotated.width=size;rotated.height=size;
+        const rc=rotated.getContext('2d');rc.fillStyle='#fff';rc.fillRect(0,0,size,size);rc.translate(size/2,size/2);rc.rotate(Math.PI/4);rc.drawImage(canvas,0,top,canvas.width,cropHeight,-canvas.width/2,-cropHeight/2,canvas.width,cropHeight);
+        const labelsResult=await worker.recognize(rotated,{}, {text:true,blocks:true});
+        departmentLabels=(labelsResult.data.blocks||[]).flatMap(block=>(block.paragraphs||[]).flatMap(p=>p.lines||[])).sort((a,b)=>a.bbox.y0-b.bbox.y0).map(line=>line.text.trim()).filter(text=>text.replace(/[^a-zA-ZÀ-ÿ]/g,'').length>=3);
+      }
+      biDraft=biExtractDraft(response.data,canvas.width,canvas.height,original.data,departmentLabels);renderBIDraft();
+      const unread=biDraft.filter(row=>!row.label||row.value==='').length;
+      biStatus(biDraft.length?`${biDraft.length} linha(s) identificada(s). ${unread?`${unread} linha(s) com campo não reconhecido: preencha os campos vazios usando a imagem. `:''}Confira os nomes, meses, anos, valores e meses parciais antes de salvar.`:'Nenhum valor legível. Tente uma imagem mais nítida ou use o preenchimento manual.');
+    }catch(error){biStatus(error.message||'Falha na leitura. Use o preenchimento manual.');}
+    finally{if(worker)await worker.terminate().catch(()=>{});biBusy=false;controls.forEach(control=>control.disabled=false);document.getElementById('biUnit').disabled=document.getElementById('biType').value!=='payment';}
+  }
+  function saveBI() {
+    readBIDraft();
+    if(!biBranch()){biStatus('Salve a identificação da filial em Configuração antes de importar.');return;}
+    const type=document.getElementById('biType').value,unit=document.getElementById('biUnit').value,groups=new Map();
+    const baseRaw=document.getElementById('biBase').value.trim(),base=baseRaw?biStrictNumber(baseRaw):null;
+    if(type==='payment'&&unit==='percent'&&baseRaw&&(base===null||base<=0)){biStatus('Informe um faturamento base maior que zero ou deixe-o vazio.');return;}
+    for(const row of biDraft){
+      const value=biStrictNumber(row.value),label=row.label.trim();
+      if(!/^20\d{2}-(0[1-9]|1[0-2])$/.test(row.month)||!label||value===null||(unit==='percent'&&value>100)){biStatus('Revise a tabela: mês, categoria e valor válido são obrigatórios em todas as linhas.');return;}
+      if(!groups.has(row.month))groups.set(row.month,[]);
+      const rows=groups.get(row.month);
+      if(rows.some(other=>other.label.toLocaleLowerCase('pt-BR')===label.toLocaleLowerCase('pt-BR'))){biStatus(`Categoria repetida em ${row.month}: ${label}. Corrija o mês, ano ou remova a duplicata.`);return;}
+      rows.push({label,value,completeness:row.completeness});
+    }
+    if(!groups.size){biStatus('Adicione pelo menos uma linha.');return;}
+    for(const [month,rows] of groups){
+      if(type==='revenue'&&rows.length!==1){biStatus(`Faturamento deve ter uma linha por mês (${month}).`);return;}
+      if(new Set(rows.map(row=>row.completeness)).size>1){biStatus(`Use o mesmo fechamento para todas as categorias de ${month}.`);return;}
+      const total=rows.reduce((sum,row)=>sum+row.value,0);
+      if(unit==='percent'&&Math.abs(total-100)>.15){biStatus(`Os percentuais de ${month} somam ${biNumber(total)}%. Confira todas as categorias; o total deve ser 100% (com tolerância de arredondamento).`);return;}
+    }
+    const duplicates=biRecords().filter(record=>record.branch===biBranch()&&record.type===type&&groups.has(record.month));
+    if(duplicates.length&&!confirm(`Substituir ${duplicates.length} registro(s) de ${biTypes[type]} da filial ${db.branch}? Os outros tipos e meses serão mantidos.`))return;
+    const previous=clone(biRecords());
+    const next=biRecords().filter(record=>!(record.branch===biBranch()&&record.type===type&&groups.has(record.month)));
+    groups.forEach((rows,month)=>next.push({branch:biBranch(),month,type,unit,base:unit==='percent'?base:null,completeness:rows[0].completeness,rows:rows.map(({label,value})=>({label,value})),source:biSourceName||'Preenchimento manual',updatedAt:new Date().toISOString()}));
+    try{
+      vault.biRecords=next;persist(false);
+      const stored=JSON.parse(localStorage.getItem(STORE));
+      if(JSON.stringify(stored?.biRecords)!==JSON.stringify(next))throw new Error('Gravação não confirmada');
+      biStatus(`${groups.size} mês(es) salvo(s). O histórico do BI já está atualizado no Compilado.`);renderBI();
+    }catch(error){vault.biRecords=previous;biStatus('Não foi possível salvar os dados. Exporte um backup e verifique o espaço do navegador antes de tentar novamente.');}
+  }
+  function biPeriodMonths(reference,period){
+    const [year,month]=reference.split('-').map(Number);
+    let start=month,length=1;
+    if(period==='quarter'){start=Math.floor((month-1)/3)*3+1;length=3;}
+    if(period==='semester'){start=month<=6?1:7;length=6;}
+    if(period==='year'||period==='yoy'){start=1;length=12;}
+    return Array.from({length},(_,i)=>`${year}-${String(start+i).padStart(2,'0')}`);
+  }
+  function biAggregate(records,type){
+    const categories=new Map();
+    const percentOnly=type==='payment'&&records.some(record=>record.unit==='percent'&&!record.base);
+    records.forEach(record=>{
+      const total=record.rows.reduce((sum,row)=>sum+row.value,0);
+      record.rows.forEach(row=>{
+        const key=row.label.normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+        const value=percentOnly ? record.unit==='percent'?row.value:(total?row.value/total*100:0) : record.unit==='percent'?row.value*record.base/100:row.value;
+        if(!categories.has(key))categories.set(key,{label:row.label,value:0});categories.get(key).value+=value;
+      });
+    });
+    if(percentOnly&&records.length)categories.forEach(row=>row.value/=records.length);
+    return {rows:[...categories.values()].sort((a,b)=>b.value-a.value),percentOnly,total:[...categories.values()].reduce((sum,row)=>sum+row.value,0),months:records.length};
+  }
+  function biChange(current,previous,percentage=false){
+    if(previous===null||current===null)return 'Sem base comparável';
+    if(percentage){const difference=current-previous;return `${difference>=0?'+':''}${biNumber(difference)} p.p.`;}
+    if(previous===0)return current===0?'Sem variação':'Base anterior zero';
+    const difference=(current/previous-1)*100;return `${difference>=0?'+':''}${biNumber(difference)}%`;
+  }
+  function renderBI() {
+    if(!document.getElementById('biCharts'))return;
+    const reference=document.getElementById('biReference').value||db.month,period=document.getElementById('biPeriod').value;
+    const compare=Number(document.getElementById('biCompareYear').value),year=Number(reference.slice(0,4));
+    if(!Number.isInteger(compare)||compare<2000||compare>2099||compare===year){document.getElementById('biPeriodNote').textContent='Escolha um ano de comparação diferente do ano de referência (2000 a 2099).';document.getElementById('biCharts').innerHTML='';return;}
+    const months=biPeriodMonths(reference,period),includePartial=document.getElementById('biIncludePartial').checked;
+    const branchRecords=biRecords().filter(record=>record.branch===biBranch());
+    const available=branchRecords.filter(record=>includePartial||record.completeness==='closed');
+    document.getElementById('biPeriodNote').textContent=`Filial ${db.branch || 'não informada'} · ${monthLabel(months[0])} a ${monthLabel(months.at(-1))}. Comparação com ${compare}, somente nos mesmos meses com dados dos dois anos. ${includePartial?'Inclui meses parciais: resultados provisórios.':'Somente meses fechados.'} Médias mensais usam apenas os meses informados; ausências não valem zero.`;
+    document.getElementById('biCharts').innerHTML=Object.entries(biTypes).map(([type,title])=>{
+      const current=available.filter(record=>record.type===type&&months.includes(record.month));
+      const previous=available.filter(record=>record.type===type&&months.some(month=>record.month===`${compare}-${month.slice(5)}`));
+      const aggregate=biAggregate(current,type),pairs=current.filter(record=>previous.some(old=>old.month.slice(5)===record.month.slice(5)));
+      const priorPairs=previous.filter(record=>pairs.some(item=>item.month.slice(5)===record.month.slice(5)));
+      const combinedPercent=type==='payment'&&[...pairs,...priorPairs].some(record=>record.unit==='percent'&&!record.base);
+      const asComparable=records=>combinedPercent?records.map(record=>{const total=record.rows.reduce((sum,row)=>sum+row.value,0);return {...record,unit:'percent',base:null,rows:record.rows.map(row=>({label:row.label,value:record.unit==='percent'?row.value:total?row.value/total*100:0}))};}):records;
+      const a=biAggregate(asComparable(pairs),type),b=biAggregate(asComparable(priorPairs),type);
+      const format=value=>aggregate.percentOnly?`${biNumber(value)}%`:brl.format(value);
+      const max=Math.max(1,...aggregate.rows.map(row=>row.value));
+      let chart='';
+      if(type==='revenue'){
+        const maximum=Math.max(1,...current.concat(previous).map(record=>record.rows[0]?.value||0));
+        chart=`<div class="bi-legend"><span class="bi-blue">■ ${year}</span><span class="bi-green">■ ${compare}</span></div><div class="bi-month-chart">${months.map(month=>{
+          const first=current.find(record=>record.month===month),second=previous.find(record=>record.month===`${compare}-${month.slice(5)}`);
+          return `<div class="bi-month"><strong>${esc(new Date(`${month}-15T12:00:00`).toLocaleDateString('pt-BR',{month:'short'}))}</strong>${[first,second].map((record,index)=>`<div class="bi-month-series"><span class="bi-bar ${index?'previous':''}" style="width:${record?Math.max(.4,record.rows[0].value/maximum*100):0}%"></span><small>${record?esc(brl.format(record.rows[0].value))+(record.completeness==='partial'?' (parcial)':''):'Sem dados'}</small></div>`).join('')}<small>${first&&second?esc(biChange(first.rows[0].value,second.rows[0].value)):'Sem base comparável'}</small></div>`;
+        }).join('')}</div>`;
+      }else chart=`<div class="bi-category-chart">${aggregate.rows.map(row=>`<div><div class="bi-bar-label"><strong>${esc(row.label)}</strong><span>${esc(format(row.value))}</span></div><div class="bi-track"><span class="bi-bar" style="width:${row.value/max*100}%"></span></div><small>${aggregate.percentOnly?'Média mensal das participações':`${biNumber(aggregate.total?row.value/aggregate.total*100:0)}% do total · média/mês: ${brl.format(row.value/Math.max(1,current.length))}`}</small></div>`).join('')}</div>`;
+      const keys=[...new Set(a.rows.concat(b.rows).map(row=>row.label.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()))];
+      const find=(rows,key)=>rows.find(row=>row.label.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()===key);
+      const categoryComparison=type==='revenue'||!pairs.length?'':`<details><summary>Comparação por categoria · ${pairs.length} mês(es) em comum</summary><div class="bi-comparison">${keys.map(key=>{const first=find(a.rows,key),second=find(b.rows,key);const f=value=>combinedPercent?`${biNumber(value)}%`:brl.format(value);return `<div><strong>${esc((first||second).label)}</strong><span>${year}: ${first?f(first.value):'Sem categoria'}</span><span>${compare}: ${second?f(second.value):'Sem categoria'}</span><b>${first&&second?esc(biChange(first.value,second.value,combinedPercent)):'Sem base comparável'}</b></div>`;}).join('')}</div></details>`;
+      const summary=aggregate.percentOnly?'Participação média mensal por forma de pagamento':`Total: ${brl.format(aggregate.total)} · Média/mês informado: ${brl.format(current.length?aggregate.total/current.length:0)}`;
+      const growth=pairs.length&&!combinedPercent?`Variação nos ${pairs.length} mês(es) em comum: ${biChange(a.total,b.total)} (${brl.format(a.total)} × ${brl.format(b.total)}).`:combinedPercent?'Comparação de participações em pontos percentuais, por categoria.':'Sem meses em comum para calcular crescimento.';
+      const warning=aggregate.percentOnly?'Sem faturamento base em pelo menos um mês: a participação usa média simples dos percentuais, e não participação ponderada. Informe a base de cada mês para obter valores em reais.':type==='payment'?'Percentuais com base informada são convertidos em reais e ponderados pelo faturamento.':'';
+      return `<section class="bi-chart-section"><h3>${esc(title)}</h3><p class="bi-coverage">${current.length}/${months.length} mês(es) informado(s) em ${year}; ${previous.length}/${months.length} em ${compare}.</p>${current.length?`<p><strong>${esc(summary)}</strong></p>`:'<p>Nenhum registro deste tipo no período. Importe os dados em Configuração.</p>'}${chart}<p class="method-note">${esc(growth)} ${esc(warning)}</p>${categoryComparison}</section>`;
+    }).join('');
+    document.getElementById('biSaved').innerHTML=`<h3>Registros do BI · ${esc(db.branch||'filial não informada')}</h3>${branchRecords.length?`<div class="bi-saved-list">${[...branchRecords].sort((a,b)=>b.month.localeCompare(a.month)).map(record=>`<div><strong>${esc(monthLabel(record.month))}</strong><span>${esc(biTypes[record.type]||record.type)} · ${record.rows.length} categoria(s) · ${record.completeness==='partial'?'Parcial':'Fechado'}</span><small>${esc(record.source||'Importação')} · ${new Date(record.updatedAt).toLocaleDateString('pt-BR')}</small></div>`).join('')}</div>`:'<p>Nenhum registro importado para esta filial.</p>'}`;
+  }
+  initBI();
 
   renderAll();
 })();

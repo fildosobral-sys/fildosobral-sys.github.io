@@ -174,7 +174,22 @@
   .monthly-balance-list{display:grid;gap:18px;margin:14px 0 18px}.balance-month-card{overflow:hidden;border:1px solid #d7dfeb;border-radius:17px;background:#fff}.balance-month-title{margin:0;padding:13px 16px;text-align:center;color:#12336f;font-size:23px;font-weight:950;text-transform:uppercase;background:linear-gradient(180deg,#fff,#f7f9fd)}.balance-table-wrap{overflow:auto}.balance-table{width:100%;min-width:1080px;table-layout:auto}.balance-table th{position:static;padding:11px 8px;background:linear-gradient(135deg,#072e68,#064e91);color:#fff;text-align:center;font-size:10px}.balance-table td{padding:11px 8px;text-align:center;font-size:12px}.balance-table td:first-child{text-align:left;font-weight:950}.balance-table .indicator-icon{margin-right:7px;color:#0b55a4;font-size:17px}.balance-composition{padding:10px 15px;border-top:1px solid #dce3ed;color:#344054;font-size:12px}.balance-composition strong{color:#132a47}.carry-panel{max-width:680px;margin:4px auto 20px;overflow:hidden;border:1px solid #bcc8d8;border-radius:14px;background:#fff}.carry-panel h4{margin:0;padding:10px;text-align:center;color:#12336f;background:#f5f7fb;font-size:17px;text-transform:uppercase}.carry-row{display:grid;grid-template-columns:1.2fr 1fr}.carry-row span,.carry-row strong{padding:10px 14px;border-top:1px solid #dce3ed}.carry-row strong{text-align:right;border-left:1px solid #dce3ed}.tier-closing-title{margin:18px 0 8px}.tier-closing-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}.closing-card{padding:14px;border:1px solid var(--line);border-radius:15px;background:#f8faff}.closing-card header{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.closing-card header strong{font-size:17px}.closing-row{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-top:1px solid #e3e9f2;font-size:11px}.closing-row strong{text-align:right}
   @media(max-width:900px){.monthly-entry-stack,.tier-balance-grid,.weekly-growth-grid,.tier-closing-grid{grid-template-columns:1fr}.balance-month-title{font-size:19px}}
 </style>
-</head>
+<style id="results-daily-fix-v26">
+#daily .table-wrap{max-height:70vh;max-height:70dvh;overflow:auto;overscroll-behavior:contain;position:relative;isolation:isolate}
+#daily .table-wrap table{border-collapse:separate;border-spacing:0}
+#daily .table-wrap thead th{position:sticky;top:0;z-index:5;background:#edf4fb;box-shadow:0 2px 0 #cddaea}
+#daily .table-wrap tr{scroll-margin-top:65px}
+.daily-achievements{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+.daily-achievement{background:#f1f5f9;border:1px solid #dce3ee;border-radius:14px;padding:14px;color:#526175}
+.daily-achievement span,.daily-achievement strong,.daily-achievement b,.daily-achievement small{display:block}
+.daily-achievement span,.daily-achievement small{font-size:12px}.daily-achievement strong{font-size:21px;margin:7px 0}.daily-achievement b{font-size:11px;margin:5px 0}
+.daily-achievement.passed{background:#e6f7ee;border-color:#9cd4b6;color:#087747}.daily-achievement.failed{background:#fff0f1;border-color:#ecc1c7;color:#b4233b}
+@media(max-width:900px){.daily-achievements{grid-template-columns:1fr 1fr}}
+@media print{#daily .table-wrap{max-height:none;overflow:visible}}
+</style><style id="results-bi-v26">.bi-panel{margin-top:18px}.bi-panel>p{color:#526175;line-height:1.5}.bi-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}.bi-form label{font-weight:800;font-size:12px;color:#405269}.bi-form input,.bi-form select{display:block;width:100%;margin-top:7px;padding:12px;border:1px solid #d5deea;border-radius:10px;background:#fff;color:#102a43}.bi-form label[hidden]{display:none}.bi-form .bi-check{display:flex;align-items:center;gap:10px}.bi-check input{width:auto;margin:0}.bi-actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0;align-items:center}.bi-preview{max-width:100%;max-height:450px;object-fit:contain;background:#132d39;border-radius:12px}.bi-preview[hidden]{display:none}#biStatus{padding:12px;border-radius:10px;background:#edf5ff;color:#174c88;font-weight:700}#biRaw{white-space:pre-wrap;max-height:250px;overflow:auto}.bi-review-scroll{overflow:auto;max-height:480px}.bi-review-table{min-width:720px}.bi-review-table input,.bi-review-table select{width:100%;min-width:120px}.bi-review-table th{position:sticky;top:0}.bi-chart-section{border-top:1px solid #dbe4ef;padding:22px 0}.bi-chart-section h3{margin:0;background:#0879e8;color:white;padding:14px;border-radius:12px;font-size:18px}.bi-chart-section:nth-child(2) h3{background:#a56d00}.bi-chart-section:nth-child(3) h3{background:#007e72}.bi-coverage{font-size:12px;color:#526175}.bi-category-chart{display:grid;gap:17px;margin:20px 0;max-width:1000px}.bi-bar-label{display:flex;justify-content:space-between;gap:12px;margin-bottom:6px}.bi-track{height:22px;background:#edf2fa;border-radius:5px;overflow:hidden}.bi-bar{display:block;background:#688ce8;height:100%;min-width:0;border-radius:3px}.bi-bar.previous{background:#21ac95}.bi-category-chart small{font-size:11px;color:#526175}.bi-legend{display:flex;gap:18px;font-weight:800;margin:16px 0}.bi-blue{color:#4b6ccc}.bi-green{color:#087b69}.bi-month-chart{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:16px 0}.bi-month{background:#f3f7fc;padding:14px;border-radius:12px}.bi-month>strong{text-transform:uppercase}.bi-month-series{margin:12px 0}.bi-month-series .bi-bar{height:15px;margin-bottom:5px}.bi-month small{font-size:11px}.bi-comparison,.bi-saved-list{display:grid;gap:10px;margin:14px 0}.bi-comparison>div,.bi-saved-list>div{display:flex;flex-wrap:wrap;align-items:center;gap:15px;border:1px solid #dce4ee;border-radius:10px;padding:12px;font-size:12px}.bi-comparison strong,.bi-saved-list strong{min-width:160px}.bi-saved-list{max-height:350px;overflow:auto}#biReview[hidden]{display:none}
+@media(max-width:1000px){.bi-form{grid-template-columns:1fr 1fr}.bi-month-chart{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.bi-form,.bi-month-chart{grid-template-columns:1fr}.bi-bar-label{font-size:12px}.bi-panel{padding:14px}.bi-actions button{width:100%}.bi-actions input{max-width:100%}}
+</style></head>
 <body>
 <main class="app">
   <header class="topbar">
@@ -230,7 +245,7 @@
         <div class="daily-goal-controls">
           <div class="field"><label for="dailyGoalDate">Dia de referência</label><input id="dailyGoalDate" type="date"></div>
           <div class="field"><label for="dailyGoalPercent">Percentual do dia (%)</label><input id="dailyGoalPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="Ex.: 3,51"></div>
-          <button class="btn primary" id="downloadDailyGoal">Baixar / compartilhar imagem HD</button>
+          <button class="btn primary" id="downloadDailyGoal">Baixar imagem HD</button>
         </div>
         <div class="daily-goal-summary" id="dailyGoalSummary"></div>
         <div class="daily-goal-team" id="dailyGoalTeam"></div>
@@ -435,7 +450,7 @@
   renderAll();
 })();
 </script>
-<script src="resultados-v24.js?v=61"></script>
+<script src="resultados-v24.js?v=62"></script>
 
 <script id="results-meeting-backup-v25-js">
 (() => {
