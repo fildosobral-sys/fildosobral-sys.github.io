@@ -1,5 +1,5 @@
 const FS_CACHE_PREFIX = 'fs-central-';
-const CACHE_NAME = 'fs-central-v41-isolado';
+const CACHE_NAME = 'fs-central-v42-crm';
 const FINANCE_PATH = '/Gest-o-Financeira/';
 
 const APP_FILES = [

@@ -1629,7 +1629,8 @@
 </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
- </head>
+ <link rel="stylesheet" href="./crm-v2.css?v=2">
+</head>
  <body>
   <header class="header">
    <div class="container">
@@ -1712,7 +1713,7 @@
           -
          </div>
         </div>
-        <div class="menu-actions"><button class="menu-item" onclick="trocarUsuario()"> 🔄 Trocar Usuário </button> <button class="menu-item" onclick="verHistoricoCompleto()"> 📊 Ver Todos os Registros </button> <button class="menu-item danger" onclick="logout()"> 🚪 Sair do Sistema </button>
+        <div class="menu-actions"><button class="menu-item" onclick="trocarUsuario()"> 🔄 Trocar Usuário </button> <button class="menu-item" onclick="verHistoricoCompleto()"> 📊 Ver Meus Registros </button> <button class="menu-item danger" onclick="logout()"> 🚪 Sair do Sistema </button>
         </div>
        </div>
       </div><button type="button" class="btn-calculator" onclick="toggleCalculator()">🧮</button>
@@ -2230,18 +2231,19 @@ let currentData = [];
             const todosRegistros = [...currentData];
             renderHistoryComplete(todosRegistros);
             
-            showToast("📊 Mostrando registros de todos os usuários", "success");
+            showToast("📊 Mostrando todos os seus registros", "success");
         }
 
         // Função para renderizar histórico completo (todos os usuários)
         function renderHistoryComplete(data) {
+            data = data.filter(item => String(item.vendedor || '').trim().toUpperCase() === String(localStorage.getItem('fs_nome') || '').trim().toUpperCase());
             const container = document.getElementById('historyContainer');
             
             if (data.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-icon">📊</div>
-                        <p><strong>Nenhum cálculo salvo no sistema</strong><br>Ainda não há registros de nenhum usuário.</p>
+                        <p><strong>Nenhum cálculo salvo no sistema</strong><br>Você ainda não possui registros.</p>
                     </div>
                 `;
                 return;
@@ -2817,6 +2819,10 @@ let currentData = [];
 
         // Função para excluir registro
         async function excluirRegistro(backendId, nomeCliente, codigoProduto) {
+            if (window.FSCRM && window.FSCRM.has(backendId)) {
+                showToast('Este orçamento tem acompanhamento. Atualize o status no painel para preservar o histórico comercial.', 'error');
+                return;
+            }
             console.log("🗑️ Solicitando exclusão do registro:", backendId);
             
             if (!backendId) {
@@ -2908,6 +2914,10 @@ let currentData = [];
 
         // Função para alterar status da venda
         async function alterarStatusVenda(backendId, novoStatus) {
+            // Registros acompanhados usam o mesmo status no painel e no histórico.
+            if (window.FSCRM && window.FSCRM.has(backendId)) {
+                return window.FSCRM.setLegacyStatus(backendId, novoStatus);
+            }
             console.log("🔄 Alterando status da venda:", backendId, "para:", novoStatus);
             
             if (!backendId) {
@@ -3188,6 +3198,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
 
         // Função para salvar cálculo
         async function salvarCalculo() {
+            vendedorAtual = (localStorage.getItem('fs_nome') || '').trim();
             const codigoProduto = document.getElementById('codigoProduto').value.trim();
             const cliente = document.getElementById('cliente').value.trim();
             const whatsapp = document.getElementById('whatsapp').value.trim();
@@ -3226,8 +3237,8 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 return;
             }
 
-            if (precoFinal >= precoNormal) {
-                showToast("❌ O preço final deve ser menor que o preço normal!", "error");
+            if (precoFinal > precoNormal) {
+                showToast("❌ O preço final não pode ser maior que o preço normal!", "error");
                 return;
             }
 
@@ -3266,7 +3277,11 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 tipoParcelaPromocional = document.getElementById('tipoParcelaPromocional').value;
             }
 
+            // Extensão isolada: classificação comercial opcional.
+            const fsCRMContext = window.FSCRM ? window.FSCRM.capture() : null;
+            if (fsCRMContext === false) return;
             const novoCalculo = {
+                fs_crm_v1: fsCRMContext,
                 codigo_produto: codigoProduto,
                 cliente: cliente,
                 whatsapp: whatsapp,
@@ -3312,7 +3327,8 @@ Zenir - O Melhor Está Aqui! 🏆`;
                 localStorage.setItem('calculosDesconto', JSON.stringify(dadosLocais));
                 
                 currentData = [...dadosLocais];
-                
+                if (window.FSCRM) window.FSCRM.saved(novoCalculo);
+
                 // Tentar salvar no Data SDK
                 if (window.dataSdk) {
                     try {
@@ -3354,6 +3370,7 @@ Zenir - O Melhor Está Aqui! 🏆`;
 
         // Função para renderizar histórico
         function renderHistory(data, dataFiltro = null, filtroSucesso = 'todos') {
+            data = data.filter(item => String(item.vendedor || '').trim().toUpperCase() === String(localStorage.getItem('fs_nome') || '').trim().toUpperCase());
             const container = document.getElementById('historyContainer');
             
             if (data.length === 0) {
@@ -4695,6 +4712,25 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
+<!-- Acompanhamento comercial: remover este bloco e o CSS desativa a extensão. -->
+<script>
+document.documentElement.classList.add('fs-orcamentos-v2');
+window.FSCRMBridge = {
+  setSale: function(id, sold) {
+    const rows = JSON.parse(localStorage.getItem('calculosDesconto') || '[]');
+    const row = rows.find(item => item.__backendId === id);
+    if (!row || row.venda_bem_sucedida === sold) return;
+    row.venda_bem_sucedida = sold;
+    localStorage.setItem('calculosDesconto', JSON.stringify(rows));
+    currentData = rows;
+    if (typeof aplicarFiltroData === 'function') aplicarFiltroData();
+  }
+};
+</script>
+<script src="./crm-config-v2.js?v=2"></script>
+<script src="./crm-api-v2.js?v=2"></script>
+<script src="./crm-core-v2.js?v=2"></script>
+<script src="./crm-ui-v2.js?v=2"></script>
 </body>
 </html>
 
