@@ -9558,7 +9558,7 @@ body.fs-escala-lock{overflow:hidden!important}
 <div class="grid">
 <article class="card"><img alt="Cotações e Vendas" decoding="async" fetchpriority="low" loading="lazy" src="cotacoes-vendas.webp"/><div class="card-body"><div class="card-title">Cotações / Vendas</div><p class="card-desc"></p><a aria-label="Abrir Cotações e Vendas" class="card-action" href="vendas-mobile.html"></a></div></article>
 <article class="card card-featured fs-planos-card"><img alt="Planos e Parcelamentos" decoding="async" fetchpriority="low" loading="lazy" src="parcelamentos-planos.webp"/><div class="card-body"><div class="card-title">Parcelamentos e Planos</div><p class="card-desc"></p><a aria-label="Abrir Planos e Parcelamentos" class="card-action" href="simulador.html"></a></div></article>
-<article class="card"><img alt="Orçamentos" decoding="async" fetchpriority="low" loading="lazy" src="orcamentos-card.webp"/><div class="card-body"><div class="card-title">Orçamentos</div><p class="card-desc"></p><a aria-label="Abrir Orçamentos" class="card-action" href="orcamentos.html"></a></div></article>
+<article class="card"><img alt="Orçamentos" decoding="async" fetchpriority="low" loading="lazy" src="orcamentos-card.webp"/><div class="card-body"><div class="card-title">Orçamentos</div><p class="card-desc"></p><a aria-label="Abrir Orçamentos" class="card-action" href="https://fildosobral-sys.github.io/orcamentos-crm/"></a></div></article>
 </div>
 </section>
 <section class="section fs-home-section fs-results-section">
@@ -11940,7 +11940,7 @@ document.addEventListener('DOMContentLoaded', function(){
       e.preventDefault();
       e.stopPropagation();
       hideInternalSheets();
-      window.location.href = 'orcamentos.html#history';
+      window.location.href = 'https://fildosobral-sys.github.io/orcamentos-crm/';
     };
   }
 
@@ -11949,7 +11949,7 @@ document.addEventListener('DOMContentLoaded', function(){
       e.preventDefault();
       e.stopPropagation();
       hideInternalSheets();
-      window.location.href = 'orcamentos.html';
+      window.location.href = 'https://fildosobral-sys.github.io/orcamentos-crm/';
     };
   }
 
@@ -12068,11 +12068,11 @@ document.addEventListener('DOMContentLoaded', function(){
 document.addEventListener('DOMContentLoaded', function(){
   function goCreate(e){
     if(e){ e.preventDefault(); e.stopPropagation(); }
-    window.location.href = 'orcamentos.html';
+    window.location.href = 'https://fildosobral-sys.github.io/orcamentos-crm/';
   }
   function goHistory(e){
     if(e){ e.preventDefault(); e.stopPropagation(); }
-    window.location.href = 'orcamentos.html#history';
+    window.location.href = 'https://fildosobral-sys.github.io/orcamentos-crm/';
   }
 
   const newBtn = document.getElementById('fsNavNew');
@@ -12217,7 +12217,7 @@ document.addEventListener('DOMContentLoaded', function(){
       btn.addEventListener('click', function(e){
         e.preventDefault();
         e.stopPropagation();
-        window.location.href = 'orcamentos.html';
+        window.location.href = 'https://fildosobral-sys.github.io/orcamentos-crm/';
       }, true);
     }
   }catch(e){}
@@ -13574,7 +13574,7 @@ document.addEventListener('DOMContentLoaded', function () {
         image.onerror = null;
       }
       if (link) {
-        link.href = 'orcamentos.html';
+        link.href = 'https://fildosobral-sys.github.io/orcamentos-crm/';
         link.setAttribute('aria-label', 'Abrir Orçamentos');
       }
     }
@@ -14785,6 +14785,31 @@ document.addEventListener('DOMContentLoaded', function () {
 })();
 </script>
 
+
+<script id="fs-orcamentos-link-definitivo">
+(function(){
+  const URL='https://fildosobral-sys.github.io/orcamentos-crm/';
+  function bind(){
+    document.querySelectorAll('.card').forEach(function(card){
+      const title=(card.querySelector('.card-title')?.textContent||'').trim().toLowerCase();
+      if(title!=='orçamentos' && title!=='orcamentos') return;
+      const link=card.querySelector('.card-action');
+      if(link){ link.href=URL; link.setAttribute('target','_self'); }
+      card.addEventListener('click',function(e){
+        e.preventDefault(); e.stopPropagation();
+        if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+        window.location.assign(URL);
+      },true);
+      if(link)link.addEventListener('click',function(e){
+        e.preventDefault(); e.stopPropagation();
+        if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+        window.location.assign(URL);
+      },true);
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+})();
+</script>
 </body>
 </html>
 

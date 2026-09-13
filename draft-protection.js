@@ -4,7 +4,6 @@
   var page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
   var roots = {
     'vendas-mobile.html': '#editorView',
-    'orcamentos.html': '#discountForm',
     'simulador.html': '#mainApp'
   };
   var rootSelector = roots[page];

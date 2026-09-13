@@ -68,7 +68,7 @@
       try{
         window.history.back();
         setTimeout(function(){
-          if(!document.hidden && /(?:simulador|orcamentos|vendas-mobile|resultados)\.html/i.test(location.pathname)){
+          if(!document.hidden && /(?:simulador|vendas-mobile|resultados)\.html/i.test(location.pathname)){
             window.location.replace('./index.html');
           }
         }, 500);
