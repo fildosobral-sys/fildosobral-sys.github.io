@@ -10876,7 +10876,7 @@ window.addEventListener('DOMContentLoaded', function(){
   'use strict';
   var API_ACESSO_FS = 'https://script.google.com/macros/s/AKfycbzQTAJGkaqzLEZs6xiEBMUp7rnLSxQiZxUQzNPiciAWxdj3ZUL6ObW4iAUfkmutueVasw/exec';
   var DONO_NOME = 'FRANCIFILDO PEREIRA SOBRAL';
-  var DONO_CARGO = 'DESENVOLVEDOR_MASTER';
+  var DONO_CARGO = 'GERENTE';
   var DONO_WHATSAPP = '88988222564';
   var authPromise = null;
   var modalPromise = null;
@@ -10884,7 +10884,7 @@ window.addEventListener('DOMContentLoaded', function(){
   function upperSave(v){ return String(v||'').toUpperCase().trim(); }
   function onlyDigits(v){ return String(v||'').replace(/\D/g,''); }
   function normalizarFilial(v){ var numero=onlyDigits(v); return numero ? 'FILIAL '+String(parseInt(numero,10)) : upperSave(v).replace(/\s+/g,' '); }
-  function filialOk(v){ return /^FILIAL\s+\d+$/i.test(normalizarFilial(v)); }
+  function filialOk(v){ var x=normalizarFilial(v); return !!x && x.length>=2; }
   function normalizeRole(v){ var role=upperSave(v).replace(/\s+/g,'_'); if(role==='DESENVOLVER_MASTER') role='DESENVOLVEDOR_MASTER'; return role; }
   function safeSet(storage,key,value){ try{storage.setItem(key,value);return true;}catch(e){console.warn('[FS] Não foi possível salvar '+key,e);return false;} }
   function setGate(text){ var el=document.getElementById('fsGateState'); if(el&&text) el.textContent=text; }
@@ -14126,6 +14126,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();
 </script>
+<script src="./fs-crm-sso.js?v=1"></script>
 </body>
 </html>
 
