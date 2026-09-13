@@ -14110,6 +14110,8 @@ document.addEventListener('DOMContentLoaded', function () {
     sessionStorage.setItem('fs_central_return_snapshot_v2',JSON.stringify(data));
     sessionStorage.setItem('fs_module_from_index','1');
     sessionStorage.removeItem('fs_returning_home');
+    localStorage.setItem('fs_central_return_snapshot_persist_v1',JSON.stringify(data));
+    localStorage.setItem('fs_return_to_central_v1','1');
   }
   window.FSPrepareOrcamentosCRM=snapshotCentral;
   window.FSOpenOrcamentosCRM=function(){snapshotCentral();location.assign(CRM_URL);};
@@ -14143,6 +14145,17 @@ document.addEventListener('DOMContentLoaded', function () {
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();
 </script>
+
+<script id="fs-clear-central-return-marker-v1">
+(function(){
+  try{
+    if(location.pathname==='/' || /\/(?:index|index-desktop|index-mobile)\.html$/i.test(location.pathname)){
+      localStorage.removeItem('fs_return_to_central_v1');
+    }
+  }catch(_e){}
+})();
+</script>
+
 </body>
 </html>
 
