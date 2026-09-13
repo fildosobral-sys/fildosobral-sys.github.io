@@ -10894,6 +10894,7 @@ window.addEventListener('DOMContentLoaded', function(){
   function fingerprint(u){ return [normalizarFilial(u.filial),upperSave(u.nome),normalizeRole(u.cargo),onlyDigits(u.whatsapp)].join('|'); }
   function localSessionValid(u){try{var verified=Number(localStorage.getItem('fs_access_verified_at')||0),saved=localStorage.getItem('fs_access_verified_fingerprint')||'',token=localStorage.getItem('fsAuthGlobal')||'',age=Date.now()-verified;return token==='ok-@fildO1060'&&verified>0&&age>=0&&age<(12*60*60*1000)&&saved===fingerprint(u);}catch(e){return false;}}
   function isTrustedInternalReturn(u){
+    if(fsValidReturnTicket(u)) return true;
     if(!hasSavedUser(u)||!localSessionValid(u)) return false;
     try{if(sessionStorage.getItem('fs_returning_home')==='1') return true;}catch(e){}
     try{
@@ -11095,7 +11096,7 @@ window.addEventListener('DOMContentLoaded', function(){
   }
   window.fsConfirmarAcesso=function(force){if(authPromise)return authPromise;authPromise=confirmAccess(!!force).finally(function(){authPromise=null;});return authPromise;};
   document.addEventListener('DOMContentLoaded',function(){
-    var logo=document.querySelector('.logo-badge.logo-image');if(logo){logo.decoding='sync';logo.loading='eager';}resetBadge();var u=getUser(),returning=false,trusted=false;try{returning=sessionStorage.getItem('fs_returning_home')==='1';}catch(e){}trusted=isTrustedInternalReturn(u)||(returning&&hasSavedUser(u)&&localSessionValid(u));if(trusted){document.documentElement.classList.remove('fs-auth-lock');try{sessionStorage.removeItem('fs_returning_home');sessionStorage.removeItem('fs_module_from_index');}catch(e){}}else{lockInterface();setTimeout(function(){window.fsConfirmarAcesso(!hasSavedUser(u));},80);}
+    var logo=document.querySelector('.logo-badge.logo-image');if(logo){logo.decoding='sync';logo.loading='eager';}resetBadge();var u=getUser(),returning=false,trusted=false;try{returning=sessionStorage.getItem('fs_returning_home')==='1';}catch(e){}trusted=isTrustedInternalReturn(u)||(returning&&hasSavedUser(u)&&localSessionValid(u));if(trusted){document.documentElement.classList.remove('fs-auth-lock');try{sessionStorage.removeItem('fs_returning_home');sessionStorage.removeItem('fs_module_from_index');sessionStorage.removeItem('fs_returning_home_nonce_v3');sessionStorage.removeItem('fs_central_return_ticket_v3');localStorage.removeItem('fs_central_return_ticket_backup_v3');}catch(e){}}else{lockInterface();setTimeout(function(){window.fsConfirmarAcesso(!hasSavedUser(u));},80);}
     document.querySelectorAll('.card').forEach(function(card){var link=card.querySelector('.card-action[href]');if(!link)return;card.classList.add('card-clickable');if(card.id==='cardDashboardBI')return;function mob(){return window.matchMedia('(max-width: 768px)').matches;}function go(){if(document.documentElement.classList.contains('fs-auth-lock'))return;if(mob()){if(card.classList.contains('fs-mobile-opening'))return;card.classList.add('fs-mobile-opening','fs-card-press');setTimeout(function(){window.location.href=link.getAttribute('href');},350);return;}card.classList.add('fs-card-press');setTimeout(function(){window.location.href=link.getAttribute('href');},100);}card.onclick=function(e){if(e.target.closest('a,button,input,select,textarea,label'))return;e.preventDefault();go();};link.onclick=function(e){e.preventDefault();e.stopPropagation();go();};});
     var btnTrocar=document.getElementById('btnTrocarUsuario');if(btnTrocar)btnTrocar.onclick=async function(){clearAuthorization(true);resetBadge();lockInterface('Informe os dados do novo usuário.');await window.fsConfirmarAcesso(true);};var btnSair=document.getElementById('btnSairAcesso');if(btnSair)btnSair.onclick=function(){clearAuthorization(false);resetBadge();lockInterface('Acesso encerrado. Informe dados autorizados para entrar novamente.');window.fsConfirmarAcesso(true);};
   });
@@ -14104,12 +14105,52 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
   var CRM_URL='https://fildosobral-sys.github.io/orcamentos-crm/';
   var KEYS=["fs_filial", "fs_nome", "fs_cargo", "fs_whatsapp", "fs_genero", "fs_access_token", "fs_pode_compartilhar", "fs_access_persisted", "fsAuthGlobal", "fs_access_verified_at", "fs_access_verified_fingerprint", "fs_device_id", "nomeVendedor", "nomeVendedorLogado", "vendedor_nome"];
+  function fsMakeReturnTicket(data){
+    try{
+      var nonce=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('fs-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+      var target=/index-mobile\.html$/i.test(location.pathname)?'/index-mobile.html':'/index-desktop.html';
+      var ticket={nonce:nonce,ts:Date.now(),target:target,snapshot:data};
+      sessionStorage.setItem('fs_central_return_ticket_v3',JSON.stringify(ticket));
+      localStorage.setItem('fs_central_return_ticket_backup_v3',JSON.stringify(ticket));
+      sessionStorage.setItem('fs_module_from_index','1');
+      return ticket;
+    }catch(e){return null;}
+  }
+  function fsReadReturnTicket(){
+    try{
+      var raw=sessionStorage.getItem('fs_central_return_ticket_v3')||localStorage.getItem('fs_central_return_ticket_backup_v3')||'';
+      var t=raw?JSON.parse(raw):null;
+      if(!t||!t.nonce||!t.ts||!t.snapshot)return null;
+      if(Date.now()-Number(t.ts)>2*60*60*1000)return null;
+      return t;
+    }catch(e){return null;}
+  }
+  function fsValidReturnTicket(u){
+    try{
+      var t=fsReadReturnTicket();
+      var nonce=sessionStorage.getItem('fs_returning_home_nonce_v3')||'';
+      if(!t||!nonce||nonce!==t.nonce)return false;
+      if(!hasSavedUser(u))return false;
+      var snap=t.snapshot||{};
+      var snapFp=[
+        normalizarFilial(snap.fs_filial||''),
+        upperSave(snap.fs_nome||''),
+        normalizeRole(snap.fs_cargo||''),
+        onlyDigits(snap.fs_whatsapp||'')
+      ].join('|');
+      if(snapFp!==fingerprint(u))return false;
+      if(String(snap.fsAuthGlobal||'')!=='ok-@fildO1060')return false;
+      if(String(snap.fs_access_verified_fingerprint||'')!==fingerprint(u))return false;
+      return true;
+    }catch(e){return false;}
+  }
   function snapshotCentral(){
     var data={};
     KEYS.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)data[k]=v;});
     sessionStorage.setItem('fs_central_return_snapshot_v2',JSON.stringify(data));
     sessionStorage.setItem('fs_module_from_index','1');
     sessionStorage.removeItem('fs_returning_home');
+    fsMakeReturnTicket(data);
     localStorage.setItem('fs_central_return_snapshot_persist_v1',JSON.stringify(data));
     localStorage.setItem('fs_return_to_central_v1','1');
   }
