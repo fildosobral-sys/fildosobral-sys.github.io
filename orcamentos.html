@@ -1,30 +1,4 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Redirecionando para Orçamentos</title>
-  <script>
-  (function(){
-    var URL='https://fildosobral-sys.github.io/orcamentos-crm/';
-    var keys=["fs_filial", "fs_nome", "fs_cargo", "fs_whatsapp", "fs_genero", "fs_access_token", "fs_pode_compartilhar", "fs_access_persisted", "fsAuthGlobal", "fs_access_verified_at", "fs_access_verified_fingerprint", "fs_device_id", "nomeVendedor", "nomeVendedorLogado", "vendedor_nome"];
-    try{
-      var central={};
-      keys.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)central[k]=v;});
-      sessionStorage.setItem('fs_central_auth_snapshot_v1',JSON.stringify(central));
-      sessionStorage.setItem('fs_module_from_index','1');
-      var crm=null;
-      try{crm=JSON.parse(localStorage.getItem('fs_crm_auth_snapshot_v1')||'null');}catch(e){}
-      if(crm){
-        keys.forEach(function(k){
-          if(Object.prototype.hasOwnProperty.call(crm,k)) localStorage.setItem(k,String(crm[k]));
-          else localStorage.removeItem(k);
-        });
-      }
-    }catch(e){}
-    location.replace(URL);
-  })();
-  </script>
-</head>
-<body><p>Redirecionando para Orçamentos…</p></body>
-</html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orçamentos</title>
+<script>(function(){var URL='https://fildosobral-sys.github.io/orcamentos-crm/';var keys=["fs_filial", "fs_nome", "fs_cargo", "fs_whatsapp", "fs_genero", "fs_access_token", "fs_pode_compartilhar", "fs_access_persisted", "fsAuthGlobal", "fs_access_verified_at", "fs_access_verified_fingerprint", "fs_device_id", "nomeVendedor", "nomeVendedorLogado", "vendedor_nome"];try{var data={};keys.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)data[k]=v;});sessionStorage.setItem('fs_central_return_snapshot_v2',JSON.stringify(data));sessionStorage.setItem('fs_module_from_index','1');sessionStorage.removeItem('fs_returning_home');}catch(e){}location.replace(URL);})();</script>
+</head><body><p>Redirecionando para Orçamentos…</p></body></html>

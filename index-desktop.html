@@ -14783,75 +14783,26 @@ document.addEventListener('DOMContentLoaded', function () {
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay.classList.contains('fs-open'))closeEscala(false)});
 })();
 </script>
-
-
-
-<script id="fs-central-crm-session-bridge-v1">
+<script id="fs-central-crm-session-bridge-v2">
 (function(){
   'use strict';
   var CRM_URL='https://fildosobral-sys.github.io/orcamentos-crm/';
   var KEYS=["fs_filial", "fs_nome", "fs_cargo", "fs_whatsapp", "fs_genero", "fs_access_token", "fs_pode_compartilhar", "fs_access_persisted", "fsAuthGlobal", "fs_access_verified_at", "fs_access_verified_fingerprint", "fs_device_id", "nomeVendedor", "nomeVendedorLogado", "vendedor_nome"];
-
-  function readKeys(){
+  function snapshotCentral(){
     var data={};
-    KEYS.forEach(function(k){
-      var v=localStorage.getItem(k);
-      if(v!==null) data[k]=v;
-    });
-    return data;
+    KEYS.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)data[k]=v;});
+    sessionStorage.setItem('fs_central_return_snapshot_v2',JSON.stringify(data));
+    sessionStorage.setItem('fs_module_from_index','1');
+    sessionStorage.removeItem('fs_returning_home');
   }
-
-  function writeKeys(data){
-    if(!data || typeof data!=='object') return;
-    KEYS.forEach(function(k){
-      if(Object.prototype.hasOwnProperty.call(data,k) && data[k]!==null){
-        localStorage.setItem(k,String(data[k]));
-      }else{
-        localStorage.removeItem(k);
-      }
-    });
-  }
-
-  function parse(value){
-    try{return JSON.parse(value||'null');}catch(_e){return null;}
-  }
-
-  function prepareCRM(){
-    try{
-      // Guarda a sessão válida da Central antes de qualquer troca de contexto.
-      sessionStorage.setItem('fs_central_auth_snapshot_v1',JSON.stringify(readKeys()));
-      sessionStorage.setItem('fs_module_from_index','1');
-      sessionStorage.removeItem('fs_returning_home');
-
-      // Se o CRM já foi validado antes neste aparelho, restaura a sessão dele
-      // antes de abrir o outro repositório. Assim não há segundo login.
-      var crm=parse(localStorage.getItem('fs_crm_auth_snapshot_v1'));
-      if(crm) writeKeys(crm);
-    }catch(e){
-      console.warn('[FS] Não foi possível preparar a sessão do Orçamentos.',e);
-    }
-  }
-
-  window.FSPrepareOrcamentosCRM=prepareCRM;
-  window.FSOpenOrcamentosCRM=function(){
-    prepareCRM();
-    window.location.assign(CRM_URL);
-  };
-
-  // Captura qualquer clique que vá para o CRM, inclusive cards antigos.
+  window.FSPrepareOrcamentosCRM=snapshotCentral;
+  window.FSOpenOrcamentosCRM=function(){snapshotCentral();location.assign(CRM_URL);};
   document.addEventListener('click',function(e){
-    var a=e.target && e.target.closest ? e.target.closest('a[href]') : null;
-    if(!a) return;
-    try{
-      var u=new URL(a.href,location.href);
-      if(u.origin===location.origin && u.pathname.indexOf('/orcamentos-crm/')===0){
-        prepareCRM();
-      }
-    }catch(_e){}
+    var a=e.target&&e.target.closest?e.target.closest('a[href]'):null;if(!a)return;
+    try{var u=new URL(a.href,location.href);if(u.origin===location.origin&&u.pathname.indexOf('/orcamentos-crm/')===0)snapshotCentral();}catch(_e){}
   },true);
 })();
 </script>
-
 <script id="fs-orcamentos-link-definitivo">
 (function(){
   const URL='https://fildosobral-sys.github.io/orcamentos-crm/';
