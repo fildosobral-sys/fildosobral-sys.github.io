@@ -148,7 +148,16 @@ if(localStorage.getItem('fs_sso_source')!=='crm'){
   localStorage.removeItem('fs_access_verified_at');
   localStorage.removeItem('fs_access_verified_fingerprint');
 }
-window.fsConfirmarAcesso=function(force){return confirmAccess(!!force);};
+let fsAccessPromise=null;
+window.fsConfirmarAcesso=function(force){
+  if(fsAccessPromise)return fsAccessPromise;
+  fsAccessPromise=confirmAccess(!!force).catch(function(err){
+    console.error('[FS SSO] Falha ao iniciar acesso:',err);
+    try{lock('Não foi possível iniciar a validação. Informe suas credenciais.');}catch(_e){}
+    return false;
+  }).finally(function(){fsAccessPromise=null;});
+  return fsAccessPromise;
+};
 
 function bindActions(){
   prepareModal();
@@ -158,6 +167,30 @@ function bindActions(){
   const out=['btnSairAcesso','btnSairAcessoFooter'];out.forEach(id=>{const el=document.getElementById(id);if(!el||el.dataset.crmSsoBound)return;el.dataset.crmSsoBound='1';el.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();if(!confirm('Sair encerrará a sessão única da Central e do CRM. Deseja realmente sair?'))return;clearSSO();lock('Sessão encerrada. Informe suas credenciais para entrar novamente.');confirmAccess(true);},true);});
   applyIdentity({name:localStorage.getItem('fs_nome'),role:localStorage.getItem('fs_cargo'),isOwner:localStorage.getItem('fs_is_owner')==='1'});
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindActions);else bindActions();
+function bootSSO(){
+  bindActions();
+
+  // O SSO não depende mais do sistema antigo do Index para começar.
+  setTimeout(function(){
+    if(!document.documentElement.classList.contains('fs-auth-lock'))return;
+    window.fsConfirmarAcesso(false);
+  },40);
+
+  // Watchdog: nunca deixa a Central presa apenas no logo de validação.
+  setTimeout(function(){
+    if(!document.documentElement.classList.contains('fs-auth-lock'))return;
+    const modal=document.getElementById('fsAccessModal');
+    const isOpen=!!(modal&&modal.classList.contains('open'));
+    if(isOpen)return;
+    const c=creds();
+    if(!validCreds(c)){
+      showModal('').catch?.(()=>{});
+    }else{
+      window.fsConfirmarAcesso(false);
+    }
+  },1200);
+}
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootSSO,{once:true});else bootSSO();
 new MutationObserver(bindActions).observe(document.documentElement,{childList:true,subtree:true});
 })();
