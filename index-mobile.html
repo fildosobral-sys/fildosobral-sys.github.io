@@ -10894,7 +10894,7 @@ window.addEventListener('DOMContentLoaded', function(){
   function fingerprint(u){ return [normalizarFilial(u.filial),upperSave(u.nome),normalizeRole(u.cargo),onlyDigits(u.whatsapp)].join('|'); }
   function localSessionValid(u){try{var verified=Number(localStorage.getItem('fs_access_verified_at')||0),saved=localStorage.getItem('fs_access_verified_fingerprint')||'',token=localStorage.getItem('fsAuthGlobal')||'',age=Date.now()-verified;return token==='ok-@fildO1060'&&verified>0&&age>=0&&age<(12*60*60*1000)&&saved===fingerprint(u);}catch(e){return false;}}
   function isTrustedInternalReturn(u){
-    if(fsValidReturnTicket(u)) return true;
+    if(typeof window.fsValidReturnTicket==='function' && window.fsValidReturnTicket(u)) return true;
     if(!hasSavedUser(u)||!localSessionValid(u)) return false;
     try{if(sessionStorage.getItem('fs_returning_home')==='1') return true;}catch(e){}
     try{
@@ -11096,7 +11096,12 @@ window.addEventListener('DOMContentLoaded', function(){
   }
   window.fsConfirmarAcesso=function(force){if(authPromise)return authPromise;authPromise=confirmAccess(!!force).finally(function(){authPromise=null;});return authPromise;};
   document.addEventListener('DOMContentLoaded',function(){
-    var logo=document.querySelector('.logo-badge.logo-image');if(logo){logo.decoding='sync';logo.loading='eager';}resetBadge();var u=getUser(),returning=false,trusted=false;try{returning=sessionStorage.getItem('fs_returning_home')==='1';}catch(e){}trusted=isTrustedInternalReturn(u)||(returning&&hasSavedUser(u)&&localSessionValid(u));if(trusted){document.documentElement.classList.remove('fs-auth-lock');try{sessionStorage.removeItem('fs_returning_home');sessionStorage.removeItem('fs_module_from_index');sessionStorage.removeItem('fs_returning_home_nonce_v3');sessionStorage.removeItem('fs_central_return_ticket_v3');localStorage.removeItem('fs_central_return_ticket_backup_v3');}catch(e){}}else{lockInterface();setTimeout(function(){window.fsConfirmarAcesso(!hasSavedUser(u));},80);}
+    var logo=document.querySelector('.logo-badge.logo-image');if(logo){logo.decoding='sync';logo.loading='eager';}resetBadge();var u=getUser(),returning=false,trusted=false;try{returning=sessionStorage.getItem('fs_returning_home')==='1';}catch(e){}try{
+          trusted=isTrustedInternalReturn(u)||(returning&&hasSavedUser(u)&&localSessionValid(u));
+        }catch(_e){
+          console.warn('[FS] Falha ao validar retorno interno; usando sessão local.', _e);
+          trusted=hasSavedUser(u)&&localSessionValid(u);
+        }if(trusted){document.documentElement.classList.remove('fs-auth-lock');try{sessionStorage.removeItem('fs_returning_home');sessionStorage.removeItem('fs_module_from_index');sessionStorage.removeItem('fs_returning_home_nonce_v3');sessionStorage.removeItem('fs_central_return_ticket_v3');localStorage.removeItem('fs_central_return_ticket_backup_v3');}catch(e){}}else{lockInterface();setTimeout(function(){window.fsConfirmarAcesso(!hasSavedUser(u));},80);}
     document.querySelectorAll('.card').forEach(function(card){var link=card.querySelector('.card-action[href]');if(!link)return;card.classList.add('card-clickable');if(card.id==='cardDashboardBI')return;function mob(){return window.matchMedia('(max-width: 768px)').matches;}function go(){if(document.documentElement.classList.contains('fs-auth-lock'))return;if(mob()){if(card.classList.contains('fs-mobile-opening'))return;card.classList.add('fs-mobile-opening','fs-card-press');setTimeout(function(){window.location.href=link.getAttribute('href');},350);return;}card.classList.add('fs-card-press');setTimeout(function(){window.location.href=link.getAttribute('href');},100);}card.onclick=function(e){if(e.target.closest('a,button,input,select,textarea,label'))return;e.preventDefault();go();};link.onclick=function(e){e.preventDefault();e.stopPropagation();go();};});
     var btnTrocar=document.getElementById('btnTrocarUsuario');if(btnTrocar)btnTrocar.onclick=async function(){clearAuthorization(true);resetBadge();lockInterface('Informe os dados do novo usuário.');await window.fsConfirmarAcesso(true);};var btnSair=document.getElementById('btnSairAcesso');if(btnSair)btnSair.onclick=function(){clearAuthorization(false);resetBadge();lockInterface('Acesso encerrado. Informe dados autorizados para entrar novamente.');window.fsConfirmarAcesso(true);};
   });
@@ -14144,6 +14149,7 @@ document.addEventListener('DOMContentLoaded', function () {
       return true;
     }catch(e){return false;}
   }
+  window.fsValidReturnTicket=fsValidReturnTicket;
   function snapshotCentral(){
     var data={};
     KEYS.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)data[k]=v;});
