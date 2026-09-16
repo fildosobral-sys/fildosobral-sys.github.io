@@ -157,6 +157,7 @@
     vault.currentKey = key;
     vault.records[key] = clone(db);
     localStorage.setItem(STORE, JSON.stringify(vault));
+    if (window.ResultsCloudSync) window.ResultsCloudSync.queue(vault);
     if (showState) {
       const state = document.getElementById('saveState');
       state.textContent = '✓ Dados salvos neste aparelho';
