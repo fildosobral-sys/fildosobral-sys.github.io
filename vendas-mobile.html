@@ -8800,8 +8800,11 @@ function abrirAlterarStatusProposta(id) {
 
 
 
-    // ========== BAIXAR IMAGEM 8K ==========
+    // ========== BAIXAR IMAGEM 8K — A4 PAISAGEM REAL ==========
+    // Saída fixa: 7680 x 5431 px (proporção ISO A4 = √2), independente do aparelho.
+    // A captura é feita fora da tela, sem alterar a visualização ou as regras da proposta.
     async function baixarImagem8K(tipo) {
+      let wrapper = null;
       try {
         if (!currentProposalData) {
           showToast('❌ Dados da proposta não encontrados', 'error');
@@ -8819,84 +8822,127 @@ function abrirAlterarStatusProposta(id) {
           return;
         }
 
-        showToast('🖼️ Gerando imagem 8K...', 'success');
-
-        const wrapper = document.createElement('div');
-        wrapper.style.position = 'fixed';
-        wrapper.style.left = '-100000px';
-        wrapper.style.top = '0';
-        wrapper.style.width = (tipo === 'cliente' ? '297mm' : '360mm');
-        wrapper.style.background = '#ffffff';
-        wrapper.style.padding = (tipo === 'cliente' ? '20mm' : '8mm 10mm');
-        wrapper.style.zIndex = '-1';
-        if (tipo === 'cliente') {
-          wrapper.id = 'contentCliente';
-          wrapper.className = target.className || '';
+        if (typeof html2canvas !== 'function') {
+          showToast('❌ Gerador de imagem indisponível', 'error');
+          return;
         }
-        wrapper.innerHTML = target.innerHTML;
 
+        showToast('🖼️ Gerando A4 paisagem em 8K...', 'success');
+
+        // Base lógica A4 landscape. Depois compomos para 7680 x 5431 px exatos.
+        const logicalW = 1920;
+        const logicalH = 1358; // 1920 / √2 ≈ 1357.65
+        const pad = tipo === 'cliente' ? 46 : 34;
+        const usableW = logicalW - (pad * 2);
+        const usableH = logicalH - (pad * 2);
+
+        wrapper = document.createElement('div');
+        wrapper.setAttribute('data-fs-export-a4-landscape', 'true');
+        wrapper.style.cssText = [
+          'position:fixed','left:-100000px','top:0','z-index:-1',
+          'box-sizing:border-box','width:'+logicalW+'px','height:'+logicalH+'px',
+          'overflow:hidden','background:#ffffff','padding:'+pad+'px',
+          'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif'
+        ].join(';');
+
+        const stage = document.createElement('div');
+        stage.style.cssText = 'position:relative;width:'+usableW+'px;height:'+usableH+'px;overflow:hidden;background:#fff;';
+        const clone = target.cloneNode(true);
+        clone.removeAttribute('id');
+        clone.setAttribute('data-fs-export-content', 'true');
+        clone.style.cssText += ';box-sizing:border-box;width:'+usableW+'px;max-width:none;height:auto;max-height:none;margin:0;overflow:visible;transform:none;transform-origin:top left;background:#fff;';
+        stage.appendChild(clone);
+        wrapper.appendChild(stage);
         document.body.appendChild(wrapper);
-        if (tipo === 'cliente' && typeof window.fsV11PrepareClienteExport === 'function') { window.fsV11PrepareClienteExport(wrapper); }
 
-        wrapper.querySelectorAll('.no-print, .fs-tabela-diretoria-actions').forEach(function(el){
+        if (tipo === 'cliente' && typeof window.fsV11PrepareClienteExport === 'function') {
+          try { window.fsV11PrepareClienteExport(clone); } catch (e) { console.warn('[8K] preparo cliente:', e); }
+        }
+
+        wrapper.querySelectorAll('.no-print, .fs-tabela-diretoria-actions, button, .acao, .edit, .lapis, .print-hide, [data-html2canvas-ignore="true"]').forEach(function(el){
           el.style.display = 'none';
         });
-        // ocultar lapis / ações
-        wrapper.querySelectorAll('button, .acao, .edit, .lapis').forEach(function(el){
-          const t=(el.textContent||'').toLowerCase();
-          if(t.includes('expandir')||t.includes('editar')||t.includes('ação')) el.style.display='none';
-        });
-        // ocultar campos vazios
         wrapper.querySelectorAll('textarea, input').forEach(function(el){
-          if(!el.value || !el.value.trim()){
-            const box=el.closest('div');
-            if(box) box.style.display='none';
+          if(!String(el.value || '').trim()){
+            const box = el.closest('div');
+            if(box) box.style.display = 'none';
           }
         });
-        wrapper.querySelectorAll('button').forEach(function(btn){
-          const txt = (btn.textContent || '').toLowerCase();
-          if (txt.indexOf('expandir') >= 0 || txt.indexOf('fechar') >= 0 || txt.indexOf('enviar') >= 0 || txt.indexOf('baixar') >= 0) {
-            btn.style.display = 'none';
-          }
+        wrapper.querySelectorAll('*').forEach(function(el){
+          try{
+            el.style.maxHeight = 'none';
+            if(el.style.height === '100vh' || el.style.height === '100dvh') el.style.height = 'auto';
+            if(el.style.overflow === 'hidden') el.style.overflow = 'visible';
+            if(el.style.overflowY === 'hidden') el.style.overflowY = 'visible';
+            el.scrollTop = 0;
+            el.scrollLeft = 0;
+          }catch(e){}
         });
 
-        const width = 7680;
-        const height = 4320;
-        const scale = Math.max(2, Math.min(8, width / Math.max(1, wrapper.scrollWidth)));
+        // Permite que fontes/imagens terminem de compor antes de medir.
+        try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
+        await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
 
-        const canvas = await html2canvas(wrapper, {
-          scale: scale,
+        // Mantém tudo em uma única folha A4 paisagem sem cortar conteúdo.
+        const naturalW = Math.max(clone.scrollWidth, clone.offsetWidth, usableW);
+        const naturalH = Math.max(clone.scrollHeight, clone.offsetHeight, 1);
+        const fit = Math.min(1, usableW / naturalW, usableH / naturalH);
+        if (fit < 1) {
+          clone.style.width = naturalW + 'px';
+          clone.style.transform = 'scale(' + fit + ')';
+        }
+
+        // Render intermediário em alta qualidade; o compositor final garante 8K A4 exato.
+        const rawCanvas = await html2canvas(wrapper, {
+          scale: 2,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
-          width: wrapper.scrollWidth,
-          height: wrapper.scrollHeight,
-          windowWidth: Math.max(wrapper.scrollWidth + 200, 2200),
-          windowHeight: Math.max(wrapper.scrollHeight + 200, 2200),
+          width: logicalW,
+          height: logicalH,
+          windowWidth: logicalW,
+          windowHeight: logicalH,
           scrollX: 0,
           scrollY: 0
         });
 
-        document.body.removeChild(wrapper);
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = 7680;
+        finalCanvas.height = 5431;
+        const ctx = finalCanvas.getContext('2d', { alpha: false });
+        if (!ctx) throw new Error('Canvas 8K indisponível neste aparelho.');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+        ctx.drawImage(rawCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
 
         const clienteNome = (currentProposalData?.cliente_nome || 'cliente').trim() || 'cliente';
         const stamp = new Date().toISOString().replace(/[-:T.]/g,'').slice(0,14);
         const label = tipo === 'cliente' ? 'visao_cliente' : (tipo === 'diretoriaAlcadas' ? 'planos_cotacoes' : 'crediario');
-        const nomeArquivo = `proposta_${label}_8k_${clienteNome.replace(/\s+/g,'_').toLowerCase()}_${stamp}.png`;
+        const nomeArquivo = `proposta_${label}_A4_paisagem_8K_${clienteNome.replace(/\s+/g,'_').toLowerCase()}_${stamp}.png`;
 
+        const blob = await new Promise(function(resolve, reject){
+          finalCanvas.toBlob(function(b){ b ? resolve(b) : reject(new Error('Falha ao finalizar PNG 8K.')); }, 'image/png', 1.0);
+        });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = canvas.toDataURL('image/png', 1.0);
+        link.href = url;
         link.download = nomeArquivo;
+        link.rel = 'noopener';
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        link.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 15000);
 
-        showToast('✅ Imagem 8K baixada com sucesso!', 'success');
+        showToast('✅ A4 paisagem 8K baixado com sucesso!', 'success');
       } catch (error) {
-        console.error('Erro ao baixar imagem 8K:', error);
+        console.error('Erro ao baixar imagem A4 paisagem 8K:', error);
         document.body.classList.remove('export-mode');
-        showToast('❌ Não foi possível gerar a imagem 8K.', 'error');
+        showToast('❌ Não foi possível gerar o A4 paisagem 8K neste aparelho.', 'error');
+      } finally {
+        if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
       }
     }
 
@@ -9061,7 +9107,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
 
           <!-- Área de Preview (Formato A4) -->
           <div class="flex-1 overflow-auto bg-gray-100 p-6">
-            <div id="previewContent" class="bg-white mx-auto shadow-2xl" style="${(tipo === 'diretoriaAlcadas' || tipo === 'diretoria') ? 'width:min(360mm,100%); min-height:210mm; padding:8mm 10mm;' : 'width:min(297mm,100%); min-height:210mm; padding:20mm;'}">
+            <div id="previewContent" class="bg-white mx-auto shadow-2xl" style="${(tipo === 'diretoriaAlcadas' || tipo === 'diretoria') ? 'width:min(360mm,100%); min-height:210mm; padding:8mm 10mm;' : 'width:min(297mm,100%); aspect-ratio:297/210; min-height:210mm; padding:8mm 10mm; overflow:hidden;'}">
               ${contentHTML}
             </div>
           </div>
@@ -9082,7 +9128,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
               </button>
             </div>
             <div class="mt-3 text-center">
-              <p class="text-xs text-gray-500">💡 ${tipo === 'cliente' ? 'A proposta será formatada em tamanho A4 para melhor visualização' : 'A imagem será baixada e o WhatsApp da diretoria será aberto automaticamente'}</p>
+              <p class="text-xs text-gray-500">💡 ${tipo === 'cliente' ? 'A proposta será gerada em A4 paisagem 8K (7680×5431)' : 'A imagem será baixada e o WhatsApp da diretoria será aberto automaticamente'}</p>
             </div>
           </div>
         </div>

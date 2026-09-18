@@ -71,10 +71,9 @@
     const JsPDF = window.jspdf?.jsPDF || window.jsPDF;
     if (!JsPDF) throw new Error("Gerador de PDF indisponível.");
 
-    const landscape =
-      (image.naturalWidth || image.width) > (image.naturalHeight || image.height);
+    // Padronização FS: proposta sempre em A4 paisagem, no mobile e no desktop.
     const pdf = new JsPDF({
-      orientation: landscape ? "landscape" : "portrait",
+      orientation: "landscape",
       unit: "mm",
       format: "a4",
       compress: true,
