@@ -8800,6 +8800,94 @@ function abrirAlterarStatusProposta(id) {
 
 
 
+
+    // ========== AJUSTES EXCLUSIVOS DE EXPORTAÇÃO — PLANOS E COTAÇÕES ==========
+    // Mantém os controles visíveis na tela, mas remove da imagem baixada:
+    // 1) bloco de Alçada extraordinária da Diretoria;
+    // 2) coluna Ação da tabela de produtos.
+    function fsPrepararPlanosCotacoesParaExport(root) {
+      if (!root || !root.querySelectorAll) return;
+
+      root.querySelectorAll('.fs-alcada-global').forEach(function(el){
+        el.style.display = 'none';
+      });
+
+      root.querySelectorAll('.fs-tabela-diretoria-actions, .no-print').forEach(function(el){
+        el.style.display = 'none';
+      });
+
+      root.querySelectorAll('table.fs-tabela-diretoria').forEach(function(table){
+        const headers = Array.from(table.querySelectorAll('thead th'));
+        const acaoIndex = headers.findIndex(function(th){
+          const txt = (th.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          return txt === 'ação' || txt === 'acao';
+        });
+        if (acaoIndex < 0) return;
+
+        const cols = table.querySelectorAll('colgroup col');
+        if (cols[acaoIndex]) cols[acaoIndex].style.display = 'none';
+
+        table.querySelectorAll('tr').forEach(function(tr){
+          const cells = Array.from(tr.children).filter(function(el){
+            return el.tagName === 'TH' || el.tagName === 'TD';
+          });
+          let logicalCol = 0;
+          cells.forEach(function(cell){
+            const span = Math.max(1, parseInt(cell.getAttribute('colspan') || '1', 10) || 1);
+            const start = logicalCol;
+            const end = logicalCol + span - 1;
+            if (acaoIndex >= start && acaoIndex <= end) {
+              if (span === 1) {
+                cell.style.display = 'none';
+              } else {
+                cell.setAttribute('colspan', String(span - 1));
+              }
+            }
+            logicalCol += span;
+          });
+        });
+      });
+    }
+
+    // Notificação própria de download, independente de autenticação/toast geral.
+    // Usa posição inferior central e z-index máximo para permanecer visível no mobile.
+    function fsDownloadToast(message, type) {
+      try {
+        const old = document.getElementById('fsDownloadToast');
+        if (old && old.parentNode) old.parentNode.removeChild(old);
+
+        const el = document.createElement('div');
+        el.id = 'fsDownloadToast';
+        el.setAttribute('role', 'status');
+        el.setAttribute('aria-live', 'polite');
+        el.textContent = message || '✅ Download iniciado!';
+        const success = type !== 'error';
+        el.style.cssText = [
+          'position:fixed',
+          'left:50%',
+          'bottom:max(22px, env(safe-area-inset-bottom))',
+          'transform:translateX(-50%)',
+          'z-index:2147483647',
+          'max-width:calc(100vw - 28px)',
+          'width:max-content',
+          'padding:12px 18px',
+          'border-radius:12px',
+          'font:700 14px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+          'text-align:center',
+          'color:#fff',
+          'background:' + (success ? '#16a34a' : '#dc2626'),
+          'box-shadow:0 10px 30px rgba(0,0,0,.28)',
+          'pointer-events:none'
+        ].join(';');
+        document.body.appendChild(el);
+        setTimeout(function(){
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 4200);
+      } catch (e) {
+        try { if (typeof showToast === 'function') showToast(message, type === 'error' ? 'error' : 'success'); } catch (_) {}
+      }
+    }
+
     // ========== BAIXAR IMAGEM 8K — A4 PAISAGEM REAL ==========
     // Saída fixa: 7680 x 5431 px (proporção ISO A4 = √2), independente do aparelho.
     // A captura é feita fora da tela, sem alterar a visualização ou as regras da proposta.
@@ -8854,6 +8942,10 @@ function abrirAlterarStatusProposta(id) {
         stage.appendChild(clone);
         wrapper.appendChild(stage);
         document.body.appendChild(wrapper);
+
+        if (tipo === 'diretoriaAlcadas') {
+          fsPrepararPlanosCotacoesParaExport(wrapper);
+        }
 
         if (tipo === 'cliente' && typeof window.fsV11PrepareClienteExport === 'function') {
           try { window.fsV11PrepareClienteExport(clone); } catch (e) { console.warn('[8K] preparo cliente:', e); }
@@ -8936,7 +9028,8 @@ function abrirAlterarStatusProposta(id) {
         link.remove();
         setTimeout(function(){ URL.revokeObjectURL(url); }, 15000);
 
-        showToast('✅ A4 paisagem 8K baixado com sucesso!', 'success');
+        fsDownloadToast('✅ Download concluído! Imagem 8K salva no aparelho.', 'success');
+        try { showToast('✅ A4 paisagem 8K baixado com sucesso!', 'success'); } catch (e) {}
       } catch (error) {
         console.error('Erro ao baixar imagem A4 paisagem 8K:', error);
         document.body.classList.remove('export-mode');
@@ -9075,6 +9168,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
         }, 400);
 
         const dataHoraEnvio = (typeof formatarDataHora === 'function') ? formatarDataHora(new Date()) : new Date().toLocaleString('pt-BR');
+        fsDownloadToast('✅ Download concluído! Imagem salva no aparelho.', 'success');
         if (typeof showToast === 'function') showToast(`✅ Imagem baixada! Abrindo WhatsApp... ${dataHoraEnvio}`, 'success');
       } catch (error) {
         console.error('Erro no envio cliente:', error);
@@ -9258,6 +9352,9 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
               }
             }
             prepararCloneDiretoriaParaImagem(clonedDoc, isDiretoria);
+            if (tipo === 'diretoriaAlcadas') {
+              fsPrepararPlanosCotacoesParaExport(clonedDoc);
+            }
           }
         });
 
@@ -9290,6 +9387,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
             try {
               link.click();
               document.body.classList.remove('export-mode');
+              fsDownloadToast('✅ Download concluído! Arquivo salvo no aparelho.', 'success');
               showToast('✅ Download iniciado! Verifique seus downloads', 'success');
             } catch (e) {
               document.body.classList.remove('export-mode');
@@ -9526,6 +9624,9 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
           windowHeight: alturaJanela,
           onclone: (clonedDoc) => {
             prepararCloneDiretoriaParaImagem(clonedDoc, isDiretoria);
+            if (tipo === 'diretoriaAlcadas') {
+              fsPrepararPlanosCotacoesParaExport(clonedDoc);
+            }
           }
         });
 
@@ -9559,6 +9660,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
                 imagemClienteBaixada = true;
               }
               document.body.classList.remove('export-mode');
+              fsDownloadToast('✅ Download concluído! Arquivo salvo no aparelho.', 'success');
               showToast('✅ Download iniciado! Verifique seus downloads', 'success');
             } catch (e) {
               document.body.classList.remove('export-mode');
