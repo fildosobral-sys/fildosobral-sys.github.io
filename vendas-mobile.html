@@ -6195,6 +6195,30 @@ async function salvarProposta() {
     }
 
 // ========== VISUALIZAR PROPOSTA ==========
+    function fsCollectProposalDataFromForm() {
+      return {
+        loja_nome: (window.fsGetFilialAtual ? window.fsGetFilialAtual() : ((document.getElementById('inputFilialManual')?.value || '').trim() || '—')),
+        vendedor_nome: document.getElementById('inputVendedorNome').value,
+        vendedor_contato: '',
+        titulo_proposta: (fs$('inputTituloProposta') ? fs$('inputTituloProposta').value : ''),
+        data_proposta: document.getElementById('inputDataProposta').value,
+        validade_proposta: (fs$('inputValidadeProposta') ? fs$('inputValidadeProposta').value : ''),
+        cliente_nome: document.getElementById('inputClienteNome').value,
+        cliente_contato: document.getElementById('inputClienteContato').value,
+        cliente_cpf: (document.getElementById('clienteCpf') ? document.getElementById('clienteCpf').value : ''),
+        produtos: produtos,
+        plano_exclusivo_valor: valorPlanoExclusivo,
+        plano_exclusivo_parcelas: parseInt(document.getElementById('inputParcelasPlanoExclusivo').value) || 1,
+        historico_negociacao: document.getElementById('inputHistorico').value,
+        opcoes_parcelamento_carne: document.getElementById('inputOpcoesParcelamentoCarne').value,
+        opcoes_parcelamento_cartao: document.getElementById('inputOpcoesParcelamentoCartao').value,
+        simulacao_perdas_ganhos: document.getElementById('inputSimulacao').value,
+        oportunidades_melhoria: document.getElementById('inputOportunidades').value,
+        parcelamentos_complementares: (typeof fsGetParcelamentoComplementarState === 'function' ? fsGetParcelamentoComplementarState() : (window.fsParcelamentoComplementarDraft || null)),
+        exibicao_parcelamento_diretoria: ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum')
+      };
+    }
+
     function visualizarProposta() {
       // Exige que a proposta tenha sido salva antes de visualizar
       if (!propostaFoiSalva) {
@@ -6208,27 +6232,7 @@ async function salvarProposta() {
         return;
       }
 
-      currentProposalData = {
-        loja_nome: (window.fsGetFilialAtual ? window.fsGetFilialAtual() : ((document.getElementById('inputFilialManual')?.value || '').trim() || '—')) ,
-        vendedor_nome: document.getElementById('inputVendedorNome').value,
-        vendedor_contato: '',
-        titulo_proposta: (fs$('inputTituloProposta')?fs$('inputTituloProposta').value:''),
-        data_proposta: document.getElementById('inputDataProposta').value,
-        validade_proposta: (fs$('inputValidadeProposta')?fs$('inputValidadeProposta').value:''),
-        cliente_nome: document.getElementById('inputClienteNome').value,
-        cliente_contato: document.getElementById('inputClienteContato').value,
-        cliente_cpf: (document.getElementById('clienteCpf')?document.getElementById('clienteCpf').value:''),
-        produtos: produtos,
-        plano_exclusivo_valor: valorPlanoExclusivo,
-        plano_exclusivo_parcelas: parseInt(document.getElementById('inputParcelasPlanoExclusivo').value) || 1,
-        historico_negociacao: document.getElementById('inputHistorico').value,
-        opcoes_parcelamento_carne: document.getElementById('inputOpcoesParcelamentoCarne').value,
-        opcoes_parcelamento_cartao: document.getElementById('inputOpcoesParcelamentoCartao').value,
-        simulacao_perdas_ganhos: document.getElementById('inputSimulacao').value,
-        oportunidades_melhoria: document.getElementById('inputOportunidades').value,
-        parcelamentos_complementares: (typeof fsGetParcelamentoComplementarState === 'function' ? fsGetParcelamentoComplementarState() : (window.fsParcelamentoComplementarDraft || null)),
-        exibicao_parcelamento_diretoria: ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum')
-      };
+      currentProposalData = fsCollectProposalDataFromForm();
 
       renderVisaoCliente(currentProposalData);
       renderVisaoDiretoriaAlcadas(currentProposalData);
@@ -7273,15 +7277,14 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
             const saldo = Math.max(0, totalPlano - entrada);
             const parcela = n ? saldo / n : 0;
             const totalFinalPc = entrada + saldo;
-            const juros = basePromo > 0 ? Math.max(0, ((totalFinalPc/basePromo)-1)*100) : 0;
-            return `<tr><td><strong>${n}x</strong></td><td>${formatarMoedaBR(parcela)}</td><td>${juros.toFixed(1).replace('.',',')}%</td><td>${formatarMoedaBR(totalFinalPc)}</td></tr>`;
+            return `<tr><td><strong>${n}x</strong></td><td>${formatarMoedaBR(parcela)}</td><td>${formatarMoedaBR(totalFinalPc)}</td></tr>`;
           }).join('');
-          return `<div class="fs-pc-mini-card"><div class="fs-pc-mini-title">${titulo}${entrada>0?` <small>• Entrada ${formatarMoedaBR(entrada)}</small>`:''}</div><table class="fs-pc-mini-table"><thead><tr><th>Plano</th><th>Parcela</th><th>Juros</th><th>Total</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+          return `<div class="fs-pc-mini-card"><div class="fs-pc-mini-title">${titulo}${entrada>0?` <small>• Entrada ${formatarMoedaBR(entrada)}</small>`:''}</div><table class="fs-pc-mini-table"><thead><tr><th>Plano</th><th>Parcela</th><th>Total</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
         };
         blocoParcelamentoComplementar = `
           <div class="fs-parcelamento-complementar-print fs-pc-full-print">
-            <div class="fs-pc-print-title"><span>📊 Tabela de Parcelamento com Juros</span><small>Valores calculados sobre a condição promocional atual</small></div>
-            <div class="fs-pc-mini-grid">
+            <div class="fs-pc-print-title"><span>📊 Consulta rápida de parcelamento</span><small>Mini tabela com Carnê e Cartão sobre o valor promocional atual</small></div>
+            <div class="fs-pc-mini-grid fs-pc-mini-grid-compact">
               ${tabelaCompacta('carne','📄 Carnê',carneFatores)}
               ${tabelaCompacta('cartao','💳 Cartão',cartaoFatores)}
             </div>
@@ -8928,9 +8931,37 @@ function abrirAlterarStatusProposta(id) {
     async function baixarImagem8K(tipo) {
       let wrapper = null;
       try {
+        if (typeof fsCollectProposalDataFromForm === 'function' && document.getElementById('inputVendedorNome')) {
+          try {
+            currentProposalData = fsCollectProposalDataFromForm();
+            renderVisaoCliente(currentProposalData);
+            renderVisaoDiretoriaAlcadas(currentProposalData);
+            renderVisaoDiretoria(currentProposalData);
+          } catch(syncBuildError) {
+            console.warn('[8K] Falha ao montar dados atuais da proposta:', syncBuildError);
+          }
+        }
+
         if (!currentProposalData) {
           showToast('❌ Dados da proposta não encontrados', 'error');
           return;
+        }
+
+        // Sincroniza a escolha atual do editor antes de montar a captura.
+        // Evita baixar uma versão antiga sem "Parcela selecionada" / "Tabela completa".
+        if (tipo === 'diretoriaAlcadas') {
+          try {
+            const radioModo = document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked');
+            currentProposalData.exibicao_parcelamento_diretoria = radioModo ? radioModo.value : (currentProposalData.exibicao_parcelamento_diretoria || 'nenhum');
+            if (typeof fsGetParcelamentoComplementarState === 'function') {
+              currentProposalData.parcelamentos_complementares = fsGetParcelamentoComplementarState();
+            } else if (window.fsParcelamentoComplementarDraft) {
+              currentProposalData.parcelamentos_complementares = window.fsParcelamentoComplementarDraft;
+            }
+            renderVisaoDiretoriaAlcadas(currentProposalData);
+          } catch (syncError) {
+            console.warn('[8K] Falha ao sincronizar parcelamento da Diretoria:', syncError);
+          }
         }
 
         const target = tipo === 'cliente'
@@ -8953,7 +8984,7 @@ function abrirAlterarStatusProposta(id) {
 
         // Base lógica A4 landscape. Depois compomos para 7680 x 5431 px exatos.
         const logicalW = 1920;
-        const logicalH = 1358; // 1920 / √2 ≈ 1357.65
+        const logicalH = 1357.75; // 5431 / 4: saída direta 7680 x 5431, sem ampliação posterior
         const pad = tipo === 'cliente' ? 46 : 34;
         const usableW = logicalW - (pad * 2);
         const usableH = logicalH - (pad * 2);
@@ -9018,9 +9049,20 @@ function abrirAlterarStatusProposta(id) {
           clone.style.transform = 'scale(' + fit + ')';
         }
 
-        // Render intermediário em alta qualidade; o compositor final garante 8K A4 exato.
-        const rawCanvas = await html2canvas(wrapper, {
-          scale: 2,
+        // Quando a proposta é curta, distribui o conteúdo no centro vertical da folha
+        // em vez de concentrá-lo no topo e deixar um grande vazio abaixo.
+        const visualH = naturalH * fit;
+        if (visualH < usableH * 0.86) {
+          stage.style.display = 'flex';
+          stage.style.flexDirection = 'column';
+          stage.style.justifyContent = 'center';
+          stage.style.alignItems = 'flex-start';
+        }
+
+        // Renderização DIRETA em 8K. Antes a captura era feita em ~4K e ampliada,
+        // o que suavizava letras e linhas ao aplicar zoom. Agora não há upscaling.
+        const finalCanvas = await html2canvas(wrapper, {
+          scale: 4,
           useCORS: true,
           allowTaint: true,
           backgroundColor: '#ffffff',
@@ -9030,19 +9072,9 @@ function abrirAlterarStatusProposta(id) {
           windowWidth: logicalW,
           windowHeight: logicalH,
           scrollX: 0,
-          scrollY: 0
+          scrollY: 0,
+          imageTimeout: 15000
         });
-
-        const finalCanvas = document.createElement('canvas');
-        finalCanvas.width = 7680;
-        finalCanvas.height = 5431;
-        const ctx = finalCanvas.getContext('2d', { alpha: false });
-        if (!ctx) throw new Error('Canvas 8K indisponível neste aparelho.');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-        ctx.drawImage(rawCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
 
         const clienteNome = (currentProposalData?.cliente_nome || 'cliente').trim() || 'cliente';
         const stamp = new Date().toISOString().replace(/[-:T.]/g,'').slice(0,14);
@@ -18556,15 +18588,19 @@ document.addEventListener('DOMContentLoaded', function(){
   .fs-diretoria-mode-options input{position:absolute;opacity:0;pointer-events:none}
   .fs-diretoria-mode-options span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px 10px;border:1px solid #d1d5db;border-radius:11px;background:#fff;color:#475569;font-size:12px;font-weight:800;text-align:center;transition:.15s ease}
   .fs-diretoria-mode-options input:checked + span{border-color:#4f46e5;background:#eef2ff;color:#3730a3;box-shadow:0 0 0 2px rgba(79,70,229,.08)}
-  .fs-pc-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-  .fs-pc-mini-card{border:1px solid #dbeafe;border-radius:10px;background:#fff;overflow:hidden}
-  .fs-pc-mini-title{padding:7px 8px;background:#eff6ff;color:#1e3a8a;font-size:10px;font-weight:900}
-  .fs-pc-mini-title small{font-size:8px;color:#64748b;font-weight:700}
-  .fs-pc-mini-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}
-  .fs-pc-mini-table th{padding:5px 4px;background:#f8fafc;color:#334155;border-bottom:1px solid #cbd5e1;font-size:7.5px;font-weight:900;text-align:center}
-  .fs-pc-mini-table td{padding:4px;border-bottom:1px solid #eef2f7;text-align:center;white-space:nowrap}
+  .fs-pc-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .fs-pc-mini-grid-compact{align-items:start}
+  .fs-pc-mini-card{border:1px solid #dbeafe;border-radius:9px;background:#fff;overflow:hidden}
+  .fs-pc-mini-title{padding:5px 7px;background:#eff6ff;color:#1e3a8a;font-size:9.5px;font-weight:900;line-height:1.2}
+  .fs-pc-mini-title small{font-size:7.5px;color:#64748b;font-weight:700}
+  .fs-pc-mini-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.2px;line-height:1.15}
+  .fs-pc-mini-table th{padding:3px 3px;background:#f8fafc;color:#334155;border-bottom:1px solid #cbd5e1;font-size:6.9px;font-weight:900;text-align:center}
+  .fs-pc-mini-table td{padding:2px 3px;border-bottom:1px solid #eef2f7;text-align:center;white-space:nowrap}
   .fs-pc-mini-table tr:last-child td{border-bottom:0}
-  @media(max-width:767px){.fs-diretoria-mode-options{grid-template-columns:1fr}.fs-pc-mini-grid{grid-template-columns:1fr}.fs-pc-mini-table{font-size:8.5px}}
+  .fs-pc-full-print{padding:8px !important}
+  .fs-pc-full-print .fs-pc-print-title{margin-bottom:7px !important;font-size:12px !important}
+  .fs-pc-full-print .fs-pc-print-title small{font-size:7.5px !important}
+  @media(max-width:767px){.fs-diretoria-mode-options{grid-template-columns:1fr}.fs-pc-mini-grid{grid-template-columns:1fr}.fs-pc-mini-table{font-size:8px}}
 </style>
 
 <script id="fs-quotation-features-v3">
@@ -20398,6 +20434,174 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   document.addEventListener('input',function(ev){
     if(ev.target && ev.target.id==='resumoEntradaFinal') setTimeout(aplicar,120);
+  });
+})();
+</script>
+
+
+<!-- FS PATCH FINAL — FOCO DE ITEM + CABEÇALHO DESKTOP + SINCRONIA DE PARCELAMENTO -->
+<style id="fs-focus-header-sync-v1">
+  /* Destaque contextual dos produtos — funciona em desktop e mobile. */
+  #editorView .produto-item{
+    transition: opacity .18s ease, transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease !important;
+  }
+  #editorView.fs-has-active-product .produto-item:not(.fs-product-active){
+    opacity:.68 !important;
+    background:#f8fafc !important;
+    border-color:#e2e8f0 !important;
+    box-shadow:none !important;
+  }
+  #editorView .produto-item.fs-product-active{
+    opacity:1 !important;
+    position:relative !important;
+    z-index:2 !important;
+    background:linear-gradient(180deg,#f3fff7 0%,#ffffff 100%) !important;
+    border-color:#86efac !important;
+    box-shadow:0 12px 28px rgba(22,163,74,.13) !important;
+    transform:translateY(-2px) !important;
+  }
+  #editorView .produto-item.fs-product-active .fs-item-index-badge{
+    background:#dcfce7 !important;
+    color:#15803d !important;
+  }
+  @media (hover:hover) and (pointer:fine){
+    #editorView .produto-item:not(.fs-product-active):hover{
+      opacity:.88 !important;
+      border-color:#cbd5e1 !important;
+    }
+  }
+  @media (max-width:767px){
+    #editorView.fs-has-active-product .produto-item:not(.fs-product-active){opacity:.76 !important;}
+    #editorView .produto-item.fs-product-active{transform:translateY(-1px) !important;}
+  }
+
+  /* Cabeçalho limpo SOMENTE no desktop. O vendedor da simulação não vira usuário do topo. */
+  @media (min-width:769px){
+    .fs-v4-header #bemVindoTexto{
+      display:inline-flex !important;
+      width:auto !important;
+      min-height:34px !important;
+      align-items:center !important;
+      justify-content:flex-start !important;
+      gap:0 !important;
+      margin:0 0 8px !important;
+      padding:0 !important;
+      font-size:0 !important;
+      line-height:1 !important;
+    }
+    .fs-v4-header #bemVindoTexto > .inline-block,
+    .fs-v4-header #bemVindoTexto > .fs-user-exclam,
+    .fs-v4-header #fsMotivMsg{
+      display:none !important;
+    }
+    .fs-v4-header #nomeUsuarioHeader{
+      display:inline-flex !important;
+      align-items:center !important;
+      min-height:34px !important;
+      padding:0 13px !important;
+      border:1px solid rgba(255,255,255,.28) !important;
+      border-radius:999px !important;
+      background:rgba(255,255,255,.14) !important;
+      color:#fff !important;
+      font-size:13px !important;
+      font-weight:850 !important;
+      letter-spacing:.02em !important;
+      white-space:nowrap !important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12) !important;
+      backdrop-filter:blur(8px) !important;
+    }
+  }
+</style>
+<script id="fs-focus-header-sync-script-v1">
+(function(){
+  'use strict';
+
+  function operatorName(){
+    try{
+      return String(
+        localStorage.getItem('fs_nome') ||
+        sessionStorage.getItem('fsUsuarioLogado') ||
+        localStorage.getItem('fsUsuarioLogado') ||
+        localStorage.getItem('fsPrefUser') ||
+        ''
+      ).trim();
+    }catch(e){ return ''; }
+  }
+
+  function lockHeaderIdentity(){
+    var header=document.getElementById('nomeUsuarioHeader');
+    if(!header) return;
+    var nome=operatorName();
+    if(nome && header.textContent!==nome) header.textContent=nome;
+  }
+
+  function productId(card){
+    if(!card) return '';
+    var input=card.querySelector('[id^="inputCodigoNome-"]');
+    return input ? String(input.id).replace(/^inputCodigoNome-/, '') : '';
+  }
+
+  function setActive(card){
+    if(!card) return;
+    var editor=document.getElementById('editorView');
+    if(!editor) return;
+    var id=productId(card);
+    if(id) window.fsActiveProductId=id;
+    editor.classList.add('fs-has-active-product');
+    editor.querySelectorAll('.produto-item').forEach(function(item){
+      item.classList.toggle('fs-product-active', item===card);
+    });
+  }
+
+  function restoreActive(){
+    var editor=document.getElementById('editorView');
+    if(!editor || !window.fsActiveProductId) return;
+    var input=document.getElementById('inputCodigoNome-'+window.fsActiveProductId);
+    var card=input && input.closest('.produto-item');
+    if(card) setActive(card);
+  }
+
+  function syncDiretoriaMode(){
+    try{
+      var checked=document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked');
+      if(!checked) return;
+      if(window.currentProposalData){
+        window.currentProposalData.exibicao_parcelamento_diretoria=checked.value;
+        if(typeof window.fsGetParcelamentoComplementarState==='function'){
+          window.currentProposalData.parcelamentos_complementares=window.fsGetParcelamentoComplementarState();
+        }
+        if(typeof window.renderVisaoDiretoriaAlcadas==='function'){
+          window.renderVisaoDiretoriaAlcadas(window.currentProposalData);
+        }
+      }
+    }catch(e){ console.warn('[FS] sincronização de parcelamento:',e); }
+  }
+
+  document.addEventListener('focusin',function(ev){
+    var card=ev.target && ev.target.closest ? ev.target.closest('#editorView .produto-item') : null;
+    if(card) setActive(card);
+  },true);
+  document.addEventListener('click',function(ev){
+    var card=ev.target && ev.target.closest ? ev.target.closest('#editorView .produto-item') : null;
+    if(card) setActive(card);
+  },true);
+  document.addEventListener('change',function(ev){
+    if(ev.target && ev.target.matches && ev.target.matches('input[name="fsModoParcelamentoDiretoria"]')){
+      syncDiretoriaMode();
+    }
+  },true);
+
+  document.addEventListener('DOMContentLoaded',function(){
+    lockHeaderIdentity();
+    var editor=document.getElementById('editorView');
+    if(editor){
+      new MutationObserver(function(){ restoreActive(); lockHeaderIdentity(); }).observe(editor,{childList:true,subtree:true});
+    }
+    var seller=document.getElementById('inputVendedorNome');
+    if(seller){
+      ['input','change','blur'].forEach(function(type){ seller.addEventListener(type,function(){ setTimeout(lockHeaderIdentity,0); }); });
+    }
+    setInterval(lockHeaderIdentity,1200);
   });
 })();
 </script>
