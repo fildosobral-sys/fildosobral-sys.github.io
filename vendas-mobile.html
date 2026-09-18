@@ -3220,7 +3220,7 @@ document.addEventListener('DOMContentLoaded', function(){
            <div class="fs-observacao-mini-grid">
             <div>
              <label class="fs-mini-label" for="inputHistoricoTipoValor">Base do valor</label>
-             <select id="inputHistoricoTipoValor" class="fs-mini-input">
+             <select id="inputHistoricoTipoValor" class="fs-mini-input" onchange="fsAtualizarResumoDiretoriaEstruturada(); salvarEstadoFormularioLocal();">
               <option value="">Selecione</option>
               <option value="normal">Preço normal (valor à vista/tabela)</option>
               <option value="final">Valor final (condição atual)</option>
@@ -3232,7 +3232,7 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
             <div>
              <label class="fs-mini-label" for="inputHistoricoParcelasResumo">Parcelas</label>
-             <input id="inputHistoricoParcelasResumo" type="number" min="1" step="1" class="fs-mini-input" placeholder="Ex.: 7">
+             <input id="inputHistoricoParcelasResumo" type="number" oninput="fsAtualizarResumoDiretoriaEstruturada();" onchange="salvarEstadoFormularioLocal();" min="1" step="1" class="fs-mini-input" placeholder="Ex.: 7">
             </div>
             <div>
              <label class="fs-mini-label">Resumo automático</label>
@@ -3261,7 +3261,7 @@ document.addEventListener('DOMContentLoaded', function(){
            <div class="fs-observacao-mini-grid">
             <div>
              <label class="fs-mini-label" for="inputOportunidadeTipoValor">Base do valor</label>
-             <select id="inputOportunidadeTipoValor" class="fs-mini-input">
+             <select id="inputOportunidadeTipoValor" class="fs-mini-input" onchange="fsAtualizarResumoDiretoriaEstruturada(); salvarEstadoFormularioLocal();">
               <option value="">Selecione</option>
               <option value="normal">Preço normal (valor à vista/tabela)</option>
               <option value="final">Valor final (condição atual)</option>
@@ -3273,7 +3273,7 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
             <div>
              <label class="fs-mini-label" for="inputOportunidadeParcelasResumo">Parcelas</label>
-             <input id="inputOportunidadeParcelasResumo" type="number" min="1" step="1" class="fs-mini-input" placeholder="Ex.: 3">
+             <input id="inputOportunidadeParcelasResumo" type="number" oninput="fsAtualizarResumoDiretoriaEstruturada();" onchange="salvarEstadoFormularioLocal();" min="1" step="1" class="fs-mini-input" placeholder="Ex.: 3">
             </div>
             <div>
              <label class="fs-mini-label">Resumo automático</label>
@@ -3975,7 +3975,7 @@ function buscarPropostaPorCodigo() {
       document.getElementById('loading').classList.add('hidden');
       
       // Verifica se já tem nome salvo no localStorage
-      const nomeSalvo = (function(){ try{ return (localStorage.getItem('nomeVendedorLogado') || sessionStorage.getItem('nomeVendedorLogado') || '').trim(); }catch(e){ return ''; }})();
+      const nomeSalvo = (function(){ try{ return (localStorage.getItem('fs_nome') || sessionStorage.getItem('fsUsuarioLogado') || localStorage.getItem('fsUsuarioLogado') || localStorage.getItem('fsPrefUser') || localStorage.getItem('nomeVendedorLogado') || sessionStorage.getItem('nomeVendedorLogado') || '').trim(); }catch(e){ return ''; }})();
         const filialSalva = (function(){ try{ return (localStorage.getItem('fsFilial') || sessionStorage.getItem('fsFilialLogada') || '').trim().toUpperCase(); }catch(e){ return ''; }})();
         const lembrar = !!(nomeSalvo && filialSalva);
       
@@ -3992,7 +3992,7 @@ function buscarPropostaPorCodigo() {
         setDataAtual();
         configurarBuscaGerente();
       try{ fsRefreshLista(); }catch(e){}
-        showToast(`👋 Bem-vindo de volta, ${nomeSalvo}!`, 'success');
+        // Boas-vindas exibidas somente após sincronizar o usuário canônico do cabeçalho.
       } else {
         // Se não tem nome salvo, mostra a tela de boas-vindas
         document.getElementById('welcomeScreen').classList.remove('hidden');
@@ -6309,9 +6309,37 @@ async function salvarProposta() {
     function fsValorAutomaticoResumo(tipo) {
       const t = fsNormalizarTipoResumo(tipo);
       let totals = { normal: 0, final: 0 };
-      try { if (typeof quoteTotals === 'function') totals = quoteTotals(); } catch(e) {}
+      try {
+        if (typeof window.fsQuoteTotals === 'function') {
+          totals = window.fsQuoteTotals() || totals;
+        } else if (typeof quoteTotals === 'function') {
+          totals = quoteTotals() || totals;
+        }
+      } catch(e) {}
+      // Fallback direto sobre os produtos, para o resumo nunca ficar zerado por escopo de script.
+      if (!(Number(totals.normal) > 0) && Array.isArray(window.produtos || (typeof produtos !== 'undefined' ? produtos : null))) {
+        try {
+          var lista = window.produtos || produtos || [];
+          var normal = 0, final = 0;
+          lista.forEach(function(prod){
+            var qtd = Math.max(1, Number(prod.quantidade || 1));
+            var precoNormal = Math.max(0, Number(prod.preco_normal || 0));
+            // Valor final do Resumo Financeiro: usa promoção quando existir; caso contrário, preço normal.
+            // Não aplica alçada/desconto adicional da Diretoria neste resumo de referência.
+            var precoFinal = Math.max(0, Number((typeof fsPrecoPromoEfetivo === 'function' ? fsPrecoPromoEfetivo(prod) : (prod.preco_promo || prod.preco_normal)) || 0));
+            normal += precoNormal * qtd;
+            final += precoFinal * qtd;
+          });
+          totals.normal = normal;
+          totals.promo = final;
+          totals.final = final;
+        } catch(_) {}
+      }
+      // Fonte canônica do mini resumo: Resumo Financeiro ANTES de qualquer alçada extraordinária.
+      // Preço normal = total normal. Valor final = condição comercial atual (promo efetiva + itens sem promoção),
+      // representada por totals.promo. Nunca usar totals.final aqui, pois ele pode incluir desconto adicional da Diretoria.
       if (t === 'normal') return Math.max(0, Number(totals.normal || 0));
-      if (t === 'final') return Math.max(0, Number(totals.final || 0));
+      if (t === 'final') return Math.max(0, Number(totals.promo || 0));
       return 0;
     }
 
@@ -10836,7 +10864,7 @@ const html = `
         document.getElementById('loading').classList.add('hidden');
 
         // Verifica se já tem nome salvo no localStorage
-        const nomeSalvo = (function(){ try{ return (localStorage.getItem('nomeVendedorLogado') || sessionStorage.getItem('nomeVendedorLogado') || '').trim(); }catch(e){ return ''; }})();
+        const nomeSalvo = (function(){ try{ return (localStorage.getItem('fs_nome') || sessionStorage.getItem('fsUsuarioLogado') || localStorage.getItem('fsUsuarioLogado') || localStorage.getItem('fsPrefUser') || localStorage.getItem('nomeVendedorLogado') || sessionStorage.getItem('nomeVendedorLogado') || '').trim(); }catch(e){ return ''; }})();
         const filialSalva = (function(){ try{ return (localStorage.getItem('fsFilial') || sessionStorage.getItem('fsFilialLogada') || '').trim().toUpperCase(); }catch(e){ return ''; }})();
         const lembrar = !!(nomeSalvo && filialSalva);
 
@@ -10854,7 +10882,7 @@ const html = `
           // Carrega/atualiza lista offline sempre que entrar no app
           try { fsRefreshLista(); } catch (e) { console.warn('[FS] fsRefreshLista falhou:', e); }
 
-          showToast(`👋 Bem-vindo de volta, ${nomeSalvo}!`, 'success');
+          // Boas-vindas exibidas somente após sincronizar o usuário canônico do cabeçalho.
         } else {
           // Se não tem nome salvo, mostra a tela de boas-vindas
           document.getElementById('welcomeScreen').classList.remove('hidden');
@@ -19342,6 +19370,7 @@ document.addEventListener('DOMContentLoaded', function(){
     totals.totalDiscount = totals.commercial + totals.additional;
     return totals;
   }
+  window.fsQuoteTotals = quoteTotals;
 
   function ensureQuotePanels(){
     var summary = document.getElementById('resumoGeralContainer');
@@ -20931,6 +20960,51 @@ document.addEventListener('DOMContentLoaded', function(){
     window.showToast=wrapped;
   }
   document.addEventListener('DOMContentLoaded',function(){ syncCanonical(); wrapToast(); setTimeout(function(){syncCanonical();wrapToast();},250); setTimeout(function(){syncCanonical();wrapToast();},1200); });
+})();
+</script>
+
+<script id="fs-welcome-current-user-v12">
+(function(){
+  'use strict';
+  function currentUser(){
+    try{
+      var h=document.getElementById('nomeUsuarioHeader');
+      var headerName=h ? String(h.textContent||'').trim() : '';
+      if(headerName && !/usu[aá]rio/i.test(headerName)) return headerName;
+      return String(
+        sessionStorage.getItem('fsUsuarioLogado') ||
+        sessionStorage.getItem('nomeVendedorLogado') ||
+        localStorage.getItem('fsPrefUser') ||
+        localStorage.getItem('fsUsuarioLogado') ||
+        localStorage.getItem('fs_nome_vendedor') ||
+        localStorage.getItem('nomeVendedorLogado') ||
+        localStorage.getItem('fs_nome') || ''
+      ).trim();
+    }catch(e){ return ''; }
+  }
+  function normalizeWelcome(){
+    try{
+      var name=currentUser();
+      if(!name) return;
+      var h=document.getElementById('nomeUsuarioHeader');
+      if(h) h.textContent=name;
+    }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    normalizeWelcome();
+    setTimeout(normalizeWelcome,100);
+    setTimeout(function(){
+      normalizeWelcome();
+      try{
+        var nome=currentUser();
+        if(nome && !sessionStorage.getItem('fsWelcomeShownThisPage') && typeof window.showToast==='function'){
+          sessionStorage.setItem('fsWelcomeShownThisPage','1');
+          window.showToast('👋 Bem-vindo de volta, '+nome+'!','success');
+        }
+      }catch(e){}
+    },800);
+  });
+  setInterval(normalizeWelcome,1800);
 })();
 </script>
 </body>
