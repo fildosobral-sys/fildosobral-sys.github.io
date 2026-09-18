@@ -3222,14 +3222,13 @@ document.addEventListener('DOMContentLoaded', function(){
              <label class="fs-mini-label" for="inputHistoricoTipoValor">Base do valor</label>
              <select id="inputHistoricoTipoValor" class="fs-mini-input">
               <option value="">Selecione</option>
-              <option value="promocional">Promocional</option>
-              <option value="tabela">Tabela</option>
-              <option value="avista">À vista</option>
+              <option value="normal">Preço normal (valor à vista/tabela)</option>
+              <option value="final">Valor final (condição atual)</option>
              </select>
             </div>
             <div>
              <label class="fs-mini-label" for="inputHistoricoValorResumo">Valor</label>
-             <input id="inputHistoricoValorResumo" type="text" inputmode="decimal" class="fs-mini-input" placeholder="R$ 0,00">
+             <input id="inputHistoricoValorResumo" type="text" class="fs-mini-input fs-mini-input-auto" placeholder="Selecionado automaticamente" readonly>
             </div>
             <div>
              <label class="fs-mini-label" for="inputHistoricoParcelasResumo">Parcelas</label>
@@ -3264,14 +3263,13 @@ document.addEventListener('DOMContentLoaded', function(){
              <label class="fs-mini-label" for="inputOportunidadeTipoValor">Base do valor</label>
              <select id="inputOportunidadeTipoValor" class="fs-mini-input">
               <option value="">Selecione</option>
-              <option value="promocional">Promocional</option>
-              <option value="tabela">Tabela</option>
-              <option value="avista">À vista</option>
+              <option value="normal">Preço normal (valor à vista/tabela)</option>
+              <option value="final">Valor final (condição atual)</option>
              </select>
             </div>
             <div>
              <label class="fs-mini-label" for="inputOportunidadeValorResumo">Valor</label>
-             <input id="inputOportunidadeValorResumo" type="text" inputmode="decimal" class="fs-mini-input" placeholder="R$ 0,00">
+             <input id="inputOportunidadeValorResumo" type="text" class="fs-mini-input fs-mini-input-auto" placeholder="Selecionado automaticamente" readonly>
             </div>
             <div>
              <label class="fs-mini-label" for="inputOportunidadeParcelasResumo">Parcelas</label>
@@ -6292,7 +6290,7 @@ async function salvarProposta() {
 
 
     function fsTextoTipoResumo(tipo) {
-      const mapa = { promocional: 'Preço promocional', tabela: 'Preço de tabela', avista: 'Preço à vista' };
+      const mapa = { normal: 'Preço normal', final: 'Valor final', promocional: 'Valor final', tabela: 'Preço normal', avista: 'Preço normal' };
       return mapa[String(tipo || '').toLowerCase()] || 'Valor informado';
     }
 
@@ -6301,16 +6299,35 @@ async function salvarProposta() {
       return (typeof money === 'function') ? money(n) : formatarMoedaBR(n);
     }
 
+    function fsNormalizarTipoResumo(tipo) {
+      tipo = String(tipo || '').toLowerCase();
+      if (tipo === 'tabela' || tipo === 'avista') return 'normal';
+      if (tipo === 'promocional') return 'final';
+      return tipo;
+    }
+
+    function fsValorAutomaticoResumo(tipo) {
+      const t = fsNormalizarTipoResumo(tipo);
+      let totals = { normal: 0, final: 0 };
+      try { if (typeof quoteTotals === 'function') totals = quoteTotals(); } catch(e) {}
+      if (t === 'normal') return Math.max(0, Number(totals.normal || 0));
+      if (t === 'final') return Math.max(0, Number(totals.final || 0));
+      return 0;
+    }
+
     function fsResumoNegociacaoEstruturada(prefixo, previewId) {
-      const tipo = ((document.getElementById('input' + prefixo + 'TipoValor') || {}).value || '').trim();
+      const tipoEl = document.getElementById('input' + prefixo + 'TipoValor');
       const valorEl = document.getElementById('input' + prefixo + 'ValorResumo');
       const parcelasEl = document.getElementById('input' + prefixo + 'ParcelasResumo');
       const box = document.getElementById(previewId);
       if (!box) return;
-      const valor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valorEl && valorEl.value) : 0;
+      let tipo = fsNormalizarTipoResumo((tipoEl || {}).value || '');
+      if (tipoEl && tipoEl.value !== tipo && (tipo === 'normal' || tipo === 'final')) tipoEl.value = tipo;
+      const valor = fsValorAutomaticoResumo(tipo);
+      if (valorEl) valorEl.value = tipo ? fsMoedaOuZero(valor) : '';
       const parcelas = Math.max(0, parseInt(parcelasEl && parcelasEl.value, 10) || 0);
-      if (valor <= 0 && parcelas <= 0 && !tipo) {
-        box.innerHTML = 'Preencha valor e parcelas para gerar o resumo.';
+      if (!tipo) {
+        box.innerHTML = 'Selecione Preço normal ou Valor final. O valor será preenchido automaticamente.';
         return;
       }
       const parcela = parcelas > 0 ? valor / parcelas : 0;
@@ -7354,7 +7371,14 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
     }
 
     function fsRenderResumoCondicaoNegocio(tipo, valor, parcelas, textoExtra) {
-      const nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0;
+      tipo = fsNormalizarTipoResumo(tipo);
+      let nValor = 0;
+      try {
+        const totaisAtuais = (typeof quoteTotals === 'function') ? quoteTotals() : null;
+        if (tipo === 'normal' && totaisAtuais) nValor = Number(totaisAtuais.normal || 0);
+        else if (tipo === 'final' && totaisAtuais) nValor = Number(totaisAtuais.final || 0);
+        else nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0;
+      } catch(e) { nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0; }
       const nParcelas = Math.max(0, parseInt(parcelas, 10) || 0);
       const parcelaMedia = nParcelas > 0 ? nValor / nParcelas : 0;
       const temResumo = nValor > 0 || nParcelas > 0 || String(tipo || '').trim();
@@ -19899,7 +19923,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .fs-observacao-mini-card-title{font-size:12px;font-weight:800;color:#334155;margin-bottom:10px}
 .fs-observacao-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .fs-mini-label{display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px}
-.fs-mini-input{width:100%;min-height:40px;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:13px}
+.fs-mini-input{width:100%;min-height:40px;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:13px}.fs-mini-input-auto[readonly]{background:#f8fafc;color:#0f172a;font-weight:800;cursor:default}
 .fs-mini-preview-box{border:1px dashed #bfdbfe;border-radius:12px;background:#f8fbff;padding:10px;color:#1e3a8a;font-size:12px;line-height:1.45;min-height:42px}
 .fs-mini-inline-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .fs-mini-inline-grid>div,.fs-card-mini-resumo>div{background:#fff;border:1px solid #dbeafe;border-radius:10px;padding:8px 10px}
@@ -20873,6 +20897,42 @@ document.addEventListener('DOMContentLoaded', function(){
 .fs-condicao-sistema-chip strong{font-size:10px;line-height:1.3;color:#1e3a8a}
 </style>
 
+
+<script id="fs-canonical-welcome-user-v1">
+(function(){
+  'use strict';
+  function currentOperator(){
+    try{
+      var header=document.getElementById('nomeUsuarioHeader');
+      var fromHeader=header ? String(header.textContent||'').trim() : '';
+      var fromSession=String(sessionStorage.getItem('fsUsuarioLogado')||sessionStorage.getItem('nomeVendedorLogado')||'').trim();
+      var fromPref=String(localStorage.getItem('fsPrefUser')||'').trim();
+      var fromLocal=String(localStorage.getItem('nomeVendedorLogado')||localStorage.getItem('fs_nome')||'').trim();
+      return fromHeader && !/usu[aá]rio/i.test(fromHeader) ? fromHeader : (fromSession || fromPref || fromLocal);
+    }catch(e){ return ''; }
+  }
+  function syncCanonical(){
+    var nome=currentOperator();
+    if(!nome) return;
+    try{ localStorage.setItem('nomeVendedorLogado',nome); sessionStorage.setItem('nomeVendedorLogado',nome); }catch(e){}
+    try{ var h=document.getElementById('nomeUsuarioHeader'); if(h) h.textContent=nome; }catch(e){}
+  }
+  function wrapToast(){
+    if(typeof window.showToast!=='function' || window.showToast.__fsCanonicalWelcome) return;
+    var base=window.showToast;
+    var wrapped=function(msg,type){
+      if(typeof msg==='string' && /bem-vindo/i.test(msg)){
+        var nome=currentOperator();
+        if(nome) msg='👋 Bem-vindo de volta, '+nome+'!';
+      }
+      return base.call(this,msg,type);
+    };
+    wrapped.__fsCanonicalWelcome=true;
+    window.showToast=wrapped;
+  }
+  document.addEventListener('DOMContentLoaded',function(){ syncCanonical(); wrapToast(); setTimeout(function(){syncCanonical();wrapToast();},250); setTimeout(function(){syncCanonical();wrapToast();},1200); });
+})();
+</script>
 </body>
 </html>
 
