@@ -19182,6 +19182,44 @@ document.addEventListener('DOMContentLoaded', function(){
     try{ scheduleDraftSave(); }catch(e){}
   };
 
+  window.fsToggleInterestCard = function(tipo, expandir){
+    try{
+      var cards = Array.from(document.querySelectorAll('#fsInterestTables .fs-interest-table-card'));
+      var card = document.getElementById('fsInterestCard-' + tipo);
+      if(!card) return;
+      var abrir = (typeof expandir === 'boolean') ? expandir : !card.classList.contains('fs-interest-card-expanded');
+      cards.forEach(function(c){
+        var expandBtn = c.querySelector('.fs-interest-expand-btn');
+        var closeBtn = c.querySelector('.fs-interest-close-btn');
+        c.classList.remove('fs-interest-card-expanded');
+        if(expandBtn) expandBtn.classList.remove('hidden');
+        if(closeBtn) closeBtn.classList.add('hidden');
+      });
+      if(abrir){
+        card.classList.add('fs-interest-card-expanded');
+        var ebtn = card.querySelector('.fs-interest-expand-btn');
+        var cbtn = card.querySelector('.fs-interest-close-btn');
+        if(ebtn) ebtn.classList.add('hidden');
+        if(cbtn) cbtn.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }else{
+        document.body.style.overflow = '';
+      }
+    }catch(e){}
+  };
+
+  document.addEventListener('keydown', function(ev){
+    if(ev.key === 'Escape'){
+      try{
+        var aberto = document.querySelector('#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded');
+        if(aberto){
+          var tipo = aberto.id.replace('fsInterestCard-','');
+          window.fsToggleInterestCard(tipo,false);
+        }
+      }catch(e){}
+    }
+  });
+
   function tableFor(tipo, title, factors, normalTotal, promoTotal){
     var state = fsGetParcelamentoComplementarState();
     var entrada = Math.max(0, Number(state[tipo] && state[tipo].entrada || 0));
@@ -19201,10 +19239,14 @@ document.addEventListener('DOMContentLoaded', function(){
         '<td><button type="button" class="fs-interest-select-btn '+(isSelected?'is-selected':'')+'" onclick="event.stopPropagation();fsSelecionarParcelamentoComplementar(\''+tipo+'\','+installments+','+Number(factor)+')">'+(isSelected?'✓':'○')+'</button></td>' +
       '</tr>';
     }).join('');
-    return '<div class="fs-interest-table-card">' +
+    return '<div class="fs-interest-table-card" id="fsInterestCard-'+tipo+'">' +
       '<div class="fs-interest-toolbar">' +
         '<h4 class="font-bold text-gray-800">' + title + '</h4>' +
-        '<label class="fs-interest-entry"><span>Entrada</span><input type="text" inputmode="decimal" value="'+fsFormatMoneyInput(entrada)+'" onfocus="this.select()" onchange="fsAtualizarEntradaParcelamento(\''+tipo+'\',this)"></label>' +
+        '<div class="fs-interest-toolbar-actions">' +
+          '<label class="fs-interest-entry"><span>Entrada</span><input type="text" inputmode="decimal" value="'+fsFormatMoneyInput(entrada)+'" onfocus="this.select()" onchange="fsAtualizarEntradaParcelamento(\''+tipo+'\',this)"></label>' +
+          '<button type="button" class="fs-interest-expand-btn" onclick="event.stopPropagation();fsToggleInterestCard(\''+tipo+'\',true)">⛶ Expandir</button>' +
+          '<button type="button" class="fs-interest-close-btn hidden" onclick="event.stopPropagation();fsToggleInterestCard(\''+tipo+'\',false)">✕ Fechar</button>' +
+        '</div>' +
       '</div>' +
       '<div class="fs-interest-scroll">' +
         '<table class="fs-interest-table fs-interest-table-v2">' +
@@ -20456,6 +20498,36 @@ document.addEventListener('DOMContentLoaded', function(){
   setTimeout(refreshProductStates,600);
 })();
 </script>
+
+
+<style id="fs-final-ux-v7">
+/* Destaque mais forte do item ativo e diferenciação clara dos preenchidos */
+#editorView .produto-item{transition:opacity .18s ease,transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease,filter .18s ease!important}
+#editorView .produto-item.fs-product-completed:not(.fs-product-active){background:linear-gradient(180deg,#edf2f7 0%,#e2e8f0 100%)!important;border:2px solid #94a3b8!important;box-shadow:inset 5px 0 0 #94a3b8,0 10px 22px rgba(15,23,42,.08)!important;opacity:.96!important}
+#editorView .produto-item.fs-product-active{background:linear-gradient(180deg,#dcfce7 0%,#effcf3 58%,#ffffff 100%)!important;border:2px solid #16a34a!important;box-shadow:inset 7px 0 0 #16a34a,0 0 0 4px rgba(34,197,94,.16),0 18px 38px rgba(22,163,74,.20)!important;opacity:1!important;transform:translateY(-3px)!important;filter:saturate(1.02)!important}
+#editorView.fs-has-active-product .produto-item:not(.fs-product-active){opacity:.52!important;filter:saturate(.72)!important}
+#editorView .produto-item.fs-product-active .fs-item-index-badge{background:#16a34a!important;color:#fff!important;box-shadow:0 6px 16px rgba(22,163,74,.25)!important}
+#editorView .produto-item.fs-product-completed:not(.fs-product-active) .fs-item-index-badge{background:#cbd5e1!important;color:#334155!important}
+@media(max-width:767px){#editorView .produto-item.fs-product-active{transform:translateY(-1px)!important}#editorView.fs-has-active-product .produto-item:not(.fs-product-active){opacity:.62!important}}
+
+/* Parcelamentos: fonte maior, hover verde na linha e expansão por tabela */
+#fsInterestTables .fs-interest-toolbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#fsInterestTables .fs-interest-expand-btn,#fsInterestTables .fs-interest-close-btn{height:36px;padding:0 12px;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(15,23,42,.10)}
+#fsInterestTables .fs-interest-expand-btn{background:#dbeafe;color:#1d4ed8}
+#fsInterestTables .fs-interest-close-btn{background:#ef4444;color:#fff}
+#fsInterestTables .fs-interest-table.fs-interest-table-v2{font-size:9.6px!important}
+#fsInterestTables .fs-interest-table-v2 th,#fsInterestTables .fs-interest-table-v2 td{padding:6px 4px!important;font-size:9.6px!important;line-height:1.18!important}
+#fsInterestTables .fs-interest-table-v2 th{font-size:8.7px!important}
+#fsInterestTables .fs-interest-table-v2 tbody tr:hover td{background:#dcfce7!important;box-shadow:inset 0 1px #86efac,inset 0 -1px #86efac}
+#fsInterestTables .fs-interest-table-v2 tbody tr:hover td:first-child{background:#bbf7d0!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded{position:fixed!important;inset:14px!important;z-index:99998!important;background:#fff!important;border:2px solid #bfdbfe!important;border-radius:18px!important;padding:14px!important;box-shadow:0 24px 60px rgba(15,23,42,.22)!important;overflow:auto!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-scroll{overflow:auto!important;max-height:calc(100vh - 148px)!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-table.fs-interest-table-v2{font-size:11px!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-table-v2 th,#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-table-v2 td{font-size:11px!important;padding:7px 5px!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-table-v2 th{font-size:10px!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-toolbar{position:sticky!important;top:0!important;background:#fff!important;z-index:2!important;padding-bottom:8px!important}
+@media(max-width:900px){#fsInterestTables .fs-interest-toolbar-actions{width:100%;justify-content:space-between}#fsInterestTables .fs-interest-expand-btn,#fsInterestTables .fs-interest-close-btn{flex:0 0 auto}}
+</style>
 
 </body>
 </html>
