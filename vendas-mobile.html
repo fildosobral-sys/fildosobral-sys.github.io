@@ -3214,21 +3214,30 @@ document.addEventListener('DOMContentLoaded', function(){
        </div><!-- Observações Internas (apenas Diretoria) -->
        <div id="secaoObservacoesInternas" class="mb-8 bg-yellow-50 p-6 rounded-lg border border-yellow-200 hidden">
         <div class="space-y-4">
-         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputHistorico">Solicitante/Informações</label> <textarea id="inputHistorico" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Descreva as informações do solicitante..."></textarea>
+         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputHistorico">Solicitação do Cliente</label> <textarea id="inputHistorico" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Descreva a solicitação do cliente..."></textarea>
          </div>
          <div id="campoParcelamentoCarne" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-2" for="inputOpcoesParcelamentoCarne">📝 Carnê - Sem Juros</label> <textarea id="inputOpcoesParcelamentoCarne" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ex: 1x, 2x, 3x, 4x, 5x sem juros"></textarea>
          </div>
          <div id="campoParcelamentoCartao" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-2" for="inputOpcoesParcelamentoCartao">💳 Cart����o - Sem Juros</label> <textarea id="inputOpcoesParcelamentoCartao" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ex: 1x, 2x, 3x, 4x, 5x, 6x sem juros"></textarea>
          </div>
-         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputSimulacao">Simulação da Gerência 💼</label> <textarea id="inputSimulacao" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputSimulacao">Condição Comercial Atual</label> <textarea id="inputSimulacao" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
          </div>
-         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputOportunidades">Observações importantes</label> <textarea id="inputOportunidades" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputOportunidades">Sugestão da Gerência</label> <textarea id="inputOportunidades" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
          </div>
          <div class="mt-4 flex items-center gap-2">
           <input id="chkMostrarParcelamentoSemJuros" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
           <label for="chkMostrarParcelamentoSemJuros" class="text-sm text-gray-700">
            Mostrar bloco "Parcelamento Sem Juros" na proposta
           </label>
+         </div>
+         <div class="mt-4 fs-diretoria-parcelamento-mode">
+          <div class="text-sm font-semibold text-gray-700 mb-2">📊 Parcelamento com juros na proposta de Planos e Cotações</div>
+          <div class="fs-diretoria-mode-options" role="radiogroup" aria-label="Forma de exibição do parcelamento na proposta">
+           <label><input type="radio" name="fsModoParcelamentoDiretoria" value="nenhum" checked><span>Não incluir</span></label>
+           <label><input type="radio" name="fsModoParcelamentoDiretoria" value="parcela"><span>Parcela selecionada</span></label>
+           <label><input type="radio" name="fsModoParcelamentoDiretoria" value="tabela"><span>Tabela completa</span></label>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">“Parcela selecionada” usa as linhas escolhidas na tabela de fatores. “Tabela completa” mostra Carnê e Cartão lado a lado.</p>
          </div>
         </div>
        </div><!-- Botões de Ação -->
@@ -4684,7 +4693,7 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
           </div>
 
           <!-- Ações do Produto -->
-          <div class="mt-4 mb-4 ${isExpanded ? '' : 'hidden'}">
+          <div class="mt-4 mb-4 fs-desktop-row2 ${isExpanded ? '' : 'hidden'}">
             <div class="fs-busca-colar-row-real">
               <button
                 type="button"
@@ -4701,28 +4710,37 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
                 Colar da ZENIR
               </button>
             </div>
+            <div class="fs-quantidade-inline-card">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade</label>
+              <input type="number"
+                     min="1"
+                     value="${p.quantidade || 1}"
+                     onchange="event.stopPropagation(); updateQuantidade('${p.id}', this.value)"
+                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent fs-quantidade-input"
+                     placeholder="1" />
+            </div>
           </div>
 
           <!-- Conteúdo Expansível -->
           <div id="produto-content-${p.id}" class="${isExpanded ? '' : 'hidden'}">
-<div class="mb-4">
-  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade</label>
-  <input type="number"
-         min="1"
-         value="${p.quantidade || 1}"
-         onchange="event.stopPropagation(); updateQuantidade('${p.id}', this.value)"
-         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-         placeholder="1" />
-</div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
+            <div class="fs-desktop-core-grid mb-4">
+              <div class="fs-preco-normal-block">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Preço Normal (R$)</label>
                 <input type="text" id="input-preco-normal-${p.id}" value="${formatarMoeda(p.preco_normal)}" onfocus="limparMoeda(this)" onblur="aplicarMoeda(this, '${p.id}', 'preco_normal')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="R$ 0,00">
               </div>
-              <div>
+              <div class="fs-preco-promo-block">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Preço Promocional (R$)</label>
                 <input type="text" id="input-preco-promo-${p.id}" value="${formatarMoeda(p.preco_promo)}" onfocus="limparMoeda(this)" onblur="aplicarMoeda(this, '${p.id}', 'preco_promo')" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="R$ 0,00">
+              </div>
+              <div class="fs-modalidade-block">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Modalidade de Pagamento</label>
+                <select onchange="updateModalidade('${p.id}', this.value)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="" ${!p.modalidade ? 'selected' : ''} disabled>Selecione</option>
+                  <option value="avista" ${p.modalidade === 'avista' ? 'selected' : ''}>Dinheiro</option>
+                  <option value="pix" ${p.modalidade === 'pix' ? 'selected' : ''}>Pix</option>
+                  <option value="carne" ${p.modalidade === 'carne' ? 'selected' : ''}>Carnê</option>
+                  <option value="cartao" ${p.modalidade === 'cartao' ? 'selected' : ''}>Cartão</option>
+                </select>
               </div>
             </div>
 
@@ -4795,19 +4813,8 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
               </div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Modalidade de Pagamento</label>
-                <select onchange="updateModalidade('${p.id}', this.value)" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                  <option value="" ${!p.modalidade ? 'selected' : ''} disabled>Selecione</option>
-                  <option value="avista" ${p.modalidade === 'avista' ? 'selected' : ''}>Dinheiro</option>
-                  <option value="pix" ${p.modalidade === 'pix' ? 'selected' : ''}>Pix</option>
-                  <option value="carne" ${p.modalidade === 'carne' ? 'selected' : ''}>Carnê</option>
-                  <option value="cartao" ${p.modalidade === 'cartao' ? 'selected' : ''}>Cartão</option>
-                </select>
-              </div>
-
-              ${(p.modalidade === 'cartao' || p.modalidade === 'carne') ? `
+            ${(p.modalidade === 'cartao' || p.modalidade === 'carne') ? `
+            <div class="fs-payment-extras-grid mb-4">
               <div class="fs-entrada-bloco">
                 <div class="fs-entrada-topo">
                   <label class="text-sm font-medium text-gray-700">Entrada</label>
@@ -4818,10 +4825,8 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
                 </div>
                 <input type="text" id="input-entrada-${p.id}" value="${formatarMoeda(p.entrada_valor || 0)}" onfocus="limparMoeda(this)" onblur="updateEntradaValor('${p.id}', this.value)" class="fs-entrada-valor w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${p.entrada_ativa ? '' : 'opacity-50'}" placeholder="R$ 0,00" ${p.entrada_ativa ? '' : 'disabled'}>
               </div>
-              ` : ''}
 
-              ${(p.modalidade === 'cartao' || p.modalidade === 'carne') ? `
-              <div>
+              <div class="fs-parcelas-bloco">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Número de Parcelas</label>
                 <div class="grid grid-cols-2 gap-2 items-stretch fs-parcelas-grid">
                   <select onchange="updateProduto('${p.id}', 'parcelas', parseInt(this.value))" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
@@ -4846,8 +4851,8 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
                   </label>
                 </div>
               </div>
-              ` : ''}
             </div>
+            ` : ''}
 
 
             <!-- Resumo Financeiro do Produto -->
@@ -5931,6 +5936,7 @@ async function salvarProposta() {
         simulacao_perdas_ganhos: document.getElementById('inputSimulacao').value,
         oportunidades_melhoria: document.getElementById('inputOportunidades').value,
         parcelamentos_complementares: (typeof fsGetParcelamentoComplementarState === 'function' ? fsGetParcelamentoComplementarState() : (window.fsParcelamentoComplementarDraft || null)),
+        exibicao_parcelamento_diretoria: ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum'),
         mostrar_parcelamento_sem_juros: (document.getElementById('chkMostrarParcelamentoSemJuros')?.checked === true),
 
         // Campos de resumo da modalidade
@@ -6119,7 +6125,8 @@ async function salvarProposta() {
           opcoes_parcelamento_carne: getVal('inputOpcoesParcelamentoCarne'),
           opcoes_parcelamento_cartao: getVal('inputOpcoesParcelamentoCartao'),
           simulacao_perdas_ganhos: getVal('inputSimulacao'),
-          oportunidades_melhoria: getVal('inputOportunidades')
+          oportunidades_melhoria: getVal('inputOportunidades'),
+          exibicao_parcelamento_diretoria: ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum')
         };
 
         localStorage.setItem(FORM_STATE_KEY, JSON.stringify(state));
@@ -6153,6 +6160,7 @@ async function salvarProposta() {
         setValue('inputOpcoesParcelamentoCartao', state.opcoes_parcelamento_cartao);
         setValue('inputSimulacao', state.simulacao_perdas_ganhos);
         setValue('inputOportunidades', state.oportunidades_melhoria);
+        try { const r=document.querySelector('input[name="fsModoParcelamentoDiretoria"][value="'+(state.exibicao_parcelamento_diretoria||'nenhum')+'"]'); if(r) r.checked=true; } catch(_) {}
       } catch (e) {
         console.warn('Erro ao carregar estado local do formulário', e);
       }
@@ -6182,6 +6190,7 @@ async function salvarProposta() {
         }
       });
 
+      document.querySelectorAll('input[name="fsModoParcelamentoDiretoria"]').forEach((el) => el.addEventListener('change', salvarEstadoFormularioLocal));
       window.addEventListener('beforeunload', salvarEstadoFormularioLocal);
     }
 
@@ -6217,7 +6226,8 @@ async function salvarProposta() {
         opcoes_parcelamento_cartao: document.getElementById('inputOpcoesParcelamentoCartao').value,
         simulacao_perdas_ganhos: document.getElementById('inputSimulacao').value,
         oportunidades_melhoria: document.getElementById('inputOportunidades').value,
-        parcelamentos_complementares: (typeof fsGetParcelamentoComplementarState === 'function' ? fsGetParcelamentoComplementarState() : (window.fsParcelamentoComplementarDraft || null))
+        parcelamentos_complementares: (typeof fsGetParcelamentoComplementarState === 'function' ? fsGetParcelamentoComplementarState() : (window.fsParcelamentoComplementarDraft || null)),
+        exibicao_parcelamento_diretoria: ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum')
       };
 
       renderVisaoCliente(currentProposalData);
@@ -7217,48 +7227,67 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
         const srcPc = data.parcelamentos_complementares || (typeof fsGetParcelamentoComplementarState === 'function' ? fsGetParcelamentoComplementarState() : null);
         parcelamentosComplementares = (typeof fsNormalizarParcelamentoComplementar === 'function') ? fsNormalizarParcelamentoComplementar(srcPc) : (srcPc || parcelamentosComplementares);
       }catch(e){}
+      const modoParcelamentoDiretoria = String(data.exibicao_parcelamento_diretoria || 'nenhum');
       const pcSelecionados = ['carne','cartao'].map(tipo => ({tipo, d: parcelamentosComplementares && parcelamentosComplementares[tipo] ? parcelamentosComplementares[tipo].selecionado : null})).filter(x => x.d);
-      const blocoParcelamentoComplementar = pcSelecionados.length ? `
-        <div class="fs-parcelamento-complementar-print">
-          <div class="fs-pc-print-title">
-            <span>💳 Opção de Parcelamento com Juros Selecionada</span>
-            <small>Condição complementar à proposta principal</small>
-          </div>
-          <div class="fs-pc-print-table-wrap">
-            <table class="fs-pc-print-table">
-              <thead>
-                <tr>
-                  <th>Modalidade</th>
-                  <th>Plano</th>
-                  <th>Entrada</th>
-                  <th>Parcela<br>normal</th>
-                  <th>Parcela<br>promocional</th>
-                  <th>Economia por<br>parcela</th>
-                  <th>Total<br>normal</th>
-                  <th>Total<br>promocional</th>
-                  <th>Economia<br>total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${pcSelecionados.map(x => {
-                  const d = x.d || {};
-                  const nome = x.tipo === 'carne' ? 'Carnê' : 'Cartão';
-                  return `<tr>
-                    <td><strong>${nome}</strong></td>
-                    <td><strong>${Number(d.parcelas||0)}x</strong></td>
-                    <td>${formatarMoedaBR(Number(d.entrada||0))}</td>
-                    <td>${formatarMoedaBR(Number(d.parcela_normal||0))}</td>
-                    <td class="fs-pc-green">${formatarMoedaBR(Number(d.parcela_promocional||0))}</td>
-                    <td class="fs-pc-blue">${formatarMoedaBR(Number(d.economia_parcela||0))}</td>
-                    <td>${formatarMoedaBR(Number(d.total_normal||0))}</td>
-                    <td class="fs-pc-green">${formatarMoedaBR(Number(d.total_promocional||0))}</td>
-                    <td class="fs-pc-green"><strong>${formatarMoedaBR(Number(d.economia_total||0))}</strong></td>
-                  </tr>`;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>` : '';
+      const calcTaxaPct = (d, base) => {
+        const entrada = Math.max(0, Number(d && d.entrada || 0));
+        const totalComEntrada = entrada + Math.max(0, Number(d && d.total_promocional || 0));
+        return base > 0 ? Math.max(0, ((totalComEntrada / base) - 1) * 100) : 0;
+      };
+      const montarLinhaSelecionada = (x) => {
+        const d = x.d || {};
+        const nome = x.tipo === 'carne' ? 'Carnê' : 'Cartão';
+        const basePromo = Math.max(0, Number(totais.totalPromo || 0));
+        const taxa = calcTaxaPct(d, basePromo);
+        const totalFinalPc = Math.max(0, Number(d.entrada||0)) + Math.max(0, Number(d.total_promocional||0));
+        return `<tr>
+          <td><strong>${nome}</strong></td>
+          <td><strong>${Number(d.parcelas||0)}x</strong></td>
+          <td>${formatarMoedaBR(Number(d.entrada||0))}</td>
+          <td class="fs-pc-green"><strong>${formatarMoedaBR(Number(d.parcela_promocional||0))}</strong></td>
+          <td>${taxa.toFixed(2).replace('.',',')}%</td>
+          <td class="fs-pc-green"><strong>${formatarMoedaBR(totalFinalPc)}</strong></td>
+        </tr>`;
+      };
+      let blocoParcelamentoComplementar = '';
+      if (modoParcelamentoDiretoria === 'parcela' && pcSelecionados.length) {
+        blocoParcelamentoComplementar = `
+          <div class="fs-parcelamento-complementar-print fs-pc-selected-print">
+            <div class="fs-pc-print-title"><span>💳 Condição de Parcelamento Solicitada</span><small>Carnê / Cartão conforme seleção</small></div>
+            <div class="fs-pc-print-table-wrap"><table class="fs-pc-print-table"><thead><tr>
+              <th>Modalidade</th><th>Plano</th><th>Entrada</th><th>Parcela</th><th>Juros</th><th>Valor final</th>
+            </tr></thead><tbody>${pcSelecionados.map(montarLinhaSelecionada).join('')}</tbody></table></div>
+          </div>`;
+      } else if (modoParcelamentoDiretoria === 'tabela') {
+        let carneFatores = [1.0690,0.5523,0.3804,0.2946,0.2432,0.2091,0.1849,0.1668,0.1528,0.1417,0.1327,0.1252];
+        let cartaoFatores = [1.0292,0.5220,0.3530,0.2685,0.2179,0.1841,0.1600,0.1420,0.1280,0.1168,0.1076,0.1000];
+        try { if (Array.isArray(TAXAS_CARNE)) carneFatores = TAXAS_CARNE.slice(0,12); } catch(e) {}
+        try { if (Array.isArray(TAXAS_CARTAO)) cartaoFatores = TAXAS_CARTAO.slice(0,12); } catch(e) {}
+        const baseNormal = Math.max(0, Number(totais.totalNormal || 0));
+        const basePromo = Math.max(0, Number(totais.totalPromo || 0));
+        const tabelaCompacta = (tipo, titulo, fatores) => {
+          const entrada = Math.max(0, Number(parcelamentosComplementares && parcelamentosComplementares[tipo] && parcelamentosComplementares[tipo].entrada || 0));
+          const linhas = fatores.map((fator, idx) => {
+            const n = idx + 1;
+            const totalPlano = Math.max(0, basePromo * Number(fator||0) * n);
+            const saldo = Math.max(0, totalPlano - entrada);
+            const parcela = n ? saldo / n : 0;
+            const totalFinalPc = entrada + saldo;
+            const juros = basePromo > 0 ? Math.max(0, ((totalFinalPc/basePromo)-1)*100) : 0;
+            return `<tr><td><strong>${n}x</strong></td><td>${formatarMoedaBR(parcela)}</td><td>${juros.toFixed(1).replace('.',',')}%</td><td>${formatarMoedaBR(totalFinalPc)}</td></tr>`;
+          }).join('');
+          return `<div class="fs-pc-mini-card"><div class="fs-pc-mini-title">${titulo}${entrada>0?` <small>• Entrada ${formatarMoedaBR(entrada)}</small>`:''}</div><table class="fs-pc-mini-table"><thead><tr><th>Plano</th><th>Parcela</th><th>Juros</th><th>Total</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+        };
+        blocoParcelamentoComplementar = `
+          <div class="fs-parcelamento-complementar-print fs-pc-full-print">
+            <div class="fs-pc-print-title"><span>📊 Tabela de Parcelamento com Juros</span><small>Valores calculados sobre a condição promocional atual</small></div>
+            <div class="fs-pc-mini-grid">
+              ${tabelaCompacta('carne','📄 Carnê',carneFatores)}
+              ${tabelaCompacta('cartao','💳 Cartão',cartaoFatores)}
+            </div>
+          </div>`;
+      }
+
 
       const html = `
         <div class="fs-diretoria-sheet bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
@@ -7338,9 +7367,9 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
           ${blocoParcelamentoComplementar}
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-            ${data.historico_negociacao ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitante / Informações</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.historico_negociacao}</p></div>` : ''}
-            ${data.simulacao_perdas_ganhos ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Simulação da Gerência</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p></div>` : ''}
-            ${data.oportunidades_melhoria ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Observações importantes</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.oportunidades_melhoria}</p></div>` : ''}
+            ${data.historico_negociacao ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitação do Cliente</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.historico_negociacao}</p></div>` : ''}
+            ${data.simulacao_perdas_ganhos ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p></div>` : ''}
+            ${data.oportunidades_melhoria ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.oportunidades_melhoria}</p></div>` : ''}
           </div>
 
 
@@ -8108,6 +8137,11 @@ function updateContador(count) {
       if (chkSemJuros) {
         chkSemJuros.checked = proposta.mostrar_parcelamento_sem_juros === true;
       }
+      try {
+        const modoPc = proposta.exibicao_parcelamento_diretoria || 'nenhum';
+        const radioPc = document.querySelector('input[name="fsModoParcelamentoDiretoria"][value="' + modoPc + '"]');
+        if (radioPc) radioPc.checked = true;
+      } catch(_) {}
 
       renderProdutos();
       atualizarCamposParcelamento();
@@ -9708,6 +9742,7 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
       fsSetValue('inputOpcoesParcelamentoCartao','');
       fsSetValue('inputSimulacao','');
       fsSetValue('inputOportunidades','');
+      try { const r=document.querySelector('input[name="fsModoParcelamentoDiretoria"][value="nenhum"]'); if(r) r.checked=true; } catch(_) {}
       renderProdutos();
       atualizarCamposParcelamento();
     }
@@ -18420,6 +18455,116 @@ document.addEventListener('DOMContentLoaded', function(){
       font-size: 14px !important;
     }
   }
+  @media (min-width: 768px) {
+    #editorView .produto-item {
+      padding: 16px !important;
+      border-radius: 18px !important;
+    }
+    #editorView .fs-desktop-row2 {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1.15fr) 180px !important;
+      gap: 14px !important;
+      align-items: end !important;
+      margin: 12px 0 14px !important;
+    }
+    #editorView .fs-busca-colar-row-real {
+      display: grid !important;
+      grid-template-columns: 110px minmax(0, 1fr) !important;
+      gap: 12px !important;
+      align-items: end !important;
+      width: 100% !important;
+    }
+    #editorView .fs-busca-colar-row-real > button:first-child,
+    #editorView .fs-busca-colar-row-real > button:last-child {
+      width: 100% !important;
+      min-width: 0 !important;
+      height: 48px !important;
+    }
+    #editorView .fs-quantidade-inline-card {
+      margin: 0 !important;
+      min-width: 0 !important;
+    }
+    #editorView .fs-quantidade-inline-card label,
+    #editorView .fs-desktop-core-grid label,
+    #editorView .fs-payment-extras-grid label {
+      margin-bottom: 6px !important;
+      font-size: 13px !important;
+    }
+    #editorView .fs-quantidade-input,
+    #editorView .fs-desktop-core-grid input,
+    #editorView .fs-desktop-core-grid select,
+    #editorView .fs-payment-extras-grid input,
+    #editorView .fs-payment-extras-grid select {
+      height: 48px !important;
+      min-height: 48px !important;
+    }
+    #editorView .fs-desktop-core-grid {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 14px !important;
+      align-items: end !important;
+      margin-bottom: 14px !important;
+    }
+    #editorView .fs-desktop-core-grid > div,
+    #editorView .fs-payment-extras-grid > div {
+      min-width: 0 !important;
+      margin: 0 !important;
+    }
+    #editorView .fs-payment-extras-grid {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 14px !important;
+      margin-bottom: 14px !important;
+      align-items: end !important;
+    }
+    #editorView .fs-parcelas-grid {
+      align-items: stretch !important;
+    }
+    #editorView .fs-parcelas-grid select,
+    #editorView .fs-parcelas-grid label {
+      height: 48px !important;
+      min-height: 48px !important;
+    }
+    #editorView .fs-parcelas-grid label {
+      justify-content: center !important;
+      gap: 4px !important;
+    }
+    #editorView .fs-entrada-topo {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 10px !important;
+      margin-bottom: 6px !important;
+    }
+    #editorView .fs-entrada-toggle {
+      width: 110px !important;
+      height: 40px !important;
+      min-height: 40px !important;
+    }
+    #editorView .fs-common-payment-note {
+      display: none !important;
+    }
+    #editorView .produto-item .mb-4 {
+      margin-bottom: 14px !important;
+    }
+    #editorView .produto-item .bg-white.p-4.rounded-lg.border.border-blue-300 {
+      margin-top: 4px !important;
+    }
+  }
+  .fs-diretoria-mode-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .fs-diretoria-mode-options label{position:relative;cursor:pointer}
+  .fs-diretoria-mode-options input{position:absolute;opacity:0;pointer-events:none}
+  .fs-diretoria-mode-options span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:8px 10px;border:1px solid #d1d5db;border-radius:11px;background:#fff;color:#475569;font-size:12px;font-weight:800;text-align:center;transition:.15s ease}
+  .fs-diretoria-mode-options input:checked + span{border-color:#4f46e5;background:#eef2ff;color:#3730a3;box-shadow:0 0 0 2px rgba(79,70,229,.08)}
+  .fs-pc-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .fs-pc-mini-card{border:1px solid #dbeafe;border-radius:10px;background:#fff;overflow:hidden}
+  .fs-pc-mini-title{padding:7px 8px;background:#eff6ff;color:#1e3a8a;font-size:10px;font-weight:900}
+  .fs-pc-mini-title small{font-size:8px;color:#64748b;font-weight:700}
+  .fs-pc-mini-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}
+  .fs-pc-mini-table th{padding:5px 4px;background:#f8fafc;color:#334155;border-bottom:1px solid #cbd5e1;font-size:7.5px;font-weight:900;text-align:center}
+  .fs-pc-mini-table td{padding:4px;border-bottom:1px solid #eef2f7;text-align:center;white-space:nowrap}
+  .fs-pc-mini-table tr:last-child td{border-bottom:0}
+  @media(max-width:767px){.fs-diretoria-mode-options{grid-template-columns:1fr}.fs-pc-mini-grid{grid-template-columns:1fr}.fs-pc-mini-table{font-size:8.5px}}
 </style>
 
 <script id="fs-quotation-features-v3">
@@ -18741,11 +18886,19 @@ document.addEventListener('DOMContentLoaded', function(){
       var paymentSelect = card.querySelector('select[onchange*="updateModalidade"]');
       if(paymentSelect){
         var paymentBlock = paymentSelect.closest('div');
-        if(paymentBlock && paymentBlock.parentElement && !paymentBlock.parentElement.querySelector('.fs-common-payment-note')){
-          var note = document.createElement('div');
-          note.className = 'fs-common-payment-note';
-          note.textContent = 'Modalidade padrão da cotação: ao alterar este campo, todos os produtos acompanham. Serviços continuam individuais.';
-          paymentBlock.parentElement.insertBefore(note, paymentBlock.parentElement.firstChild);
+        var isMobileViewport = window.matchMedia ? window.matchMedia('(max-width: 767px)').matches : (window.innerWidth < 768);
+        if(paymentBlock && paymentBlock.parentElement){
+          var existingNote = paymentBlock.parentElement.querySelector('.fs-common-payment-note');
+          if(isMobileViewport){
+            if(!existingNote){
+              var note = document.createElement('div');
+              note.className = 'fs-common-payment-note';
+              note.textContent = 'Modalidade padrão da cotação: ao alterar este campo, todos os produtos acompanham. Serviços continuam individuais.';
+              paymentBlock.parentElement.insertBefore(note, paymentBlock.parentElement.firstChild);
+            }
+          }else if(existingNote){
+            existingNote.remove();
+          }
         }
       }
       var chip = document.createElement('button');
