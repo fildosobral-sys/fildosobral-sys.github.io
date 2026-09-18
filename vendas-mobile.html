@@ -6996,6 +6996,11 @@ async function salvarProposta() {
       const descontoGerenteTotal = usaDescontoGlobalTabela ? descontoAdicionalGlobalTotal : Math.max(0, totalPromo - (baseAposGerenteUnit * quantidade));
       const totalAposGerente = Math.max(0, totalPromo - descontoGerenteTotal);
       const descontoSupervisorTotal = usaDescontoGlobalTabela ? 0 : Math.max(0, totalAposGerente - totalFinal);
+      const descontoAdicionalTotal = Math.max(0, descontoGerenteTotal + descontoSupervisorTotal);
+      // Percentual adicional EFETIVO sobre o preço normal. Assim, Base % + Adic. % = desconto final real.
+      // Ex.: base 11,8% e alçada total 15% => adicional exibido ~3,2%. Se a alçada for menor que a promoção, adicional = 0.
+      const descontoAdicionalPctEfetivo = totalNormal > 0 ? (descontoAdicionalTotal / totalNormal) * 100 : 0;
+      const descontoAdicionalUnitEfetivo = quantidade > 0 ? descontoAdicionalTotal / quantidade : 0;
       const descontoFinalPct = totalNormal > 0 ? ((totalNormal - totalFinal) / totalNormal) * 100 : 0;
 
       let status = 'Gerente';
@@ -7031,6 +7036,9 @@ async function salvarProposta() {
         descontoBaseTotal,
         descontoGerenteTotal,
         descontoSupervisorTotal,
+        descontoAdicionalTotal,
+        descontoAdicionalPctEfetivo,
+        descontoAdicionalUnitEfetivo,
         descontoFinalPct,
         margemGerente,
         margemSupervisor,
@@ -7221,8 +7229,8 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
                 </div>
               </div>
             </td>
-            <td class="border border-gray-300 px-2 py-1 text-right ${info.status === 'Supervisor' ? 'text-orange-700' : 'text-blue-700'} font-semibold">${(info.usaDescontoGlobalTabela ? info.descontoGlobalTabelaPct : info.descontoSolicitadoPct).toFixed(1)}%</td>
-            <td class="border border-gray-300 px-2 py-1 text-right text-blue-700 font-semibold">${formatarMoedaBR(info.descontoGerenteTotal + info.descontoSupervisorTotal)}<div class="text-[10px] text-gray-500">unit. ${formatarMoedaBR(info.usaDescontoGlobalTabela ? Math.max(0, info.precoPromoUnit - info.precoFinalUnit) : (info.descontoGerenteUnit + info.descontoSupervisorUnit))}</div></td>
+            <td class="border border-gray-300 px-2 py-1 text-right ${info.status === 'Supervisor' ? 'text-orange-700' : 'text-blue-700'} font-semibold">${info.descontoAdicionalPctEfetivo > 0.004 ? `${info.descontoAdicionalPctEfetivo.toFixed(1)}%` : '<span class="text-gray-400">—</span>'}</td>
+            <td class="border border-gray-300 px-2 py-1 text-right text-blue-700 font-semibold">${info.descontoAdicionalTotal > 0.004 ? `${formatarMoedaBR(info.descontoAdicionalTotal)}<div class="text-[10px] text-gray-500">unit. ${formatarMoedaBR(info.descontoAdicionalUnitEfetivo)}</div>` : '<span class="text-gray-400">—</span>'}</td>
             <td class="border border-gray-300 px-2 py-1 text-right text-emerald-700 font-semibold">${formatarMoedaBR(info.precoFinalUnit)}<div class="text-[10px] text-gray-500">unitário</div></td>
                         <td class="border border-gray-300 px-2 py-1 text-right font-semibold text-purple-600">${formatarMoedaBR(info.totalFinal)}<div class="text-[10px] text-gray-500">${info.quantidade} un.</div></td>
                       </tr>`;
@@ -7233,7 +7241,8 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       const percentualDescontoTotal = totais.totalNormal > 0 ? ((descontoTotalGeral / totais.totalNormal) * 100).toFixed(1) : '0.0';
       const descontoGlobalAtual = Number(data.desconto_global_tabela_pct || (produtosDiretoria[0] && produtosDiretoria[0].desconto_diretoria_tabela_pct) || 0);
       const qtdTotalItens = Math.max(1, produtosDiretoria.reduce((acc, p) => acc + (parseInt(p.quantidade, 10) || 1), 0));
-      const mediaSolicitada = (totais.descontoSolicitadoPctPonderado / qtdTotalItens).toFixed(1);
+      const descontoAdicionalGeral = Math.max(0, totais.descontoGerente + totais.descontoSupervisor);
+      const percentualAdicionalGeral = totais.totalNormal > 0 ? (descontoAdicionalGeral / totais.totalNormal) * 100 : 0;
 
       let parcelamentosComplementares = { carne:{entrada:0,selecionado:null}, cartao:{entrada:0,selecionado:null} };
       try{
@@ -7250,15 +7259,12 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       const montarLinhaSelecionada = (x) => {
         const d = x.d || {};
         const nome = x.tipo === 'carne' ? 'Carnê' : 'Cartão';
-        const basePromo = Math.max(0, Number(totais.totalPromo || 0));
-        const taxa = calcTaxaPct(d, basePromo);
         const totalFinalPc = Math.max(0, Number(d.entrada||0)) + Math.max(0, Number(d.total_promocional||0));
         return `<tr>
           <td><strong>${nome}</strong></td>
           <td><strong>${Number(d.parcelas||0)}x</strong></td>
           <td>${formatarMoedaBR(Number(d.entrada||0))}</td>
           <td class="fs-pc-green"><strong>${formatarMoedaBR(Number(d.parcela_promocional||0))}</strong></td>
-          <td>${taxa.toFixed(2).replace('.',',')}%</td>
           <td class="fs-pc-green"><strong>${formatarMoedaBR(totalFinalPc)}</strong></td>
         </tr>`;
       };
@@ -7266,9 +7272,9 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       if (modoParcelamentoDiretoria === 'parcela' && pcSelecionados.length) {
         blocoParcelamentoComplementar = `
           <div class="fs-parcelamento-complementar-print fs-pc-selected-print">
-            <div class="fs-pc-print-title"><span>💳 Condição de Parcelamento Solicitada</span><small>Carnê / Cartão conforme seleção</small></div>
+            <div class="fs-pc-print-title"><span>💳 Condição Padrão do Sistema — Parcelamento com Juros</span><small>Referência vigente para a mesma quantidade de parcelas</small></div>
             <div class="fs-pc-print-table-wrap"><table class="fs-pc-print-table"><thead><tr>
-              <th>Modalidade</th><th>Plano</th><th>Entrada</th><th>Parcela</th><th>Juros</th><th>Valor final</th>
+              <th>Modalidade</th><th>Plano</th><th>Entrada</th><th>Parcela do sistema</th><th>Valor final</th>
             </tr></thead><tbody>${pcSelecionados.map(montarLinhaSelecionada).join('')}</tbody></table></div>
           </div>`;
       } else if (modoParcelamentoDiretoria === 'tabela') {
@@ -7300,6 +7306,13 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
           </div>`;
       }
 
+
+      const condicaoSistemaResumo = pcSelecionados.length ? pcSelecionados.map(x => {
+        const d = x.d || {};
+        const nome = x.tipo === 'carne' ? 'Carnê' : 'Cartão';
+        const totalPc = Math.max(0, Number(d.entrada||0)) + Math.max(0, Number(d.total_promocional||0));
+        return `${nome}: ${Number(d.parcelas||0)}x de ${formatarMoedaBR(Number(d.parcela_promocional||0))} • total ${formatarMoedaBR(totalPc)}${Number(d.entrada||0)>0 ? ` • entrada ${formatarMoedaBR(Number(d.entrada||0))}` : ''}`;
+      }).join(' | ') : '';
 
       const html = `
         <div class="fs-diretoria-sheet bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
@@ -7370,7 +7383,7 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
                 <tbody>
                   ${linhasTabela}
                   <tr class="bg-white"><td colspan="11" class="border-0 py-1"></td></tr>
-                  <tr class="bg-gray-100 font-bold"><td colspan="2" class="border border-gray-300 px-2 py-1">TOTAL</td><td class="border border-gray-300 px-2 py-1 text-right">${formatarMoedaBR(totais.totalNormal)}</td><td class="border border-gray-300 px-2 py-1 text-right text-green-600">${formatarMoedaBR(totais.totalPromo)}</td><td class="border border-gray-300 px-2 py-1 text-right text-red-600">${formatarMoedaBR(totais.descontoBase)}</td><td class="border border-gray-300 px-2 py-1 text-right text-red-600">${percentualBase}%</td><td class="border border-gray-300 px-2 py-1 text-center">-</td><td class="border border-gray-300 px-2 py-1 text-right text-blue-700">${mediaSolicitada}%</td><td class="border border-gray-300 px-2 py-1 text-right text-blue-700">${formatarMoedaBR(totais.descontoGerente + totais.descontoSupervisor)}</td><td class="border border-gray-300 px-2 py-1 text-center text-gray-500">-</td><td class="border border-gray-300 px-2 py-1 text-right font-semibold text-purple-600">${formatarMoedaBR(totais.totalFinal)}</td></tr>
+                  <tr class="bg-gray-100 font-bold"><td colspan="2" class="border border-gray-300 px-2 py-1">TOTAL</td><td class="border border-gray-300 px-2 py-1 text-right">${formatarMoedaBR(totais.totalNormal)}</td><td class="border border-gray-300 px-2 py-1 text-right text-green-600">${formatarMoedaBR(totais.totalPromo)}</td><td class="border border-gray-300 px-2 py-1 text-right text-red-600">${formatarMoedaBR(totais.descontoBase)}</td><td class="border border-gray-300 px-2 py-1 text-right text-red-600">${percentualBase}%</td><td class="border border-gray-300 px-2 py-1 text-center">-</td><td class="border border-gray-300 px-2 py-1 text-right text-blue-700">${percentualAdicionalGeral > 0.004 ? `${percentualAdicionalGeral.toFixed(1)}%` : '<span class="text-gray-400">—</span>'}</td><td class="border border-gray-300 px-2 py-1 text-right text-blue-700">${descontoAdicionalGeral > 0.004 ? formatarMoedaBR(descontoAdicionalGeral) : '<span class="text-gray-400">—</span>'}</td><td class="border border-gray-300 px-2 py-1 text-center text-gray-500">-</td><td class="border border-gray-300 px-2 py-1 text-right font-semibold text-purple-600">${formatarMoedaBR(totais.totalFinal)}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -7380,7 +7393,7 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 fs-diretoria-info-grid">
             ${data.historico_negociacao ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitação do Cliente</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.historico_negociacao}</p></div>` : ''}
-            ${data.simulacao_perdas_ganhos ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p></div>` : ''}
+            ${(data.simulacao_perdas_ganhos || condicaoSistemaResumo) ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4>${condicaoSistemaResumo ? `<div class="fs-condicao-sistema-chip mb-2"><span>Condição normal do sistema</span><strong>${condicaoSistemaResumo}</strong></div>` : ''}${data.simulacao_perdas_ganhos ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p>` : ''}</div>` : ''}
             ${data.oportunidades_melhoria ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.oportunidades_melhoria}</p></div>` : ''}
           </div>
 
@@ -20573,6 +20586,13 @@ document.addEventListener('DOMContentLoaded', function(){
   document.addEventListener('DOMContentLoaded',function(){ setTimeout(abrirListaInicial,80); });
 })();
 </script>
+
+
+<style id="fs-diretoria-clarity-v9">
+.fs-condicao-sistema-chip{display:flex;flex-direction:column;gap:3px;padding:7px 8px;border:1px solid #93c5fd;border-radius:9px;background:#eff6ff;color:#1e3a8a}
+.fs-condicao-sistema-chip span{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.035em;color:#2563eb}
+.fs-condicao-sistema-chip strong{font-size:10px;line-height:1.3;color:#1e3a8a}
+</style>
 
 </body>
 </html>
