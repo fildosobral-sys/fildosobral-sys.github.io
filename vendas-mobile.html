@@ -8859,30 +8859,85 @@ function abrirAlterarStatusProposta(id) {
           const txt = (th.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
           return txt === 'ação' || txt === 'acao';
         });
-        if (acaoIndex < 0) return;
 
-        const cols = table.querySelectorAll('colgroup col');
-        if (cols[acaoIndex]) cols[acaoIndex].style.display = 'none';
-
-        table.querySelectorAll('tr').forEach(function(tr){
-          const cells = Array.from(tr.children).filter(function(el){
-            return el.tagName === 'TH' || el.tagName === 'TD';
-          });
-          let logicalCol = 0;
-          cells.forEach(function(cell){
-            const span = Math.max(1, parseInt(cell.getAttribute('colspan') || '1', 10) || 1);
-            const start = logicalCol;
-            const end = logicalCol + span - 1;
-            if (acaoIndex >= start && acaoIndex <= end) {
-              if (span === 1) {
-                cell.style.display = 'none';
-              } else {
-                cell.setAttribute('colspan', String(span - 1));
+        if (acaoIndex >= 0) {
+          table.querySelectorAll('tr').forEach(function(tr){
+            const cells = Array.from(tr.children).filter(function(el){
+              return el.tagName === 'TH' || el.tagName === 'TD';
+            });
+            let logicalCol = 0;
+            cells.forEach(function(cell){
+              const span = Math.max(1, parseInt(cell.getAttribute('colspan') || '1', 10) || 1);
+              const start = logicalCol;
+              const end = logicalCol + span - 1;
+              if (acaoIndex >= start && acaoIndex <= end) {
+                if (span === 1) {
+                  cell.style.display = 'none';
+                } else {
+                  cell.setAttribute('colspan', String(span - 1));
+                }
               }
+              logicalCol += span;
+            });
+          });
+        }
+
+        // No download, reconstrói as proporções da tabela depois da remoção da coluna Ação.
+        // Isso evita que o navegador redistribua as colunas e deixe a imagem diferente da visualização.
+        let colgroup = table.querySelector('colgroup');
+        if (!colgroup) {
+          colgroup = document.createElement('colgroup');
+          table.insertBefore(colgroup, table.firstChild);
+        }
+        colgroup.innerHTML = '';
+        [22,6,10,10,9,8,8,9,9,9].forEach(function(w){
+          const col = document.createElement('col');
+          col.style.width = w + '%';
+          colgroup.appendChild(col);
+        });
+
+        table.style.width = '100%';
+        table.style.tableLayout = 'fixed';
+        table.style.borderCollapse = 'collapse';
+
+        const visibleHeaders = Array.from(table.querySelectorAll('thead th')).filter(function(th){
+          return th.style.display !== 'none';
+        });
+        visibleHeaders.forEach(function(th){
+          th.style.textAlign = 'center';
+          th.style.fontSize = '14.2px';
+          th.style.lineHeight = '1.2';
+          th.style.padding = '8px 6px';
+          th.style.verticalAlign = 'middle';
+          th.style.whiteSpace = 'normal';
+        });
+
+        table.querySelectorAll('tbody tr').forEach(function(tr){
+          const cells = Array.from(tr.children).filter(function(el){
+            return el.tagName === 'TD' && el.style.display !== 'none';
+          });
+          cells.forEach(function(td, idx){
+            td.style.verticalAlign = 'middle';
+            td.style.padding = '8px 6px';
+            td.style.lineHeight = '1.22';
+            if (idx === 0) {
+              td.style.textAlign = 'left';
+              td.style.fontSize = '11.5px';
+            } else {
+              td.style.textAlign = 'center';
+              td.style.fontSize = '14.2px';
             }
-            logicalCol += span;
+            td.querySelectorAll('div,span,small').forEach(function(child){
+              if (idx > 0) child.style.textAlign = 'center';
+            });
           });
         });
+
+        const wrap = table.closest('.fs-tabela-diretoria-wrap');
+        if (wrap) {
+          wrap.style.padding = '10px';
+          wrap.style.overflow = 'visible';
+        }
       });
     }
 
