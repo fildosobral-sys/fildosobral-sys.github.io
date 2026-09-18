@@ -4341,15 +4341,23 @@ fsOn('btnVoltarEditor','click',voltarParaEditor);
         preco_com_pm: 0
       };
       produtos.push(produto);
+      try{ window.fsActiveProductId = produto.id; }catch(e){}
       renderProdutos();
+      setTimeout(function(){ try{ var el=document.getElementById('inputCodigoNome-'+produto.id); var card=el&&el.closest('.produto-item'); if(card && typeof window.fsSetActiveProductCard==='function') window.fsSetActiveProductCard(card); }catch(e){} },0);
     }
 
 
 
     function removerProduto(id) {
+      const removendoAtivo = String(window.fsActiveProductId || '') === String(id);
       produtos = produtos.filter(p => p.id !== id);
+      if(removendoAtivo){
+        const proximo = produtos.length ? produtos[produtos.length - 1] : null;
+        window.fsActiveProductId = proximo ? proximo.id : '';
+      }
       renderProdutos();
       atualizarCamposParcelamento();
+      setTimeout(function(){ try{ if(typeof window.fsRestoreActiveProduct==='function') window.fsRestoreActiveProduct(); }catch(e){} },0);
     }
 
 
@@ -5241,6 +5249,7 @@ function updateQuantidade(id, valor) {
 function responderServicos(id, temServicos) {
       const produto = produtos.find(p => p.id === id);
       if (produto) {
+        try{ window.fsActiveProductId = id; }catch(e){}
         produto.tem_servicos = temServicos;
         if (temServicos === false) {
           produto.valor_ge = 0;
@@ -5248,6 +5257,7 @@ function responderServicos(id, temServicos) {
           produto.usa_pm = false;
         }
         renderProdutos();
+        setTimeout(function(){ try{ if(typeof window.fsRestoreActiveProduct==='function') window.fsRestoreActiveProduct(); }catch(e){} },0);
       }
     }
 
@@ -18855,7 +18865,7 @@ document.addEventListener('DOMContentLoaded', function(){
         resumoParcelas.value = state.values.resumoParcelas;
         resumoParcelas.dispatchEvent(new Event('change', { bubbles: true }));
       }
-      if(typeof window.showView === 'function') window.showView('editor');
+      // Rascunho é recuperado silenciosamente, mas a plataforma continua em Minhas Simulações.
       feedback('Rascunho local recuperado automaticamente.', 'success');
       return true;
     }catch(error){
@@ -20529,6 +20539,41 @@ document.addEventListener('DOMContentLoaded', function(){
 @media(max-width:900px){#fsInterestTables .fs-interest-toolbar-actions{width:100%;justify-content:space-between}#fsInterestTables .fs-interest-expand-btn,#fsInterestTables .fs-interest-close-btn{flex:0 0 auto}}
 </style>
 
+
+<style id="fs-final-ux-v8">
+/* Itens concluídos continuam claramente diferenciados mesmo sem item ativo. */
+#editorView .produto-item.fs-product-completed:not(.fs-product-active){
+  background:linear-gradient(180deg,#e2e8f0 0%,#edf2f7 100%)!important;
+  border:2px solid #94a3b8!important;
+  box-shadow:inset 7px 0 0 #64748b,0 8px 20px rgba(15,23,42,.08)!important;
+  opacity:.94!important;
+}
+#editorView .produto-item.fs-product-active{
+  background:linear-gradient(180deg,#d1fae5 0%,#ecfdf5 62%,#ffffff 100%)!important;
+  border:2px solid #16a34a!important;
+  box-shadow:inset 8px 0 0 #15803d,0 0 0 5px rgba(34,197,94,.16),0 20px 42px rgba(22,163,74,.22)!important;
+}
+/* Tabela expandida: leitura mais confortável sem perder uma linha por tela. */
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-table.fs-interest-table-v2{font-size:13px!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-table-v2 td{font-size:13px!important;padding:9px 7px!important;line-height:1.22!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-table-v2 th{font-size:11.8px!important;padding:9px 7px!important;line-height:1.18!important}
+#fsInterestTables .fs-interest-table-card.fs-interest-card-expanded .fs-interest-select-btn{width:34px!important;height:34px!important;font-size:16px!important}
+</style>
+<script id="fs-start-list-v8">
+(function(){
+  function abrirListaInicial(){
+    try{
+      if(typeof window.showView==='function') window.showView('lista');
+      else {
+        var l=document.getElementById('listaView'), e=document.getElementById('editorView'), v=document.getElementById('visualizacaoView');
+        if(l) l.classList.remove('hidden'); if(e) e.classList.add('hidden'); if(v) v.classList.add('hidden');
+      }
+    }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded',function(){ setTimeout(abrirListaInicial,80); });
+})();
+</script>
+
 </body>
 </html>
 
@@ -20767,11 +20812,18 @@ document.addEventListener('DOMContentLoaded', function(){
 
   function restoreActive(){
     var editor=document.getElementById('editorView');
-    if(!editor || !window.fsActiveProductId) return;
+    if(!editor) return;
+    if(!window.fsActiveProductId){
+      editor.classList.remove('fs-has-active-product');
+      editor.querySelectorAll('.produto-item').forEach(function(item){ item.classList.remove('fs-product-active'); });
+      return;
+    }
     var input=document.getElementById('inputCodigoNome-'+window.fsActiveProductId);
     var card=input && input.closest('.produto-item');
     if(card) setActive(card);
   }
+  window.fsSetActiveProductCard = setActive;
+  window.fsRestoreActiveProduct = restoreActive;
 
   function syncDiretoriaMode(){
     try{
