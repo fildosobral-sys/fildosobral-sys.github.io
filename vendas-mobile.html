@@ -3213,15 +3213,77 @@ document.addEventListener('DOMContentLoaded', function(){
        </div><!-- Observações Internas (apenas Diretoria) -->
        <div id="secaoObservacoesInternas" class="mb-8 bg-yellow-50 p-6 rounded-lg border border-yellow-200 hidden">
         <div class="space-y-4">
-         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputHistorico">Solicitação do Cliente</label> <textarea id="inputHistorico" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Descreva a solicitação do cliente..."></textarea>
+         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2" for="inputHistorico">Solicitação do Cliente</label>
+          <div class="fs-observacao-mini-card mb-3">
+           <div class="fs-observacao-mini-card-title">Mini resumo da solicitação</div>
+           <div class="fs-observacao-mini-grid">
+            <div>
+             <label class="fs-mini-label" for="inputHistoricoTipoValor">Base do valor</label>
+             <select id="inputHistoricoTipoValor" class="fs-mini-input">
+              <option value="">Selecione</option>
+              <option value="promocional">Promocional</option>
+              <option value="tabela">Tabela</option>
+              <option value="avista">À vista</option>
+             </select>
+            </div>
+            <div>
+             <label class="fs-mini-label" for="inputHistoricoValorResumo">Valor</label>
+             <input id="inputHistoricoValorResumo" type="text" inputmode="decimal" class="fs-mini-input" placeholder="R$ 0,00">
+            </div>
+            <div>
+             <label class="fs-mini-label" for="inputHistoricoParcelasResumo">Parcelas</label>
+             <input id="inputHistoricoParcelasResumo" type="number" min="1" step="1" class="fs-mini-input" placeholder="Ex.: 7">
+            </div>
+            <div>
+             <label class="fs-mini-label">Resumo automático</label>
+             <div id="fsHistoricoResumoPreview" class="fs-mini-preview-box">Preencha valor e parcelas para gerar o resumo.</div>
+            </div>
+           </div>
+          </div>
+          <textarea id="inputHistorico" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Feedback complementar da solicitação do cliente..."></textarea>
          </div>
          <div id="campoParcelamentoCarne" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-2" for="inputOpcoesParcelamentoCarne">📝 Carnê - Sem Juros</label> <textarea id="inputOpcoesParcelamentoCarne" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ex: 1x, 2x, 3x, 4x, 5x sem juros"></textarea>
          </div>
          <div id="campoParcelamentoCartao" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-2" for="inputOpcoesParcelamentoCartao">💳 Cart����o - Sem Juros</label> <textarea id="inputOpcoesParcelamentoCartao" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Ex: 1x, 2x, 3x, 4x, 5x, 6x sem juros"></textarea>
          </div>
-         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputSimulacao">Condição Comercial Atual</label> <textarea id="inputSimulacao" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2" for="inputSimulacao">Condição Comercial Atual</label>
+          <div id="fsCondicaoAtualPreview" class="fs-observacao-mini-card mb-3">
+           <div class="fs-observacao-mini-card-title">Resumo automático da condição comercial atual</div>
+           <div class="fs-mini-preview-box">Selecione “Parcela selecionada” ou “Tabela completa” para visualizar a condição comercial atual aqui.</div>
+          </div>
+          <textarea id="inputSimulacao" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Observação complementar (opcional)..."></textarea>
          </div>
-         <div><label class="block text-sm font-medium text-gray-700 mb-2" for="inputOportunidades">Sugestão da Gerência</label> <textarea id="inputOportunidades" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+         <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2" for="inputOportunidades">Sugestão da Gerência</label>
+          <div class="fs-observacao-mini-card mb-3">
+           <div class="fs-observacao-mini-card-title">Mini resumo da sugestão</div>
+           <div class="fs-observacao-mini-grid">
+            <div>
+             <label class="fs-mini-label" for="inputOportunidadeTipoValor">Base do valor</label>
+             <select id="inputOportunidadeTipoValor" class="fs-mini-input">
+              <option value="">Selecione</option>
+              <option value="promocional">Promocional</option>
+              <option value="tabela">Tabela</option>
+              <option value="avista">À vista</option>
+             </select>
+            </div>
+            <div>
+             <label class="fs-mini-label" for="inputOportunidadeValorResumo">Valor</label>
+             <input id="inputOportunidadeValorResumo" type="text" inputmode="decimal" class="fs-mini-input" placeholder="R$ 0,00">
+            </div>
+            <div>
+             <label class="fs-mini-label" for="inputOportunidadeParcelasResumo">Parcelas</label>
+             <input id="inputOportunidadeParcelasResumo" type="number" min="1" step="1" class="fs-mini-input" placeholder="Ex.: 3">
+            </div>
+            <div>
+             <label class="fs-mini-label">Resumo automático</label>
+             <div id="fsOportunidadeResumoPreview" class="fs-mini-preview-box">Preencha valor e parcelas para gerar o resumo.</div>
+            </div>
+           </div>
+          </div>
+          <textarea id="inputOportunidades" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Feedback complementar da sugestão da gerência..."></textarea>
          </div>
          <div class="mt-4 flex items-center gap-2">
           <input id="chkMostrarParcelamentoSemJuros" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
@@ -5944,6 +6006,12 @@ async function salvarProposta() {
         opcoes_parcelamento_cartao: document.getElementById('inputOpcoesParcelamentoCartao').value,
         simulacao_perdas_ganhos: document.getElementById('inputSimulacao').value,
         oportunidades_melhoria: document.getElementById('inputOportunidades').value,
+        historico_resumo_tipo: (document.getElementById('inputHistoricoTipoValor') || {}).value || '',
+        historico_resumo_valor: (document.getElementById('inputHistoricoValorResumo') || {}).value || '',
+        historico_resumo_parcelas: (document.getElementById('inputHistoricoParcelasResumo') || {}).value || '',
+        oportunidades_resumo_tipo: (document.getElementById('inputOportunidadeTipoValor') || {}).value || '',
+        oportunidades_resumo_valor: (document.getElementById('inputOportunidadeValorResumo') || {}).value || '',
+        oportunidades_resumo_parcelas: (document.getElementById('inputOportunidadeParcelasResumo') || {}).value || '',
         parcelamentos_complementares: (typeof fsGetParcelamentoComplementarState === 'function' ? fsGetParcelamentoComplementarState() : (window.fsParcelamentoComplementarDraft || null)),
         exibicao_parcelamento_diretoria: ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum'),
         mostrar_parcelamento_sem_juros: (document.getElementById('chkMostrarParcelamentoSemJuros')?.checked === true),
@@ -6135,6 +6203,12 @@ async function salvarProposta() {
           opcoes_parcelamento_cartao: getVal('inputOpcoesParcelamentoCartao'),
           simulacao_perdas_ganhos: getVal('inputSimulacao'),
           oportunidades_melhoria: getVal('inputOportunidades'),
+          historico_resumo_tipo: getVal('inputHistoricoTipoValor'),
+          historico_resumo_valor: getVal('inputHistoricoValorResumo'),
+          historico_resumo_parcelas: getVal('inputHistoricoParcelasResumo'),
+          oportunidades_resumo_tipo: getVal('inputOportunidadeTipoValor'),
+          oportunidades_resumo_valor: getVal('inputOportunidadeValorResumo'),
+          oportunidades_resumo_parcelas: getVal('inputOportunidadeParcelasResumo'),
           exibicao_parcelamento_diretoria: ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum')
         };
 
@@ -6169,7 +6243,14 @@ async function salvarProposta() {
         setValue('inputOpcoesParcelamentoCartao', state.opcoes_parcelamento_cartao);
         setValue('inputSimulacao', state.simulacao_perdas_ganhos);
         setValue('inputOportunidades', state.oportunidades_melhoria);
+        setValue('inputHistoricoTipoValor', state.historico_resumo_tipo);
+        setValue('inputHistoricoValorResumo', state.historico_resumo_valor);
+        setValue('inputHistoricoParcelasResumo', state.historico_resumo_parcelas);
+        setValue('inputOportunidadeTipoValor', state.oportunidades_resumo_tipo);
+        setValue('inputOportunidadeValorResumo', state.oportunidades_resumo_valor);
+        setValue('inputOportunidadeParcelasResumo', state.oportunidades_resumo_parcelas);
         try { const r=document.querySelector('input[name="fsModoParcelamentoDiretoria"][value="'+(state.exibicao_parcelamento_diretoria||'nenhum')+'"]'); if(r) r.checked=true; } catch(_) {}
+        try { if (typeof fsAtualizarResumoDiretoriaEstruturada === 'function') fsAtualizarResumoDiretoriaEstruturada(); } catch(_) {}
       } catch (e) {
         console.warn('Erro ao carregar estado local do formulário', e);
       }
@@ -6187,7 +6268,13 @@ async function salvarProposta() {
         'inputOpcoesParcelamentoCarne',
         'inputOpcoesParcelamentoCartao',
         'inputSimulacao',
-        'inputOportunidades'
+        'inputOportunidades',
+        'inputHistoricoTipoValor',
+        'inputHistoricoValorResumo',
+        'inputHistoricoParcelasResumo',
+        'inputOportunidadeTipoValor',
+        'inputOportunidadeValorResumo',
+        'inputOportunidadeParcelasResumo'
       ];
       const handler = () => salvarEstadoFormularioLocal();
 
@@ -6199,8 +6286,98 @@ async function salvarProposta() {
         }
       });
 
-      document.querySelectorAll('input[name="fsModoParcelamentoDiretoria"]').forEach((el) => el.addEventListener('change', salvarEstadoFormularioLocal));
+      document.querySelectorAll('input[name="fsModoParcelamentoDiretoria"]').forEach((el) => el.addEventListener('change', function(){ salvarEstadoFormularioLocal(); try { if (typeof fsAtualizarResumoDiretoriaEstruturada === 'function') fsAtualizarResumoDiretoriaEstruturada(); } catch(_) {} }));
       window.addEventListener('beforeunload', salvarEstadoFormularioLocal);
+    }
+
+
+    function fsTextoTipoResumo(tipo) {
+      const mapa = { promocional: 'Preço promocional', tabela: 'Preço de tabela', avista: 'Preço à vista' };
+      return mapa[String(tipo || '').toLowerCase()] || 'Valor informado';
+    }
+
+    function fsMoedaOuZero(valor) {
+      const n = Number((typeof fsParseMoneyInput === 'function' ? fsParseMoneyInput(valor) : parseFloat(String(valor || '').replace(',', '.'))) || 0);
+      return (typeof money === 'function') ? money(n) : formatarMoedaBR(n);
+    }
+
+    function fsResumoNegociacaoEstruturada(prefixo, previewId) {
+      const tipo = ((document.getElementById('input' + prefixo + 'TipoValor') || {}).value || '').trim();
+      const valorEl = document.getElementById('input' + prefixo + 'ValorResumo');
+      const parcelasEl = document.getElementById('input' + prefixo + 'ParcelasResumo');
+      const box = document.getElementById(previewId);
+      if (!box) return;
+      const valor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valorEl && valorEl.value) : 0;
+      const parcelas = Math.max(0, parseInt(parcelasEl && parcelasEl.value, 10) || 0);
+      if (valor <= 0 && parcelas <= 0 && !tipo) {
+        box.innerHTML = 'Preencha valor e parcelas para gerar o resumo.';
+        return;
+      }
+      const parcela = parcelas > 0 ? valor / parcelas : 0;
+      box.innerHTML =
+        '<div class="fs-mini-inline-grid">' +
+          '<div><span>Base</span><strong>' + escapeHtml(fsTextoTipoResumo(tipo)) + '</strong></div>' +
+          '<div><span>Valor</span><strong>' + fsMoedaOuZero(valor) + '</strong></div>' +
+          '<div><span>Parcelas</span><strong>' + (parcelas > 0 ? parcelas + 'x' : '—') + '</strong></div>' +
+          '<div><span>Parcela média</span><strong>' + (parcelas > 0 ? fsMoedaOuZero(parcela) : '—') + '</strong></div>' +
+        '</div>';
+    }
+
+    function fsBuildCondicaoAtualPreviewHtml() {
+      const modo = ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum');
+      const state = (typeof fsGetParcelamentoComplementarState === 'function') ? fsGetParcelamentoComplementarState() : { carne:{entrada:0,selecionado:null}, cartao:{entrada:0,selecionado:null} };
+      const totals = (typeof quoteTotals === 'function') ? quoteTotals() : { normal:0, promo:0 };
+      const moneyFn = (typeof money === 'function') ? money : fsMoedaOuZero;
+      const sel = ['carne','cartao'].map(function(tipo){ return { tipo:tipo, d: state[tipo] && state[tipo].selecionado ? state[tipo].selecionado : null }; }).filter(function(x){ return !!x.d; });
+      if (modo === 'parcela') {
+        if (!sel.length) return '<div class="fs-mini-preview-box">Nenhuma parcela foi selecionada ainda.</div>';
+        return '<div class="fs-cond-preview-grid">' + sel.map(function(item){
+          var nome = item.tipo === 'carne' ? 'Carnê' : 'Cartão';
+          var d = item.d || {};
+          var totalFinal = Math.max(0, Number(d.entrada || 0)) + Math.max(0, Number(d.total_promocional || 0));
+          return '<div class="fs-cond-preview-card">' +
+                   '<div class="fs-cond-preview-title">' + nome + '</div>' +
+                   '<div class="fs-cond-preview-line"><span>Plano</span><strong>' + (Number(d.parcelas||0) || 0) + 'x</strong></div>' +
+                   '<div class="fs-cond-preview-line"><span>Entrada</span><strong>' + moneyFn(Number(d.entrada || 0)) + '</strong></div>' +
+                   '<div class="fs-cond-preview-line"><span>Parcela do sistema</span><strong>' + moneyFn(Number(d.parcela_promocional || 0)) + '</strong></div>' +
+                   '<div class="fs-cond-preview-line"><span>Total</span><strong>' + moneyFn(totalFinal) + '</strong></div>' +
+                 '</div>';
+        }).join('') + '</div>';
+      }
+      if (modo === 'tabela') {
+        var carne = [1.0690,0.5523,0.3804,0.2946,0.2432,0.2091,0.1849,0.1668,0.1528,0.1417,0.1327,0.1252];
+        var cartao = [1.0292,0.5220,0.3530,0.2685,0.2179,0.1841,0.1600,0.1420,0.1280,0.1168,0.1076,0.1000];
+        try { if (Array.isArray(TAXAS_CARNE)) carne = TAXAS_CARNE.slice(0,12); } catch(e) {}
+        try { if (Array.isArray(TAXAS_CARTAO)) cartao = TAXAS_CARTAO.slice(0,12); } catch(e) {}
+        function mini(tipo, titulo, fatores){
+          var entrada = Math.max(0, Number(state[tipo] && state[tipo].entrada || 0));
+          var rows = fatores.map(function(fator, idx){
+            var n = idx + 1;
+            var totalPlano = Math.max(0, Number(totals.promo || 0) * Number(fator || 0) * n);
+            var saldo = Math.max(0, totalPlano - entrada);
+            var parcela = n ? saldo / n : 0;
+            var total = entrada + saldo;
+            return '<tr><td><strong>' + n + 'x</strong></td><td>' + moneyFn(parcela) + '</td><td>' + moneyFn(total) + '</td></tr>';
+          }).join('');
+          return '<div class="fs-cond-preview-card fs-cond-preview-card-table">' +
+                   '<div class="fs-cond-preview-title">' + titulo + (entrada > 0 ? ' <small>• Entrada ' + moneyFn(entrada) + '</small>' : '') + '</div>' +
+                   '<table class="fs-cond-preview-table"><thead><tr><th>Plano</th><th>Parcela</th><th>Total</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+                 '</div>';
+        }
+        return '<div class="fs-cond-preview-grid fs-cond-preview-grid-table">' + mini('carne','Tabela Carnê',carne) + mini('cartao','Tabela Cartão',cartao) + '</div>';
+      }
+      return '<div class="fs-mini-preview-box">Selecione “Parcela selecionada” ou “Tabela completa” para visualizar a condição comercial atual aqui.</div>';
+    }
+
+    function fsAtualizarResumoDiretoriaEstruturada() {
+      try { fsResumoNegociacaoEstruturada('Historico', 'fsHistoricoResumoPreview'); } catch(e) {}
+      try { fsResumoNegociacaoEstruturada('Oportunidade', 'fsOportunidadeResumoPreview'); } catch(e) {}
+      try {
+        const box = document.getElementById('fsCondicaoAtualPreview');
+        if (box) {
+          box.innerHTML = '<div class="fs-observacao-mini-card-title">Resumo automático da condição comercial atual</div>' + fsBuildCondicaoAtualPreviewHtml();
+        }
+      } catch(e) {}
     }
 
 // ========== VISUALIZAR PROPOSTA ==========
@@ -6223,6 +6400,12 @@ async function salvarProposta() {
         opcoes_parcelamento_cartao: document.getElementById('inputOpcoesParcelamentoCartao').value,
         simulacao_perdas_ganhos: document.getElementById('inputSimulacao').value,
         oportunidades_melhoria: document.getElementById('inputOportunidades').value,
+        historico_resumo_tipo: (document.getElementById('inputHistoricoTipoValor') || {}).value || '',
+        historico_resumo_valor: (document.getElementById('inputHistoricoValorResumo') || {}).value || '',
+        historico_resumo_parcelas: (document.getElementById('inputHistoricoParcelasResumo') || {}).value || '',
+        oportunidades_resumo_tipo: (document.getElementById('inputOportunidadeTipoValor') || {}).value || '',
+        oportunidades_resumo_valor: (document.getElementById('inputOportunidadeValorResumo') || {}).value || '',
+        oportunidades_resumo_parcelas: (document.getElementById('inputOportunidadeParcelasResumo') || {}).value || '',
         parcelamentos_complementares: (typeof fsGetParcelamentoComplementarState === 'function' ? fsGetParcelamentoComplementarState() : (window.fsParcelamentoComplementarDraft || null)),
         exibicao_parcelamento_diretoria: ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum')
       };
@@ -7158,6 +7341,34 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       wrapper.classList.toggle('hidden');
     }
 
+
+    function fsExtrairCodigoDescricaoProdutoDiretoria(produto) {
+      const bruto = String((produto && (produto.produto_completo || produto.nome || produto.descricao)) || 'N/A').trim();
+      const match = bruto.match(/^\s*(\d{1,6})\s*[-–]\s*(.+)$/);
+      if (match) return { codigo: match[1], descricao: match[2] };
+      const codigo = bruto.match(/^\s*(\d{1,6})/);
+      if (codigo) {
+        return { codigo: codigo[1], descricao: bruto.replace(/^\s*\d{1,6}\s*[-–]?\s*/, '').trim() || bruto };
+      }
+      return { codigo: '—', descricao: bruto };
+    }
+
+    function fsRenderResumoCondicaoNegocio(tipo, valor, parcelas, textoExtra) {
+      const nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0;
+      const nParcelas = Math.max(0, parseInt(parcelas, 10) || 0);
+      const parcelaMedia = nParcelas > 0 ? nValor / nParcelas : 0;
+      const temResumo = nValor > 0 || nParcelas > 0 || String(tipo || '').trim();
+      const resumoBox = temResumo ? `
+        <div class="fs-card-mini-resumo">
+          <div><span>Base</span><strong>${escapeHtml(fsTextoTipoResumo(tipo))}</strong></div>
+          <div><span>Valor</span><strong>${formatarMoedaBR(nValor)}</strong></div>
+          <div><span>Parcelas</span><strong>${nParcelas > 0 ? `${nParcelas}x` : '—'}</strong></div>
+          <div><span>Parcela média</span><strong>${nParcelas > 0 ? formatarMoedaBR(parcelaMedia) : '—'}</strong></div>
+        </div>` : '';
+      const textoBox = textoExtra ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${textoExtra}</p>` : '';
+      return resumoBox + textoBox;
+    }
+
     function obterClasseLinhaDiretoriaAlcadas(info) {
       if (info.status === 'Produto em promoção') return 'bg-red-50';
       if (info.status === 'Supervisor') return 'bg-orange-50';
@@ -7204,7 +7415,7 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
         return `
           <tr class="${obterClasseLinhaDiretoriaAlcadas(info)} align-top">
             <td class="border border-gray-300 px-2 py-1">
-              <div class="font-medium text-gray-800">${p.produto_completo || p.nome || p.descricao || 'N/A'}</div>
+              ${(() => { const split = fsExtrairCodigoDescricaoProdutoDiretoria(p); return `<div class="fs-prod-cell-wrap"><div class="fs-prod-cell-code">${escapeHtml(split.codigo || '—')}</div><div class="fs-prod-cell-desc" title="${escapeHtml(split.descricao || '')}">${escapeHtml(split.descricao || 'N/A')}</div></div>`; })()}
               <div class="mt-1">${statusBadge}</div>
             </td>
                         <td class="border border-gray-300 px-2 py-1 text-center">${info.quantidade}</td>
@@ -7392,9 +7603,9 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
           ${blocoParcelamentoComplementar}
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 fs-diretoria-info-grid">
-            ${data.historico_negociacao ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitação do Cliente</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.historico_negociacao}</p></div>` : ''}
-            ${(data.simulacao_perdas_ganhos || condicaoSistemaResumo) ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4>${condicaoSistemaResumo ? `<div class="fs-condicao-sistema-chip mb-2"><span>Condição normal do sistema</span><strong>${condicaoSistemaResumo}</strong></div>` : ''}${data.simulacao_perdas_ganhos ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p>` : ''}</div>` : ''}
-            ${data.oportunidades_melhoria ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4><p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.oportunidades_melhoria}</p></div>` : ''}
+            ${(data.historico_negociacao || data.historico_resumo_valor || data.historico_resumo_parcelas || data.historico_resumo_tipo) ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitação do Cliente</h4>${fsRenderResumoCondicaoNegocio(data.historico_resumo_tipo, data.historico_resumo_valor, data.historico_resumo_parcelas, data.historico_negociacao)}</div>` : ''}
+            ${(data.simulacao_perdas_ganhos || condicaoSistemaResumo || modoParcelamentoDiretoria === 'tabela') ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4>${condicaoSistemaResumo ? `<div class="fs-condicao-sistema-chip mb-2"><span>Condição normal do sistema</span><strong>${condicaoSistemaResumo}</strong></div>` : ''}${modoParcelamentoDiretoria === 'tabela' ? `<div class="fs-condicao-card-table mb-2">${blocoParcelamentoComplementar}</div>` : ''}${data.simulacao_perdas_ganhos ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p>` : ''}</div>` : ''}
+            ${(data.oportunidades_melhoria || data.oportunidades_resumo_valor || data.oportunidades_resumo_parcelas || data.oportunidades_resumo_tipo) ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4>${fsRenderResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data.oportunidades_melhoria)}</div>` : ''}
           </div>
 
 
@@ -8158,6 +8369,12 @@ function updateContador(count) {
       document.getElementById('inputOpcoesParcelamentoCartao').value = proposta.opcoes_parcelamento_cartao || '';
       document.getElementById('inputSimulacao').value = proposta.simulacao_perdas_ganhos || '';
       document.getElementById('inputOportunidades').value = proposta.oportunidades_melhoria || '';
+      try { if (document.getElementById('inputHistoricoTipoValor')) document.getElementById('inputHistoricoTipoValor').value = proposta.historico_resumo_tipo || ''; } catch(_) {}
+      try { if (document.getElementById('inputHistoricoValorResumo')) document.getElementById('inputHistoricoValorResumo').value = proposta.historico_resumo_valor || ''; } catch(_) {}
+      try { if (document.getElementById('inputHistoricoParcelasResumo')) document.getElementById('inputHistoricoParcelasResumo').value = proposta.historico_resumo_parcelas || ''; } catch(_) {}
+      try { if (document.getElementById('inputOportunidadeTipoValor')) document.getElementById('inputOportunidadeTipoValor').value = proposta.oportunidades_resumo_tipo || ''; } catch(_) {}
+      try { if (document.getElementById('inputOportunidadeValorResumo')) document.getElementById('inputOportunidadeValorResumo').value = proposta.oportunidades_resumo_valor || ''; } catch(_) {}
+      try { if (document.getElementById('inputOportunidadeParcelasResumo')) document.getElementById('inputOportunidadeParcelasResumo').value = proposta.oportunidades_resumo_parcelas || ''; } catch(_) {}
       const chkSemJuros = document.getElementById('chkMostrarParcelamentoSemJuros');
       if (chkSemJuros) {
         chkSemJuros.checked = proposta.mostrar_parcelamento_sem_juros === true;
@@ -8170,6 +8387,7 @@ function updateContador(count) {
 
       renderProdutos();
       atualizarCamposParcelamento();
+      try { if (typeof fsAtualizarResumoDiretoriaEstruturada === 'function') fsAtualizarResumoDiretoriaEstruturada(); } catch(_) {}
       if (typeof atualizarBadgeCodigo === 'function') {
         atualizarBadgeCodigo(proposta.codigo_proposta);
       }
@@ -8212,6 +8430,12 @@ function updateContador(count) {
         try { if (document.getElementById('inputOpcoesParcelamentoCarne')) document.getElementById('inputOpcoesParcelamentoCarne').value = proposta.opcoes_parcelamento_carne || ''; } catch(_) {}
         try { if (document.getElementById('inputOpcoesParcelamentoCartao')) document.getElementById('inputOpcoesParcelamentoCartao').value = proposta.opcoes_parcelamento_cartao || ''; } catch(_) {}
         try { if (document.getElementById('inputSimulacao')) document.getElementById('inputSimulacao').value = proposta.simulacao_perdas_ganhos || ''; } catch(_) {}
+        try { if (document.getElementById('inputHistoricoTipoValor')) document.getElementById('inputHistoricoTipoValor').value = proposta.historico_resumo_tipo || ''; } catch(_) {}
+        try { if (document.getElementById('inputHistoricoValorResumo')) document.getElementById('inputHistoricoValorResumo').value = proposta.historico_resumo_valor || ''; } catch(_) {}
+        try { if (document.getElementById('inputHistoricoParcelasResumo')) document.getElementById('inputHistoricoParcelasResumo').value = proposta.historico_resumo_parcelas || ''; } catch(_) {}
+        try { if (document.getElementById('inputOportunidadeTipoValor')) document.getElementById('inputOportunidadeTipoValor').value = proposta.oportunidades_resumo_tipo || ''; } catch(_) {}
+        try { if (document.getElementById('inputOportunidadeValorResumo')) document.getElementById('inputOportunidadeValorResumo').value = proposta.oportunidades_resumo_valor || ''; } catch(_) {}
+        try { if (document.getElementById('inputOportunidadeParcelasResumo')) document.getElementById('inputOportunidadeParcelasResumo').value = proposta.oportunidades_resumo_parcelas || ''; } catch(_) {}
         try { if (document.getElementById('inputOportunidades')) document.getElementById('inputOportunidades').value = proposta.oportunidades_melhoria || ''; } catch(_) {}
         try { var _t=fs$('inputTituloProposta'); if(_t) _t.value = proposta.titulo_proposta || ''; } catch(_) {}
         try { var _v=fs$('inputValidadeProposta'); if(_v) _v.value = proposta.validade_proposta || ''; } catch(_) {}
@@ -9885,8 +10109,15 @@ async function enviarAnaliseWhatsApp(numero,msg,canvas){
       fsSetValue('inputOpcoesParcelamentoCartao','');
       fsSetValue('inputSimulacao','');
       fsSetValue('inputOportunidades','');
+      fsSetValue('inputHistoricoTipoValor','');
+      fsSetValue('inputHistoricoValorResumo','');
+      fsSetValue('inputHistoricoParcelasResumo','');
+      fsSetValue('inputOportunidadeTipoValor','');
+      fsSetValue('inputOportunidadeValorResumo','');
+      fsSetValue('inputOportunidadeParcelasResumo','');
       try { const r=document.querySelector('input[name="fsModoParcelamentoDiretoria"][value="nenhum"]'); if(r) r.checked=true; } catch(_) {}
       renderProdutos();
+      try { if (typeof fsAtualizarResumoDiretoriaEstruturada === 'function') fsAtualizarResumoDiretoriaEstruturada(); } catch(_) {}
       atualizarCamposParcelamento();
     }
 
@@ -19147,6 +19378,7 @@ document.addEventListener('DOMContentLoaded', function(){
     try{ if(window.currentProposalData) window.currentProposalData.parcelamentos_complementares = fsGetParcelamentoComplementarState(); }catch(e){}
     window.__fsManterParcelamentosAbertos = true;
     renderQuotePanels();
+    try{ if(typeof fsAtualizarResumoDiretoriaEstruturada === 'function') fsAtualizarResumoDiretoriaEstruturada(); }catch(e){}
     try{ scheduleDraftSave(); }catch(e){}
   };
 
@@ -19194,6 +19426,7 @@ document.addEventListener('DOMContentLoaded', function(){
     try{ if(window.currentProposalData) window.currentProposalData.parcelamentos_complementares = fsGetParcelamentoComplementarState(); }catch(e){}
     window.__fsManterParcelamentosAbertos = false;
     renderQuotePanels();
+    try{ if(typeof fsAtualizarResumoDiretoriaEstruturada === 'function') fsAtualizarResumoDiretoriaEstruturada(); }catch(e){}
     try{
       var details = document.getElementById('fsInterestDetails');
       if(details) details.open = false;
@@ -19331,6 +19564,7 @@ document.addEventListener('DOMContentLoaded', function(){
           tableFor('cartao', '💳 Tabela Cartão', cartao, totals.normal, totals.promo) +
         '</div>' +
       '</details>';
+    try{ if(typeof fsAtualizarResumoDiretoriaEstruturada === 'function') fsAtualizarResumoDiretoriaEstruturada(); }catch(e){}
   }
 
   var originalRenderProducts = window.renderProdutos;
@@ -19368,6 +19602,10 @@ document.addEventListener('DOMContentLoaded', function(){
       scheduleDraftSave();
       setTimeout(renderQuotePanels, 80);
     }
+    try{ if(typeof fsAtualizarResumoDiretoriaEstruturada === 'function' && event.target && event.target.closest && event.target.closest('#secaoObservacoesInternas')) fsAtualizarResumoDiretoriaEstruturada(); }catch(e){}
+  }, true);
+  document.addEventListener('input', function(event){
+    try{ if(typeof fsAtualizarResumoDiretoriaEstruturada === 'function' && event.target && event.target.closest && event.target.closest('#secaoObservacoesInternas')) fsAtualizarResumoDiretoriaEstruturada(); }catch(e){}
   }, true);
 
   document.addEventListener('visibilitychange', function(){
@@ -19426,6 +19664,7 @@ document.addEventListener('DOMContentLoaded', function(){
       renderQuotePanels();
       syncEditorChrome();
       document.documentElement.setAttribute('data-fs-quotation-features', 'v3');
+      try{ if(typeof fsAtualizarResumoDiretoriaEstruturada==='function') fsAtualizarResumoDiretoriaEstruturada(); }catch(e){}
     }, 500);
   });
 })();
@@ -19655,6 +19894,46 @@ document.addEventListener('DOMContentLoaded', function(){
 #contentDiretoriaAlcadas .fs-pc-print-table td{font-size:11.5px!important;padding:10px 7px!important;line-height:1.2!important}
 #contentDiretoriaAlcadas .fs-pc-print-title{font-size:14px!important}
 #contentDiretoriaAlcadas .fs-pc-print-title small{font-size:9px!important}
+
+.fs-observacao-mini-card{background:#fff;border:1px solid #dbe3f0;border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(15,23,42,.05)}
+.fs-observacao-mini-card-title{font-size:12px;font-weight:800;color:#334155;margin-bottom:10px}
+.fs-observacao-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fs-mini-label{display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px}
+.fs-mini-input{width:100%;min-height:40px;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font-size:13px}
+.fs-mini-preview-box{border:1px dashed #bfdbfe;border-radius:12px;background:#f8fbff;padding:10px;color:#1e3a8a;font-size:12px;line-height:1.45;min-height:42px}
+.fs-mini-inline-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fs-mini-inline-grid>div,.fs-card-mini-resumo>div{background:#fff;border:1px solid #dbeafe;border-radius:10px;padding:8px 10px}
+.fs-mini-inline-grid span,.fs-card-mini-resumo span{display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+.fs-mini-inline-grid strong,.fs-card-mini-resumo strong{display:block;font-size:12px;color:#1e3a8a;font-weight:800;line-height:1.3}
+.fs-cond-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fs-cond-preview-grid-table{align-items:start}
+.fs-cond-preview-card{background:#fff;border:1px solid #dbeafe;border-radius:12px;overflow:hidden}
+.fs-cond-preview-title{padding:8px 10px;background:#eff6ff;color:#1e3a8a;font-size:12px;font-weight:800}
+.fs-cond-preview-title small{font-size:10px;color:#64748b;font-weight:700}
+.fs-cond-preview-line{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-top:1px solid #eef2ff;font-size:12px;color:#334155}
+.fs-cond-preview-line span{color:#64748b;font-weight:700}
+.fs-cond-preview-line strong{color:#0f172a;font-weight:800;text-align:right}
+.fs-cond-preview-table{width:100%;border-collapse:collapse;font-size:10px;line-height:1.2}
+.fs-cond-preview-table th{background:#f8fafc;color:#334155;font-size:10px;font-weight:800;padding:5px;border-bottom:1px solid #dbeafe;text-align:center}
+.fs-cond-preview-table td{padding:4px 5px;border-bottom:1px solid #eef2f7;text-align:center;color:#334155;white-space:nowrap}
+.fs-card-mini-resumo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.fs-condicao-card-table .fs-parcelamento-complementar-print{padding:0!important;border:0!important;background:transparent!important}
+.fs-condicao-card-table .fs-pc-print-title{margin-bottom:6px!important;font-size:11px!important}
+.fs-condicao-card-table .fs-pc-print-title small{display:none!important}
+.fs-condicao-card-table .fs-pc-mini-grid{gap:6px!important}
+.fs-condicao-card-table .fs-pc-mini-title{font-size:8.5px!important;padding:4px 6px!important}
+.fs-condicao-card-table .fs-pc-mini-table{font-size:6.8px!important}
+.fs-condicao-card-table .fs-pc-mini-table th{font-size:6.2px!important;padding:2px!important}
+.fs-condicao-card-table .fs-pc-mini-table td{font-size:6.4px!important;padding:2px!important}
+.fs-prod-cell-wrap{display:grid;grid-template-columns:68px minmax(0,1fr);gap:8px;align-items:flex-start}
+.fs-prod-cell-code{display:flex;align-items:flex-start;justify-content:flex-start;font-weight:800;color:#0f172a;line-height:1.2}
+.fs-prod-cell-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.28;max-height:2.56em;font-weight:600;color:#1f2937;word-break:break-word}
+#fsInterestTables .fs-interest-table-v2 th{font-size:13px!important;padding:10px 8px!important;line-height:1.18!important}
+#fsInterestTables .fs-interest-table-v2 td{font-size:13.2px!important;padding:11px 8px!important;line-height:1.22!important}
+#fsInterestTables .fs-interest-table-v2 td strong{font-size:13.4px!important}
+#fsInterestTables .fs-interest-select-btn{font-size:15px!important}
+@media(max-width:767px){.fs-observacao-mini-grid,.fs-mini-inline-grid,.fs-card-mini-resumo,.fs-cond-preview-grid{grid-template-columns:1fr}.fs-prod-cell-wrap{grid-template-columns:58px minmax(0,1fr)}.fs-condicao-card-table .fs-pc-mini-grid{grid-template-columns:1fr!important}}
+
 
 /* Logo do cliente: fica dentro da propria proposta e com fundo institucional */
 #contentCliente .fs-cliente-zenir-logo-wrap{
@@ -20857,6 +21136,9 @@ document.addEventListener('DOMContentLoaded', function(){
         if(typeof window.renderVisaoDiretoriaAlcadas==='function'){
           window.renderVisaoDiretoriaAlcadas(window.currentProposalData);
         }
+        if(typeof window.fsAtualizarResumoDiretoriaEstruturada==='function'){
+          window.fsAtualizarResumoDiretoriaEstruturada();
+        }
       }
     }catch(e){ console.warn('[FS] sincronização de parcelamento:',e); }
   }
@@ -20886,6 +21168,7 @@ document.addEventListener('DOMContentLoaded', function(){
       ['input','change','blur'].forEach(function(type){ seller.addEventListener(type,function(){ setTimeout(lockHeaderIdentity,0); }); });
     }
     setInterval(lockHeaderIdentity,1200);
+    try { if (typeof fsAtualizarResumoDiretoriaEstruturada === 'function') fsAtualizarResumoDiretoriaEstruturada(); } catch(_) {}
   });
 })();
 </script>
