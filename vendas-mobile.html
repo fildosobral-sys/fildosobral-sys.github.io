@@ -9358,7 +9358,24 @@ function abrirAlterarStatusProposta(id) {
         });
         table.querySelectorAll('td .inline-flex.rounded-full').forEach(function(el){
           el.style.fontSize = '8px';
-          el.style.padding = '1px 5px';
+          el.style.padding = '0';
+          el.style.background = 'transparent';
+          el.style.border = 'none';
+          el.style.boxShadow = 'none';
+          el.style.borderRadius = '0';
+          el.style.maxWidth = 'none';
+          el.style.display = 'inline';
+        });
+
+        root.querySelectorAll('.fs-rank-badge').forEach(function(el){
+          el.style.padding = '0';
+          el.style.background = 'transparent';
+          el.style.border = 'none';
+          el.style.boxShadow = 'none';
+          el.style.borderRadius = '0';
+          el.style.maxWidth = 'none';
+          el.style.display = 'inline';
+          el.style.lineHeight = '1.15';
         });
         const totalSpacer = table.querySelector('tbody tr.bg-white td[colspan="11"]');
         if (totalSpacer) totalSpacer.style.padding = '3px 0';
