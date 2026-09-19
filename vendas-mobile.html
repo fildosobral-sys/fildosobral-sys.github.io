@@ -7422,7 +7422,7 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       return { normal: normal, final: final };
     }
 
-    function fsRenderResumoCondicaoNegocio(tipo, valor, parcelas, textoExtra, data) {
+    function fsObterResumoCondicaoNegocio(tipo, valor, parcelas, data) {
       tipo = fsNormalizarTipoResumo(tipo);
       let nValor = 0;
       try {
@@ -7430,17 +7430,94 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
         if (tipo === 'normal') nValor = Number(totaisDaProposta.normal || 0);
         else if (tipo === 'final') nValor = Number(totaisDaProposta.final || 0);
         else nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0;
-      } catch(e) { nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0; }
+      } catch(e) {
+        nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0;
+      }
       const nParcelas = Math.max(0, parseInt(parcelas, 10) || 0);
       const parcelaMedia = nParcelas > 0 ? nValor / nParcelas : 0;
-      const temResumo = nValor > 0 || nParcelas > 0 || String(tipo || '').trim();
+      return {
+        tipo: tipo,
+        tipoTexto: fsTextoTipoResumo(tipo),
+        valor: nValor,
+        parcelas: nParcelas,
+        parcelaMedia: parcelaMedia
+      };
+    }
+
+    function fsObterResumoCondicaoSistemaDiretoria(pcSelecionados, totais) {
+      const lista = Array.isArray(pcSelecionados) ? pcSelecionados : [];
+      if (lista.length) {
+        const primeiro = lista[0] || {};
+        const d = primeiro.d || {};
+        const nome = primeiro.tipo === 'carne' ? 'Carnê' : 'Cartão';
+        const entrada = Math.max(0, Number(d.entrada || 0));
+        const total = entrada + Math.max(0, Number(d.total_promocional || 0));
+        const parcelas = Math.max(0, Number(d.parcelas || 0));
+        const parcela = Math.max(0, Number(d.parcela_promocional || 0));
+        return {
+          modalidade: nome,
+          valor: total,
+          parcelas: parcelas,
+          parcelaMedia: parcela,
+          entrada: entrada,
+          resumo: `${nome}: ${parcelas}x de ${formatarMoedaBR(parcela)} • total ${formatarMoedaBR(total)}${entrada > 0 ? ` • entrada ${formatarMoedaBR(entrada)}` : ''}`
+        };
+      }
+      const totalVista = Math.max(0, Number((totais && totais.totalPromo) || 0));
+      return {
+        modalidade: 'À vista',
+        valor: totalVista,
+        parcelas: 0,
+        parcelaMedia: 0,
+        entrada: 0,
+        resumo: `À vista • total ${formatarMoedaBR(totalVista)}`
+      };
+    }
+
+    function fsRenderResumoCondicaoNegocio(tipo, valor, parcelas, textoExtra, data) {
+      const info = fsObterResumoCondicaoNegocio(tipo, valor, parcelas, data);
+      const temResumo = info.valor > 0 || info.parcelas > 0 || String(info.tipo || '').trim();
       const resumoBox = temResumo ? `
         <div class="fs-condicao-sistema-chip fs-side-condition-chip mb-2">
-          <span>${escapeHtml(fsTextoTipoResumo(tipo))}</span>
-          <strong>${nParcelas > 0 ? `Carnê: ${nParcelas}x de ${formatarMoedaBR(parcelaMedia)} • total ${formatarMoedaBR(nValor)}` : `Carnê: total ${formatarMoedaBR(nValor)}`}</strong>
+          <span>${escapeHtml(info.tipoTexto)}</span>
+          <strong>${info.parcelas > 0 ? `Carnê: ${info.parcelas}x de ${formatarMoedaBR(info.parcelaMedia)} • total ${formatarMoedaBR(info.valor)}` : `Carnê: total ${formatarMoedaBR(info.valor)}`}</strong>
         </div>` : '';
       const textoBox = textoExtra ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${escapeHtml(textoExtra)}</p>` : '';
       return resumoBox + textoBox;
+    }
+
+    function fsRenderDashboardComparativoDiretoria(cenarios) {
+      const lista = Array.isArray(cenarios) ? cenarios.filter(function(item){
+        return item && Number(item.valor || 0) > 0;
+      }) : [];
+      if (!lista.length) return '';
+      const ordenados = lista.slice().sort(function(a, b){ return Number(b.valor || 0) - Number(a.valor || 0); });
+      const topo = Number(ordenados[0] && ordenados[0].valor || 0);
+      const labelsRank = ['Melhor para a empresa', 'Intermediária', 'Menor retorno'];
+      const classesRank = ['fs-rank-top', 'fs-rank-mid', 'fs-rank-low'];
+      const cards = ordenados.map(function(item, idx){
+        const delta = topo - Number(item.valor || 0);
+        const parcelasTxt = item.parcelas > 0
+          ? `${item.modalidade || 'Carnê'}: ${item.parcelas}x de ${formatarMoedaBR(item.parcelaMedia)} • total ${formatarMoedaBR(item.valor)}`
+          : `${item.modalidade || 'À vista'} • total ${formatarMoedaBR(item.valor)}`;
+        const deltaTxt = idx === 0 ? 'Maior retorno financeiro entre as condições comparadas.' : `Diferença para a melhor condição: ${formatarMoedaBR(delta)}`;
+        return `
+          <div class="fs-dashboard-card ${classesRank[idx] || 'fs-rank-mid'}">
+            <div class="fs-dashboard-rank">${labelsRank[idx] || 'Condição avaliada'}</div>
+            <div class="fs-dashboard-scenario">${escapeHtml(item.nome || 'Condição')}</div>
+            <div class="fs-dashboard-total">${formatarMoedaBR(Number(item.valor || 0))}</div>
+            <div class="fs-dashboard-meta">${escapeHtml(parcelasTxt)}</div>
+            <div class="fs-dashboard-delta">${escapeHtml(deltaTxt)}</div>
+          </div>`;
+      }).join('');
+      return `
+        <div class="fs-dashboard-negocio mb-4">
+          <div class="fs-dashboard-head">
+            <strong>📈 Leitura rápida das condições</strong>
+            <small>Critério: maior valor final da operação = maior retorno para a empresa.</small>
+          </div>
+          <div class="fs-dashboard-grid">${cards}</div>
+        </div>`;
     }
 
     function obterClasseLinhaDiretoriaAlcadas(info) {
@@ -7598,6 +7675,14 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
         const totalPc = Math.max(0, Number(d.entrada||0)) + Math.max(0, Number(d.total_promocional||0));
         return `${nome}: ${Number(d.parcelas||0)}x de ${formatarMoedaBR(Number(d.parcela_promocional||0))} • total ${formatarMoedaBR(totalPc)}${Number(d.entrada||0)>0 ? ` • entrada ${formatarMoedaBR(Number(d.entrada||0))}` : ''}`;
       }).join(' | ') : '';
+      const resumoHistoricoDiretoria = fsObterResumoCondicaoNegocio(data.historico_resumo_tipo, data.historico_resumo_valor, data.historico_resumo_parcelas, data);
+      const resumoOportunidadeDiretoria = fsObterResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data);
+      const resumoSistemaDiretoria = fsObterResumoCondicaoSistemaDiretoria(pcSelecionados, totais);
+      const dashboardComparativoDiretoria = fsRenderDashboardComparativoDiretoria([
+        { nome: 'Solicitação do Cliente', modalidade: 'Carnê', valor: resumoHistoricoDiretoria.valor, parcelas: resumoHistoricoDiretoria.parcelas, parcelaMedia: resumoHistoricoDiretoria.parcelaMedia },
+        { nome: 'Condição Comercial Atual', modalidade: resumoSistemaDiretoria.modalidade, valor: resumoSistemaDiretoria.valor, parcelas: resumoSistemaDiretoria.parcelas, parcelaMedia: resumoSistemaDiretoria.parcelaMedia },
+        { nome: 'Sugestão da Gerência', modalidade: 'Carnê', valor: resumoOportunidadeDiretoria.valor, parcelas: resumoOportunidadeDiretoria.parcelas, parcelaMedia: resumoOportunidadeDiretoria.parcelaMedia }
+      ]);
 
       const html = `
         <div class="fs-diretoria-sheet bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
@@ -7680,6 +7765,7 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
             ${(data.oportunidades_melhoria || data.oportunidades_resumo_valor || data.oportunidades_resumo_parcelas || data.oportunidades_resumo_tipo) ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4>${fsRenderResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data.oportunidades_melhoria, data)}</div>` : ''}
           </div>
 
+          ${dashboardComparativoDiretoria}
 
           <div class="mt-4 pt-2 border-t-2 border-yellow-400 text-center text-xs text-gray-600"><p>🎯 Demonstrativo das Solicitações de Clientes</p></div>
         </div>`;
@@ -9216,7 +9302,7 @@ function abrirAlterarStatusProposta(id) {
           table.insertBefore(colgroup, table.firstChild);
         }
         colgroup.innerHTML = '';
-        [22,6,10,10,9,8,8,9,9,9].forEach(function(w){
+        [28,5,8,8,8,7,7,7,10,12].forEach(function(w){
           const col = document.createElement('col');
           col.style.width = w + '%';
           colgroup.appendChild(col);
@@ -9231,7 +9317,7 @@ function abrirAlterarStatusProposta(id) {
         });
         visibleHeaders.forEach(function(th){
           th.style.textAlign = 'center';
-          th.style.fontSize = '14.2px';
+          th.style.fontSize = '13.4px';
           th.style.lineHeight = '1.2';
           th.style.padding = '8px 6px';
           th.style.verticalAlign = 'middle';
@@ -9248,10 +9334,10 @@ function abrirAlterarStatusProposta(id) {
             td.style.lineHeight = '1.22';
             if (idx === 0) {
               td.style.textAlign = 'left';
-              td.style.fontSize = '11.5px';
+              td.style.fontSize = '10.6px';
             } else {
               td.style.textAlign = 'center';
-              td.style.fontSize = '14.2px';
+              td.style.fontSize = '13.2px';
             }
             td.querySelectorAll('div,span,small').forEach(function(child){
               if (idx > 0) child.style.textAlign = 'center';
@@ -9259,12 +9345,59 @@ function abrirAlterarStatusProposta(id) {
           });
         });
 
+        table.querySelectorAll('.fs-prod-cell-wrap').forEach(function(el){
+          el.style.gridTemplateColumns = '72px minmax(0, 1fr)';
+          el.style.gap = '8px';
+          el.style.alignItems = 'flex-start';
+        });
+        table.querySelectorAll('.fs-prod-cell-code').forEach(function(el){
+          el.style.fontSize = '10.8px';
+          el.style.lineHeight = '1.15';
+        });
+        table.querySelectorAll('.fs-prod-cell-desc').forEach(function(el){
+          el.style.fontSize = '9.8px';
+          el.style.lineHeight = '1.12';
+          el.style.maxHeight = '2.24em';
+          el.style.display = '-webkit-box';
+          el.style.webkitLineClamp = '2';
+          el.style.webkitBoxOrient = 'vertical';
+          el.style.overflow = 'hidden';
+        });
+        table.querySelectorAll('td .inline-flex.rounded-full').forEach(function(el){
+          el.style.fontSize = '8px';
+          el.style.padding = '1px 5px';
+        });
+        const totalSpacer = table.querySelector('tbody tr.bg-white td[colspan="11"]');
+        if (totalSpacer) totalSpacer.style.padding = '3px 0';
+
         const wrap = table.closest('.fs-tabela-diretoria-wrap');
         if (wrap) {
           wrap.style.padding = '10px';
           wrap.style.overflow = 'visible';
         }
       });
+
+      root.querySelectorAll('.fs-dashboard-negocio').forEach(function(box){
+        box.style.marginTop = '8px';
+        box.style.marginBottom = '10px';
+      });
+      root.querySelectorAll('.fs-dashboard-head').forEach(function(el){
+        el.style.padding = '8px 10px';
+        el.style.marginBottom = '8px';
+      });
+      root.querySelectorAll('.fs-dashboard-head strong').forEach(function(el){ el.style.fontSize = '12px'; });
+      root.querySelectorAll('.fs-dashboard-head small').forEach(function(el){ el.style.fontSize = '9px'; });
+      root.querySelectorAll('.fs-dashboard-grid').forEach(function(el){
+        el.style.gap = '8px';
+      });
+      root.querySelectorAll('.fs-dashboard-card').forEach(function(el){
+        el.style.padding = '8px';
+        el.style.minHeight = '0';
+      });
+      root.querySelectorAll('.fs-dashboard-rank').forEach(function(el){ el.style.fontSize = '9px'; });
+      root.querySelectorAll('.fs-dashboard-scenario').forEach(function(el){ el.style.fontSize = '11px'; });
+      root.querySelectorAll('.fs-dashboard-total').forEach(function(el){ el.style.fontSize = '16px'; });
+      root.querySelectorAll('.fs-dashboard-meta, .fs-dashboard-delta').forEach(function(el){ el.style.fontSize = '9px'; });
 
       // Organiza a faixa inferior da exportação: mini tabelas à esquerda e textos à direita.
       const pc = root.querySelector('.fs-pc-full-print');
@@ -20008,7 +20141,7 @@ document.addEventListener('DOMContentLoaded', function(){
 .fs-condicao-card-table .fs-pc-mini-table td{font-size:6.4px!important;padding:2px!important}
 .fs-prod-cell-wrap{display:grid;grid-template-columns:78px minmax(0,1fr);gap:10px;align-items:flex-start}
 .fs-prod-cell-code{display:flex;align-items:flex-start;justify-content:flex-start;font-weight:800;color:#0f172a;line-height:1.2}
-.fs-prod-cell-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.24;max-height:2.48em;font-weight:600;color:#1f2937;word-break:break-word;font-size:11px}
+.fs-prod-cell-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.22;max-height:2.44em;font-weight:600;color:#1f2937;word-break:break-word;font-size:10.8px}
 #fsInterestTables .fs-interest-table-v2 th{font-size:13px!important;padding:10px 8px!important;line-height:1.18!important}
 #fsInterestTables .fs-interest-table-v2 td{font-size:13.2px!important;padding:11px 8px!important;line-height:1.22!important}
 #fsInterestTables .fs-interest-table-v2 td strong{font-size:13.4px!important}
@@ -20955,6 +21088,24 @@ document.addEventListener('DOMContentLoaded', function(){
 .fs-side-condition-chip{background:rgba(255,255,255,.72)!important;border-color:rgba(148,163,184,.55)!important}
 .fs-side-condition-chip span{color:#475569!important}
 .fs-side-condition-chip strong{font-size:11px!important;color:#0f172a!important}
+.fs-dashboard-negocio{background:#fffef5;border:1px solid rgba(234,179,8,.35);border-radius:14px;padding:10px 12px;box-shadow:0 8px 20px rgba(15,23,42,.04)}
+.fs-dashboard-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;padding:10px 12px;border:1px dashed rgba(245,158,11,.45);border-radius:12px;background:linear-gradient(135deg,#fff7ed,#fffbeb);margin-bottom:10px}
+.fs-dashboard-head strong{font-size:13px;color:#92400e}
+.fs-dashboard-head small{font-size:10px;color:#78716c}
+.fs-dashboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fs-dashboard-card{border-radius:12px;padding:10px;border:1px solid #e5e7eb;background:#fff;display:flex;flex-direction:column;gap:4px;min-height:110px}
+.fs-dashboard-rank{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+.fs-dashboard-scenario{font-size:12px;font-weight:800;color:#111827}
+.fs-dashboard-total{font-size:20px;font-weight:900;line-height:1.1}
+.fs-dashboard-meta{font-size:11px;font-weight:700;color:#334155;line-height:1.35}
+.fs-dashboard-delta{font-size:10px;color:#64748b;line-height:1.35}
+.fs-rank-top{border-color:#86efac;background:linear-gradient(135deg,#f0fdf4,#ecfccb)}
+.fs-rank-top .fs-dashboard-rank,.fs-rank-top .fs-dashboard-total{color:#166534}
+.fs-rank-mid{border-color:#fde68a;background:linear-gradient(135deg,#fffbeb,#fefce8)}
+.fs-rank-mid .fs-dashboard-rank,.fs-rank-mid .fs-dashboard-total{color:#92400e}
+.fs-rank-low{border-color:#fecaca;background:linear-gradient(135deg,#fef2f2,#fff1f2)}
+.fs-rank-low .fs-dashboard-rank,.fs-rank-low .fs-dashboard-total{color:#b91c1c}
+@media (max-width: 900px){.fs-dashboard-grid{grid-template-columns:1fr}}
 </style>
 
 
