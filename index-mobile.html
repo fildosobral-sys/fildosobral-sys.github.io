@@ -10472,8 +10472,9 @@ body.fs-escala-lock{overflow:hidden!important}
   btnCancelarEdicao.addEventListener('click', limparFormulario);
   btnRegistrarAtualizacao.addEventListener('click', registrarAtualizacao);
   btnNotificarTodos.addEventListener('click', notificarTodos);
-  btnTrocarUsuario.addEventListener('click', trocarUsuario);
-  btnSairAcesso.addEventListener('click', sairAcesso);
+  // A autenticação atual é controlada pelo fluxo único "fs-index-stable-auth".
+  // Não registre aqui o fluxo legado baseado em prompt/alert: ele executava em
+  // paralelo com o modal moderno e fazia o usuário confirmar os dados várias vezes.
   document.addEventListener('click', function(e){ if (!menuDropdown.contains(e.target) && !menuBtn.contains(e.target)) menuDropdown.classList.remove('open'); if (!datePanel.contains(e.target) && e.target !== btnDate) datePanel.classList.remove('open'); if (!timePanel.contains(e.target) && e.target !== btnTime) timePanel.classList.remove('open'); });
 
   const hpModal = document.getElementById('hp12cModal');
