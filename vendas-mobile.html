@@ -129,18 +129,60 @@
     }
 
 
-    /* Lista de simulações: manter ações na mesma linha sem estourar em tablet/mobile */
+    /* Lista de simulações: organizar em duas linhas e sem sobreposição */
     .fs-proposta-card{
-      padding: 1.1rem 1rem;
+      padding: 1rem;
     }
     .fs-proposta-topo{
       display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:0.9rem;
+      flex-direction:column;
+      gap:0.8rem;
     }
-    .fs-proposta-info{
-      flex:1 1 auto;
+    .fs-proposta-linha-principal,
+    .fs-proposta-linha-secundaria{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:0.85rem;
+      min-width:0;
+    }
+    .fs-proposta-linha-principal{
+      flex-wrap:wrap;
+    }
+    .fs-proposta-linha-secundaria{
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+    .fs-proposta-cabecalho-inline{
+      display:flex;
+      align-items:center;
+      gap:0.9rem;
+      flex:1 1 560px;
+      min-width:0;
+      flex-wrap:wrap;
+    }
+    .fs-proposta-codigo{
+      margin:0;
+      flex:0 0 auto;
+      white-space:nowrap;
+    }
+    .fs-proposta-meta-inline{
+      flex:1 1 360px;
+      min-width:0;
+      display:flex;
+      flex-wrap:wrap;
+      gap:0.45rem 0.8rem;
+      align-items:center;
+    }
+    .fs-proposta-meta-inline > span{
+      white-space:nowrap;
+    }
+    .fs-proposta-status-wrap{
+      display:flex;
+      gap:0.45rem;
+      flex-wrap:wrap;
+      align-items:center;
+      flex:1 1 280px;
       min-width:0;
     }
     .fs-proposta-acoes{
@@ -148,19 +190,20 @@
       flex-wrap:nowrap;
       align-items:stretch;
       justify-content:flex-end;
-      gap:0.45rem;
-      flex:0 0 auto;
+      gap:0.4rem;
+      flex:0 1 auto;
       min-width:0;
+      margin-left:auto;
     }
     .fs-proposta-acao{
       display:inline-flex;
       align-items:center;
       justify-content:center;
       gap:0.28rem;
-      padding:0.65rem 0.8rem !important;
-      min-height:44px !important;
+      padding:0.58rem 0.72rem !important;
+      min-height:40px !important;
       border-radius:0.7rem;
-      font-size:0.88rem !important;
+      font-size:0.8rem !important;
       line-height:1.05;
       font-weight:700;
       text-align:center;
@@ -177,17 +220,17 @@
       white-space:normal;
     }
     .fs-proposta-acao-excluir{
-      min-width:44px;
-      width:44px;
-      padding:0.65rem 0.45rem;
-      flex:0 0 44px;
+      min-width:40px;
+      width:40px;
+      padding:0.58rem 0.35rem;
+      flex:0 0 40px;
     }
     .fs-proposta-acao-editar,
     .fs-proposta-acao-visualizar{
-      min-width:82px;
+      min-width:86px;
     }
     .fs-proposta-acao-enviar{
-      min-width:102px;
+      min-width:118px;
     }
     .fs-info-linha-card{
       display:flex;
@@ -198,83 +241,49 @@
       white-space:nowrap;
     }
     @media (max-width: 1100px) {
-      .fs-proposta-card{
-        padding: 0.95rem 0.9rem;
-      }
-      .fs-proposta-topo{
-        gap:0.75rem;
-      }
-      .fs-proposta-acoes{
-        gap:0.32rem;
-      }
+      .fs-proposta-card{ padding: 0.95rem 0.9rem; }
+      .fs-proposta-linha-principal,
+      .fs-proposta-linha-secundaria{ gap:0.7rem; }
+      .fs-proposta-cabecalho-inline{ gap:0.7rem; flex-basis:100%; }
+      .fs-proposta-meta-inline{ gap:0.35rem 0.65rem; }
+      .fs-proposta-acoes{ gap:0.32rem; }
       .fs-proposta-acao{
-        padding:0.55rem 0.58rem !important;
-        min-height:40px !important;
-        font-size:0.76rem !important;
-        border-radius:0.65rem;
+        padding:0.52rem 0.58rem !important;
+        min-height:38px !important;
+        font-size:0.74rem !important;
       }
       .fs-proposta-acao-editar,
-      .fs-proposta-acao-visualizar{
-        min-width:72px;
-      }
-      .fs-proposta-acao-enviar{
-        min-width:86px;
-      }
-      .fs-proposta-acao-excluir{
-        min-width:38px;
-        width:38px;
-        flex-basis:38px;
-        padding:0.55rem 0.3rem;
-      }
+      .fs-proposta-acao-visualizar{ min-width:74px; }
+      .fs-proposta-acao-enviar{ min-width:96px; }
+      .fs-proposta-acao-excluir{ min-width:38px; width:38px; flex-basis:38px; }
     }
     @media (max-width: 820px) {
-      .fs-proposta-card{
-        padding: 0.85rem 0.75rem;
-      }
-      .fs-proposta-topo{
-        gap:0.65rem;
-      }
-      .fs-proposta-acoes{
-        gap:0.26rem;
-      }
+      .fs-proposta-card{ padding: 0.85rem 0.75rem; }
+      .fs-proposta-linha-principal,
+      .fs-proposta-linha-secundaria{ gap:0.55rem; }
+      .fs-proposta-cabecalho-inline{ gap:0.55rem; }
+      .fs-proposta-meta-inline{ gap:0.35rem 0.55rem; }
+      .fs-proposta-acoes{ width:100%; justify-content:flex-start; margin-left:0; }
       .fs-proposta-acao{
-        padding:0.48rem 0.45rem !important;
-        min-height:38px !important;
+        padding:0.46rem 0.45rem !important;
+        min-height:36px !important;
         font-size:0.7rem !important;
       }
       .fs-proposta-acao-editar,
-      .fs-proposta-acao-visualizar{
-        min-width:64px;
-      }
-      .fs-proposta-acao-enviar{
-        min-width:76px;
-      }
-      .fs-proposta-acao-texto{
-        line-height:1.0;
-      }
-      .fs-info-linha-card{
-        gap:0.4rem 0.7rem;
-      }
-      .fs-info-linha-card > span{
-        white-space:normal;
-      }
+      .fs-proposta-acao-visualizar{ min-width:68px; }
+      .fs-proposta-acao-enviar{ min-width:84px; }
+      .fs-proposta-meta-inline > span,
+      .fs-info-linha-card > span{ white-space:normal; }
     }
     @media (max-width: 640px) {
-      .fs-proposta-topo{
-        flex-direction:column;
-      }
-      .fs-proposta-acoes{
-        width:100%;
-        justify-content:space-between;
-      }
-      .fs-proposta-acao{
-        flex:1 1 0;
-        min-width:0;
-      }
-      .fs-proposta-acao-excluir{
-        flex:0 0 42px;
-        width:42px;
-      }
+      .fs-proposta-linha-principal,
+      .fs-proposta-linha-secundaria,
+      .fs-proposta-cabecalho-inline{ flex-direction:column; align-items:flex-start; }
+      .fs-proposta-status-wrap,
+      .fs-proposta-acoes{ width:100%; }
+      .fs-proposta-acoes{ justify-content:space-between; }
+      .fs-proposta-acao{ flex:1 1 0; min-width:0; }
+      .fs-proposta-acao-excluir{ flex:0 0 42px; width:42px; }
     }
 
     @media print {
@@ -8585,19 +8594,23 @@ Demonstrativo das Solicitações de Clientes</p>
         return `
           <div class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 fs-proposta-card">
             <div class="fs-proposta-topo">
-              <div class="fs-proposta-info">
-                <h3 class="text-lg font-bold text-gray-800 mb-1">${p.codigo_proposta || p.titulo_proposta || 'Sem código'}</h3>
-                <div class="fs-info-linha-card text-xs text-gray-500 mb-3">
-                  <span>🏪 ${p.filial || p.loja_nome || (window.fsGetFilialAtual ? window.fsGetFilialAtual() : 'N/A')}</span>
-                  <span>👤 ${p.vendedor_nome || 'N/A'}</span>
-                  <span>📅 ${formatarData(p.data_proposta)}</span>
-                  ${p.cliente_nome ? `<span>🎯 ${p.cliente_nome}</span>` : ''}
+              <div class="fs-proposta-linha-principal">
+                <div class="fs-proposta-cabecalho-inline">
+                  <h3 class="text-lg font-bold text-gray-800 fs-proposta-codigo">${p.codigo_proposta || p.titulo_proposta || 'Sem código'}</h3>
+                  <div class="fs-proposta-meta-inline text-xs text-gray-500">
+                    <span>🏪 ${p.filial || p.loja_nome || (window.fsGetFilialAtual ? window.fsGetFilialAtual() : 'N/A')}</span>
+                    <span>👤 ${p.vendedor_nome || 'N/A'}</span>
+                    <span>📅 ${formatarData(p.data_proposta)}</span>
+                    ${p.cliente_nome ? `<span>🎯 ${p.cliente_nome}</span>` : ''}
+                  </div>
                 </div>
-                <div class="flex gap-2 flex-wrap">
+              </div>
+              <div class="fs-proposta-linha-secundaria">
+                <div class="fs-proposta-status-wrap">
                   <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
                     ${produtosArray.length} produto(s)
                   </span>
-                   <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer"
+                  <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer"
                     onclick="abrirAlterarStatusProposta('${p.__offlineId || p.__backendId}')">
                     ${
                       (function () {
@@ -8618,20 +8631,20 @@ Demonstrativo das Solicitações de Clientes</p>
                     </span>
                   ` : ''}
                 </div>
-              </div>
-              <div class="fs-proposta-acoes">
-                <button onclick="editarProposta('${p.__offlineId || p.__backendId}')" class="bg-blue-500 text-white hover:bg-blue-600 fs-proposta-acao fs-proposta-acao-editar">
-                  <span class="fs-proposta-acao-icone">✏️</span><span class="fs-proposta-acao-texto">Editar</span>
-                </button>
-                <button onclick="visualizarPropostaDaLista('${p.__offlineId || p.__backendId}')" class="bg-indigo-500 text-white hover:bg-indigo-600 fs-proposta-acao fs-proposta-acao-visualizar">
-                  <span class="fs-proposta-acao-icone">👁️</span><span class="fs-proposta-acao-texto">Visualizar</span>
-                </button>
-                <button onclick="fsEnviarAnaliseLista('${p.__offlineId || p.__backendId}')" class="bg-emerald-500 text-white hover:bg-emerald-600 fs-proposta-acao fs-proposta-acao-enviar">
-                  <span class="fs-proposta-acao-icone">📤</span><span class="fs-proposta-acao-texto">Enviar para análise</span>
-                </button>
-                <button onclick="excluirProposta('${p.__offlineId || p.__backendId}')" class="bg-red-500 text-white hover:bg-red-600 fs-proposta-acao fs-proposta-acao-excluir" aria-label="Excluir proposta" title="Excluir proposta">
-                  <span class="fs-proposta-acao-icone">🗑️</span>
-                </button>
+                <div class="fs-proposta-acoes">
+                  <button onclick="editarProposta('${p.__offlineId || p.__backendId}')" class="bg-blue-500 text-white hover:bg-blue-600 fs-proposta-acao fs-proposta-acao-editar">
+                    <span class="fs-proposta-acao-icone">✏️</span><span class="fs-proposta-acao-texto">Editar</span>
+                  </button>
+                  <button onclick="visualizarPropostaDaLista('${p.__offlineId || p.__backendId}')" class="bg-indigo-500 text-white hover:bg-indigo-600 fs-proposta-acao fs-proposta-acao-visualizar">
+                    <span class="fs-proposta-acao-icone">👁️</span><span class="fs-proposta-acao-texto">Visualizar</span>
+                  </button>
+                  <button onclick="fsEnviarAnaliseLista('${p.__offlineId || p.__backendId}')" class="bg-emerald-500 text-white hover:bg-emerald-600 fs-proposta-acao fs-proposta-acao-enviar">
+                    <span class="fs-proposta-acao-icone">📤</span><span class="fs-proposta-acao-texto">Enviar para análise</span>
+                  </button>
+                  <button onclick="excluirProposta('${p.__offlineId || p.__backendId}')" class="bg-red-500 text-white hover:bg-red-600 fs-proposta-acao fs-proposta-acao-excluir" aria-label="Excluir proposta" title="Excluir proposta">
+                    <span class="fs-proposta-acao-icone">🗑️</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -9574,7 +9587,7 @@ function abrirAlterarStatusProposta(id) {
         grid.appendChild(pc);
         grid.appendChild(infos);
         grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = '45% 55%';
+        grid.style.gridTemplateColumns = '43% 57%';
         grid.style.gap = '10px';
         grid.style.alignItems = 'stretch';
         pc.style.margin = '0';
@@ -9635,6 +9648,99 @@ function abrirAlterarStatusProposta(id) {
         }, 4200);
       } catch (e) {
         try { if (typeof showToast === 'function') showToast(message, type === 'error' ? 'error' : 'success'); } catch (_) {}
+      }
+    }
+
+    function fsAplicarModoLeveParcelamentoExport(root) {
+      try {
+        if (!root || !root.querySelectorAll) return;
+        root.querySelectorAll('.fs-pc-full-print').forEach(function(box){
+          box.setAttribute('data-fs-export-light', 'true');
+          const subtitle = box.querySelector('.fs-pc-print-title small');
+          if (subtitle) subtitle.textContent = 'Versão leve para exportação quando o aparelho limita a captura 8K';
+          box.querySelectorAll('.fs-pc-mini-grid').forEach(function(grid){
+            grid.style.gap = '4px';
+          });
+          box.querySelectorAll('.fs-pc-mini-card').forEach(function(card){
+            card.style.boxShadow = 'none';
+          });
+          box.querySelectorAll('.fs-pc-mini-table').forEach(function(tbl){
+            Array.from(tbl.querySelectorAll('tbody tr')).forEach(function(tr){
+              const plano = ((tr.children[0] && tr.children[0].textContent) || '').replace(/\s+/g, '').toLowerCase();
+              if (!['1x','3x','6x','9x','12x'].includes(plano)) {
+                tr.remove();
+              }
+            });
+            tbl.style.fontSize = '7px';
+            tbl.style.lineHeight = '1.06';
+            tbl.querySelectorAll('th').forEach(function(th){ th.style.padding = '2px'; th.style.fontSize = '6.6px'; });
+            tbl.querySelectorAll('td').forEach(function(td){ td.style.padding = '1.8px 2px'; td.style.fontSize = '6.8px'; });
+          });
+        });
+      } catch (e) {
+        console.warn('[8K] modo leve parcelamento:', e);
+      }
+    }
+
+    async function fsRenderWrapperHtml2Canvas(wrapper, logicalW, logicalH, scale) {
+      return await html2canvas(wrapper, {
+        scale: scale,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: logicalW,
+        height: logicalH,
+        windowWidth: logicalW,
+        windowHeight: logicalH,
+        scrollX: 0,
+        scrollY: 0,
+        imageTimeout: 15000
+      });
+    }
+
+    function fsGarantirCanvas8K(srcCanvas) {
+      const targetW = 7680;
+      const targetH = 5431;
+      if (srcCanvas && srcCanvas.width === targetW && srcCanvas.height === targetH) return srcCanvas;
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = targetW;
+      finalCanvas.height = targetH;
+      const ctx = finalCanvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, targetW, targetH);
+      ctx.imageSmoothingEnabled = true;
+      try { ctx.imageSmoothingQuality = 'high'; } catch (_) {}
+      if (srcCanvas) ctx.drawImage(srcCanvas, 0, 0, targetW, targetH);
+      return finalCanvas;
+    }
+
+    async function fsRenderA4Canvas8KComFallback(wrapper, logicalW, logicalH, tipo) {
+      try {
+        return await fsRenderWrapperHtml2Canvas(wrapper, logicalW, logicalH, 4);
+      } catch (erroPrincipal) {
+        console.warn('[8K] Primeira tentativa em 8K falhou:', erroPrincipal);
+        let ultimoErro = erroPrincipal;
+
+        if (tipo === 'diretoriaAlcadas') {
+          try {
+            fsAplicarModoLeveParcelamentoExport(wrapper);
+            await new Promise(function(r){ requestAnimationFrame(function(){ requestAnimationFrame(r); }); });
+            const leve = await fsRenderWrapperHtml2Canvas(wrapper, logicalW, logicalH, 3);
+            return fsGarantirCanvas8K(leve);
+          } catch (erroLeve) {
+            console.warn('[8K] Tentativa com parcelamento simplificado falhou:', erroLeve);
+            ultimoErro = erroLeve;
+          }
+        }
+
+        try {
+          const reduzido = await fsRenderWrapperHtml2Canvas(wrapper, logicalW, logicalH, 2.5);
+          return fsGarantirCanvas8K(reduzido);
+        } catch (erroFinal) {
+          console.warn('[8K] Fallback reduzido também falhou:', erroFinal);
+          throw (erroFinal || ultimoErro);
+        }
       }
     }
 
@@ -9778,20 +9884,7 @@ function abrirAlterarStatusProposta(id) {
 
         // Renderização DIRETA em 8K. Antes a captura era feita em ~4K e ampliada,
         // o que suavizava letras e linhas ao aplicar zoom. Agora não há upscaling.
-        const finalCanvas = await html2canvas(wrapper, {
-          scale: 4,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-          width: logicalW,
-          height: logicalH,
-          windowWidth: logicalW,
-          windowHeight: logicalH,
-          scrollX: 0,
-          scrollY: 0,
-          imageTimeout: 15000
-        });
+        const finalCanvas = await fsRenderA4Canvas8KComFallback(wrapper, logicalW, logicalH, tipo);
 
         const clienteNome = (currentProposalData?.cliente_nome || 'cliente').trim() || 'cliente';
         const stamp = new Date().toISOString().replace(/[-:T.]/g,'').slice(0,14);
