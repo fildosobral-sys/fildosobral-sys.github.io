@@ -7652,13 +7652,13 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
             <div class="fs-tabela-diretoria-wrap overflow-x-auto">
               <table class="w-full text-xs border-collapse fs-tabela-diretoria" style="table-layout:fixed;">
                 <colgroup>
-                  <col style="width:12%">
-                  <col style="width:5%">
-                  <col style="width:9%">
-                  <col style="width:9%">
-                  <col style="width:9%">
-                  <col style="width:7%">
+                  <col style="width:18%">
+                  <col style="width:4%">
+                  <col style="width:8%">
+                  <col style="width:8%">
+                  <col style="width:8%">
                   <col style="width:6%">
+                  <col style="width:5%">
                   <col style="width:7%">
                   <col style="width:8%">
                   <col style="width:10%">
@@ -7676,7 +7676,7 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 fs-diretoria-info-grid">
             ${(data.historico_negociacao || data.historico_resumo_valor || data.historico_resumo_parcelas || data.historico_resumo_tipo) ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitação do Cliente</h4>${fsRenderResumoCondicaoNegocio(data.historico_resumo_tipo, data.historico_resumo_valor, data.historico_resumo_parcelas, data.historico_negociacao, data)}</div>` : ''}
-            ${(data.simulacao_perdas_ganhos || condicaoSistemaResumo || modoParcelamentoDiretoria === 'tabela') ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4>${condicaoSistemaResumo ? `<div class="fs-condicao-sistema-chip mb-2"><span>Condição normal do sistema</span><strong>${condicaoSistemaResumo}</strong></div>` : ''}${modoParcelamentoDiretoria === 'tabela' ? `<div class="fs-condicao-card-table mb-2">${blocoParcelamentoComplementar}</div>` : ''}${data.simulacao_perdas_ganhos ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p>` : ''}</div>` : ''}
+            ${(data.simulacao_perdas_ganhos || condicaoSistemaResumo || modoParcelamentoDiretoria === 'tabela') ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4>${condicaoSistemaResumo ? `<div class="fs-condicao-sistema-chip fs-side-condition-chip mb-2"><span>Condição normal do sistema</span><strong>${condicaoSistemaResumo}</strong></div>` : ''}${modoParcelamentoDiretoria === 'tabela' ? `<div class="fs-condicao-card-table mb-2">${blocoParcelamentoComplementar}</div>` : ''}${data.simulacao_perdas_ganhos ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p>` : ''}</div>` : ''}
             ${(data.oportunidades_melhoria || data.oportunidades_resumo_valor || data.oportunidades_resumo_parcelas || data.oportunidades_resumo_tipo) ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4>${fsRenderResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data.oportunidades_melhoria, data)}</div>` : ''}
           </div>
 
@@ -20006,14 +20006,14 @@ document.addEventListener('DOMContentLoaded', function(){
 .fs-condicao-card-table .fs-pc-mini-table{font-size:6.8px!important}
 .fs-condicao-card-table .fs-pc-mini-table th{font-size:6.2px!important;padding:2px!important}
 .fs-condicao-card-table .fs-pc-mini-table td{font-size:6.4px!important;padding:2px!important}
-.fs-prod-cell-wrap{display:grid;grid-template-columns:68px minmax(0,1fr);gap:8px;align-items:flex-start}
+.fs-prod-cell-wrap{display:grid;grid-template-columns:78px minmax(0,1fr);gap:10px;align-items:flex-start}
 .fs-prod-cell-code{display:flex;align-items:flex-start;justify-content:flex-start;font-weight:800;color:#0f172a;line-height:1.2}
-.fs-prod-cell-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.28;max-height:2.56em;font-weight:600;color:#1f2937;word-break:break-word}
+.fs-prod-cell-desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.24;max-height:2.48em;font-weight:600;color:#1f2937;word-break:break-word;font-size:11px}
 #fsInterestTables .fs-interest-table-v2 th{font-size:13px!important;padding:10px 8px!important;line-height:1.18!important}
 #fsInterestTables .fs-interest-table-v2 td{font-size:13.2px!important;padding:11px 8px!important;line-height:1.22!important}
 #fsInterestTables .fs-interest-table-v2 td strong{font-size:13.4px!important}
 #fsInterestTables .fs-interest-select-btn{font-size:15px!important}
-@media(max-width:767px){.fs-observacao-mini-grid,.fs-mini-inline-grid,.fs-card-mini-resumo,.fs-cond-preview-grid{grid-template-columns:1fr}.fs-prod-cell-wrap{grid-template-columns:58px minmax(0,1fr)}.fs-condicao-card-table .fs-pc-mini-grid{grid-template-columns:1fr!important}}
+@media(max-width:767px){.fs-observacao-mini-grid,.fs-mini-inline-grid,.fs-card-mini-resumo,.fs-cond-preview-grid{grid-template-columns:1fr}.fs-prod-cell-wrap{grid-template-columns:64px minmax(0,1fr)}.fs-condicao-card-table .fs-pc-mini-grid{grid-template-columns:1fr!important}}
 
 
 /* Logo do cliente: fica dentro da propria proposta e com fundo institucional */
