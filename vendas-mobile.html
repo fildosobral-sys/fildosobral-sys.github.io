@@ -279,11 +279,47 @@
       .fs-proposta-linha-principal,
       .fs-proposta-linha-secundaria,
       .fs-proposta-cabecalho-inline{ flex-direction:column; align-items:flex-start; }
-      .fs-proposta-status-wrap,
-      .fs-proposta-acoes{ width:100%; }
-      .fs-proposta-acoes{ justify-content:space-between; }
-      .fs-proposta-acao{ flex:1 1 0; min-width:0; }
-      .fs-proposta-acao-excluir{ flex:0 0 42px; width:42px; }
+
+      /* Mobile: impede o flex-basis do desktop de virar altura e criar o espaço branco gigante */
+      .fs-proposta-cabecalho-inline,
+      .fs-proposta-meta-inline,
+      .fs-proposta-status-wrap{
+        flex:0 0 auto !important;
+        width:100%;
+      }
+      .fs-proposta-meta-inline{
+        display:flex;
+        flex-direction:row;
+        flex-wrap:wrap;
+        align-items:center;
+        gap:0.3rem 0.55rem;
+      }
+      .fs-proposta-status-wrap{
+        display:flex;
+        flex-direction:row;
+        flex-wrap:wrap;
+        gap:0.35rem;
+      }
+      .fs-proposta-acoes{
+        width:100%;
+        justify-content:space-between;
+      }
+      .fs-proposta-acao{
+        flex:1 1 0;
+        min-width:0;
+      }
+      .fs-proposta-acao-excluir{
+        flex:0 0 42px;
+        width:42px;
+      }
+      .fs-proposta-card{
+        min-height:0 !important;
+        height:auto !important;
+      }
+      .fs-proposta-topo{
+        min-height:0 !important;
+        height:auto !important;
+      }
     }
 
     @media print {
