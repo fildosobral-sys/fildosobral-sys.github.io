@@ -7398,26 +7398,37 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       return { codigo: '—', descricao: bruto };
     }
 
-    function fsRenderResumoCondicaoNegocio(tipo, valor, parcelas, textoExtra) {
+    function fsCalcularTotaisResumoDiretoria(data) {
+      const lista = Array.isArray(data && data.produtos) ? data.produtos : [];
+      let normal = 0, final = 0;
+      lista.forEach(function(produto){
+        const qtd = Math.max(1, parseInt(produto && produto.quantidade, 10) || 1);
+        const precoNormal = Math.max(0, Number(produto && produto.preco_normal || 0));
+        const precoPromo = Math.max(0, Number(produto && produto.preco_promo || 0));
+        normal += precoNormal * qtd;
+        final += (precoPromo > 0 ? precoPromo : precoNormal) * qtd;
+      });
+      return { normal: normal, final: final };
+    }
+
+    function fsRenderResumoCondicaoNegocio(tipo, valor, parcelas, textoExtra, data) {
       tipo = fsNormalizarTipoResumo(tipo);
       let nValor = 0;
       try {
-        const totaisAtuais = (typeof quoteTotals === 'function') ? quoteTotals() : null;
-        if (tipo === 'normal' && totaisAtuais) nValor = Number(totaisAtuais.normal || 0);
-        else if (tipo === 'final' && totaisAtuais) nValor = Number(totaisAtuais.final || 0);
+        const totaisDaProposta = fsCalcularTotaisResumoDiretoria(data);
+        if (tipo === 'normal') nValor = Number(totaisDaProposta.normal || 0);
+        else if (tipo === 'final') nValor = Number(totaisDaProposta.final || 0);
         else nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0;
       } catch(e) { nValor = (typeof fsParseMoneyInput === 'function') ? fsParseMoneyInput(valor) : 0; }
       const nParcelas = Math.max(0, parseInt(parcelas, 10) || 0);
       const parcelaMedia = nParcelas > 0 ? nValor / nParcelas : 0;
       const temResumo = nValor > 0 || nParcelas > 0 || String(tipo || '').trim();
       const resumoBox = temResumo ? `
-        <div class="fs-card-mini-resumo">
-          <div><span>Base</span><strong>${escapeHtml(fsTextoTipoResumo(tipo))}</strong></div>
-          <div><span>Valor</span><strong>${formatarMoedaBR(nValor)}</strong></div>
-          <div><span>Parcelas</span><strong>${nParcelas > 0 ? `${nParcelas}x` : '—'}</strong></div>
-          <div><span>Parcela média</span><strong>${nParcelas > 0 ? formatarMoedaBR(parcelaMedia) : '—'}</strong></div>
+        <div class="fs-condicao-sistema-chip fs-side-condition-chip mb-2">
+          <span>${escapeHtml(fsTextoTipoResumo(tipo))}</span>
+          <strong>${formatarMoedaBR(nValor)}${nParcelas > 0 ? ` • ${nParcelas}x de ${formatarMoedaBR(parcelaMedia)}` : ''}</strong>
         </div>` : '';
-      const textoBox = textoExtra ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${textoExtra}</p>` : '';
+      const textoBox = textoExtra ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${escapeHtml(textoExtra)}</p>` : '';
       return resumoBox + textoBox;
     }
 
@@ -7652,12 +7663,10 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
             </div>
           </div>
 
-          ${blocoParcelamentoComplementar}
-
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 fs-diretoria-info-grid">
-            ${(data.historico_negociacao || data.historico_resumo_valor || data.historico_resumo_parcelas || data.historico_resumo_tipo) ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitação do Cliente</h4>${fsRenderResumoCondicaoNegocio(data.historico_resumo_tipo, data.historico_resumo_valor, data.historico_resumo_parcelas, data.historico_negociacao)}</div>` : ''}
+            ${(data.historico_negociacao || data.historico_resumo_valor || data.historico_resumo_parcelas || data.historico_resumo_tipo) ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitação do Cliente</h4>${fsRenderResumoCondicaoNegocio(data.historico_resumo_tipo, data.historico_resumo_valor, data.historico_resumo_parcelas, data.historico_negociacao, data)}</div>` : ''}
             ${(data.simulacao_perdas_ganhos || condicaoSistemaResumo || modoParcelamentoDiretoria === 'tabela') ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4>${condicaoSistemaResumo ? `<div class="fs-condicao-sistema-chip mb-2"><span>Condição normal do sistema</span><strong>${condicaoSistemaResumo}</strong></div>` : ''}${modoParcelamentoDiretoria === 'tabela' ? `<div class="fs-condicao-card-table mb-2">${blocoParcelamentoComplementar}</div>` : ''}${data.simulacao_perdas_ganhos ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p>` : ''}</div>` : ''}
-            ${(data.oportunidades_melhoria || data.oportunidades_resumo_valor || data.oportunidades_resumo_parcelas || data.oportunidades_resumo_tipo) ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4>${fsRenderResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data.oportunidades_melhoria)}</div>` : ''}
+            ${(data.oportunidades_melhoria || data.oportunidades_resumo_valor || data.oportunidades_resumo_parcelas || data.oportunidades_resumo_tipo) ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4>${fsRenderResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data.oportunidades_melhoria, data)}</div>` : ''}
           </div>
 
 
@@ -20924,6 +20933,9 @@ document.addEventListener('DOMContentLoaded', function(){
 .fs-condicao-sistema-chip{display:flex;flex-direction:column;gap:3px;padding:7px 8px;border:1px solid #93c5fd;border-radius:9px;background:#eff6ff;color:#1e3a8a}
 .fs-condicao-sistema-chip span{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.035em;color:#2563eb}
 .fs-condicao-sistema-chip strong{font-size:10px;line-height:1.3;color:#1e3a8a}
+.fs-side-condition-chip{background:rgba(255,255,255,.72)!important;border-color:rgba(148,163,184,.55)!important}
+.fs-side-condition-chip span{color:#475569!important}
+.fs-side-condition-chip strong{font-size:11px!important;color:#0f172a!important}
 </style>
 
 
