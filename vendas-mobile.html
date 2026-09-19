@@ -6146,6 +6146,17 @@ async function salvarProposta() {
         showToast('✅ Simulação salva neste dispositivo!', 'success');
         propostaFoiSalva = true;
         try { atualizarResumoGeralProposta(); } catch(e) {}
+        // Mantém a visão da Diretoria sincronizada imediatamente após salvar.
+        // Assim os cards estruturados já existem antes de qualquer download 8K.
+        try {
+          var _produtosSalvosAgora = [];
+          try { _produtosSalvosAgora = Array.isArray(proposta.produtos) ? proposta.produtos : JSON.parse(proposta.produtos || '[]'); } catch(_e) { _produtosSalvosAgora = Array.isArray(produtos) ? produtos : []; }
+          currentProposalData = Object.assign({}, proposta, { produtos: _produtosSalvosAgora });
+          window.currentProposalData = currentProposalData;
+          if (typeof renderVisaoCliente === 'function') renderVisaoCliente(currentProposalData);
+          if (typeof renderVisaoDiretoriaAlcadas === 'function') renderVisaoDiretoriaAlcadas(currentProposalData);
+          if (typeof renderVisaoDiretoria === 'function') renderVisaoDiretoria(currentProposalData);
+        } catch(_syncErr) { console.warn('[FS] Não foi possível sincronizar as visões após salvar.', _syncErr); }
 
         // Retorna imediatamente para "Minhas Simulações" usando a lista recém-salva.
         // Também limpa eventual filtro de data para a nova simulação não ficar escondida.
@@ -7426,7 +7437,7 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       const resumoBox = temResumo ? `
         <div class="fs-condicao-sistema-chip fs-side-condition-chip mb-2">
           <span>${escapeHtml(fsTextoTipoResumo(tipo))}</span>
-          <strong>${formatarMoedaBR(nValor)}${nParcelas > 0 ? ` • ${nParcelas}x de ${formatarMoedaBR(parcelaMedia)}` : ''}</strong>
+          <strong>${nParcelas > 0 ? `Carnê: ${nParcelas}x de ${formatarMoedaBR(parcelaMedia)} • total ${formatarMoedaBR(nValor)}` : `Carnê: total ${formatarMoedaBR(nValor)}`}</strong>
         </div>` : '';
       const textoBox = textoExtra ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${escapeHtml(textoExtra)}</p>` : '';
       return resumoBox + textoBox;
@@ -8521,6 +8532,14 @@ function updateContador(count) {
           opcoes_parcelamento_cartao: proposta.opcoes_parcelamento_cartao || '',
           simulacao_perdas_ganhos: proposta.simulacao_perdas_ganhos || '',
           oportunidades_melhoria: proposta.oportunidades_melhoria || '',
+          historico_resumo_tipo: proposta.historico_resumo_tipo || '',
+          historico_resumo_valor: proposta.historico_resumo_valor || '',
+          historico_resumo_parcelas: proposta.historico_resumo_parcelas || '',
+          oportunidades_resumo_tipo: proposta.oportunidades_resumo_tipo || '',
+          oportunidades_resumo_valor: proposta.oportunidades_resumo_valor || '',
+          oportunidades_resumo_parcelas: proposta.oportunidades_resumo_parcelas || '',
+          exibicao_parcelamento_diretoria: proposta.exibicao_parcelamento_diretoria || 'nenhum',
+          mostrar_parcelamento_sem_juros: proposta.mostrar_parcelamento_sem_juros === true,
           carne_vencimento_data: proposta.carne_vencimento_data || '',
           carne_vencimento_dias: proposta.carne_vencimento_dias || '',
           carne_aut_atendente: proposta.carne_aut_atendente || '',
