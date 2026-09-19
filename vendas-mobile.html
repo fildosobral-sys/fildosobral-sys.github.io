@@ -3283,12 +3283,6 @@ document.addEventListener('DOMContentLoaded', function(){
           </div>
           <textarea id="inputOportunidades" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Feedback complementar da sugestão da gerência..."></textarea>
          </div>
-         <div class="mt-4 flex items-center gap-2">
-          <input id="chkMostrarParcelamentoSemJuros" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-          <label for="chkMostrarParcelamentoSemJuros" class="text-sm text-gray-700">
-           Mostrar bloco "Parcelamento Sem Juros" na proposta
-          </label>
-         </div>
          <div class="mt-4 fs-diretoria-parcelamento-mode">
           <div class="text-sm font-semibold text-gray-700 mb-2">📊 Parcelamento com juros na proposta de Planos e Cotações</div>
           <div class="fs-diretoria-mode-options" role="radiogroup" aria-label="Forma de exibição do parcelamento na proposta">
@@ -3296,7 +3290,7 @@ document.addEventListener('DOMContentLoaded', function(){
            <label><input type="radio" name="fsModoParcelamentoDiretoria" value="parcela"><span>Parcela selecionada</span></label>
            <label><input type="radio" name="fsModoParcelamentoDiretoria" value="tabela"><span>Tabela completa</span></label>
           </div>
-          <p class="text-xs text-gray-500 mt-2">“Parcela selecionada” usa as linhas escolhidas na tabela de fatores. “Tabela completa” mostra Carnê e Cartão lado a lado.</p>
+          <p class="text-xs text-gray-500 mt-2">“Parcela selecionada” exige uma linha escolhida na tabela de fatores. “Tabela completa” mostra automaticamente todos os planos de Carnê e Cartão, mesmo sem nenhuma parcela marcada.</p>
          </div>
         </div>
        </div><!-- Botões de Ação -->
@@ -6382,7 +6376,18 @@ async function salvarProposta() {
     function fsBuildCondicaoAtualPreviewHtml() {
       const modo = ((document.querySelector('input[name="fsModoParcelamentoDiretoria"]:checked') || {}).value || 'nenhum');
       const state = (typeof fsGetParcelamentoComplementarState === 'function') ? fsGetParcelamentoComplementarState() : { carne:{entrada:0,selecionado:null}, cartao:{entrada:0,selecionado:null} };
-      const totals = (typeof quoteTotals === 'function') ? quoteTotals() : { normal:0, promo:0 };
+      let totals = { normal:0, promo:0 };
+      try {
+        if (typeof window.fsQuoteTotals === 'function') totals = window.fsQuoteTotals() || totals;
+        else if (typeof quoteTotals === 'function') totals = quoteTotals() || totals;
+      } catch(e) {}
+      // Tabela completa não depende de parcela marcada: usa a condição comercial atual da cotação.
+      if (!(Number(totals.promo) > 0)) {
+        try { totals.promo = fsValorAutomaticoResumo('final'); } catch(e) {}
+      }
+      if (!(Number(totals.normal) > 0)) {
+        try { totals.normal = fsValorAutomaticoResumo('normal'); } catch(e) {}
+      }
       const moneyFn = (typeof money === 'function') ? money : fsMoedaOuZero;
       const sel = ['carne','cartao'].map(function(tipo){ return { tipo:tipo, d: state[tipo] && state[tipo].selecionado ? state[tipo].selecionado : null }; }).filter(function(x){ return !!x.d; });
       if (modo === 'parcela') {
@@ -19246,7 +19251,6 @@ document.addEventListener('DOMContentLoaded', function(){
       'inputOpcoesParcelamentoCartao',
       'inputSimulacao',
       'inputOportunidades',
-      'chkMostrarParcelamentoSemJuros',
       'resumoModalidade',
       'resumoParcelas'
     ];
