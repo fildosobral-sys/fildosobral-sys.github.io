@@ -7485,39 +7485,31 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       const textoBox = textoExtra ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${escapeHtml(textoExtra)}</p>` : '';
       return resumoBox + textoBox;
     }
-
-    function fsRenderDashboardComparativoDiretoria(cenarios) {
+    function fsObterRankingComparativoDiretoria(cenarios) {
       const lista = Array.isArray(cenarios) ? cenarios.filter(function(item){
         return item && Number(item.valor || 0) > 0;
       }) : [];
-      if (!lista.length) return '';
+      if (!lista.length) return {};
       const ordenados = lista.slice().sort(function(a, b){ return Number(b.valor || 0) - Number(a.valor || 0); });
-      const topo = Number(ordenados[0] && ordenados[0].valor || 0);
-      const labelsRank = ['Melhor para a empresa', 'Intermediária', 'Menor retorno'];
+      const labelsRank = ['Mais produtiva', 'Mais equilibrada', 'Menos interessante para a empresa'];
       const classesRank = ['fs-rank-top', 'fs-rank-mid', 'fs-rank-low'];
-      const cards = ordenados.map(function(item, idx){
-        const delta = topo - Number(item.valor || 0);
-        const parcelasTxt = item.parcelas > 0
-          ? `${item.modalidade || 'Carnê'}: ${item.parcelas}x de ${formatarMoedaBR(item.parcelaMedia)} • total ${formatarMoedaBR(item.valor)}`
-          : `${item.modalidade || 'À vista'} • total ${formatarMoedaBR(item.valor)}`;
-        const deltaTxt = idx === 0 ? 'Maior retorno financeiro entre as condições comparadas.' : `Diferença para a melhor condição: ${formatarMoedaBR(delta)}`;
-        return `
-          <div class="fs-dashboard-card ${classesRank[idx] || 'fs-rank-mid'}">
-            <div class="fs-dashboard-rank">${labelsRank[idx] || 'Condição avaliada'}</div>
-            <div class="fs-dashboard-scenario">${escapeHtml(item.nome || 'Condição')}</div>
-            <div class="fs-dashboard-total">${formatarMoedaBR(Number(item.valor || 0))}</div>
-            <div class="fs-dashboard-meta">${escapeHtml(parcelasTxt)}</div>
-            <div class="fs-dashboard-delta">${escapeHtml(deltaTxt)}</div>
-          </div>`;
-      }).join('');
-      return `
-        <div class="fs-dashboard-negocio mb-4">
-          <div class="fs-dashboard-head">
-            <strong>📈 Leitura rápida das condições</strong>
-            <small>Critério: maior valor final da operação = maior retorno para a empresa.</small>
-          </div>
-          <div class="fs-dashboard-grid">${cards}</div>
-        </div>`;
+      const ranking = {};
+      ordenados.forEach(function(item, idx){
+        const chave = String(item.nome || '').trim();
+        if (!chave) return;
+        ranking[chave] = {
+          label: labelsRank[idx] || 'Condição avaliada',
+          className: classesRank[idx] || 'fs-rank-mid',
+          order: idx,
+          valor: Number(item.valor || 0)
+        };
+      });
+      return ranking;
+    }
+
+    function fsRenderBadgeComparativoDiretoria(info) {
+      if (!info || !info.label) return '';
+      return `<span class="fs-rank-badge ${info.className || 'fs-rank-mid'}">${escapeHtml(info.label)}</span>`;
     }
 
     function obterClasseLinhaDiretoriaAlcadas(info) {
@@ -7678,11 +7670,14 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
       const resumoHistoricoDiretoria = fsObterResumoCondicaoNegocio(data.historico_resumo_tipo, data.historico_resumo_valor, data.historico_resumo_parcelas, data);
       const resumoOportunidadeDiretoria = fsObterResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data);
       const resumoSistemaDiretoria = fsObterResumoCondicaoSistemaDiretoria(pcSelecionados, totais);
-      const dashboardComparativoDiretoria = fsRenderDashboardComparativoDiretoria([
+      const rankingComparativoDiretoria = fsObterRankingComparativoDiretoria([
         { nome: 'Solicitação do Cliente', modalidade: 'Carnê', valor: resumoHistoricoDiretoria.valor, parcelas: resumoHistoricoDiretoria.parcelas, parcelaMedia: resumoHistoricoDiretoria.parcelaMedia },
         { nome: 'Condição Comercial Atual', modalidade: resumoSistemaDiretoria.modalidade, valor: resumoSistemaDiretoria.valor, parcelas: resumoSistemaDiretoria.parcelas, parcelaMedia: resumoSistemaDiretoria.parcelaMedia },
         { nome: 'Sugestão da Gerência', modalidade: 'Carnê', valor: resumoOportunidadeDiretoria.valor, parcelas: resumoOportunidadeDiretoria.parcelas, parcelaMedia: resumoOportunidadeDiretoria.parcelaMedia }
       ]);
+      const badgeHistoricoDiretoria = fsRenderBadgeComparativoDiretoria(rankingComparativoDiretoria['Solicitação do Cliente']);
+      const badgeSistemaDiretoria = fsRenderBadgeComparativoDiretoria(rankingComparativoDiretoria['Condição Comercial Atual']);
+      const badgeOportunidadeDiretoria = fsRenderBadgeComparativoDiretoria(rankingComparativoDiretoria['Sugestão da Gerência']);
 
       const html = `
         <div class="fs-diretoria-sheet bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300">
@@ -7760,12 +7755,10 @@ function atualizarDescontoDiretoriaAlcadas(index, valor) {
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 fs-diretoria-info-grid">
-            ${(data.historico_negociacao || data.historico_resumo_valor || data.historico_resumo_parcelas || data.historico_resumo_tipo) ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center"><span class="text-base mr-1">📋</span>Solicitação do Cliente</h4>${fsRenderResumoCondicaoNegocio(data.historico_resumo_tipo, data.historico_resumo_valor, data.historico_resumo_parcelas, data.historico_negociacao, data)}</div>` : ''}
-            ${(data.simulacao_perdas_ganhos || condicaoSistemaResumo || modoParcelamentoDiretoria === 'tabela') ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center"><span class="text-base mr-1">💼</span>Condição Comercial Atual</h4>${condicaoSistemaResumo ? `<div class="fs-condicao-sistema-chip fs-side-condition-chip mb-2"><span>Condição normal do sistema</span><strong>${condicaoSistemaResumo}</strong></div>` : ''}${modoParcelamentoDiretoria === 'tabela' ? `<div class="fs-condicao-card-table mb-2">${blocoParcelamentoComplementar}</div>` : ''}${data.simulacao_perdas_ganhos ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p>` : ''}</div>` : ''}
-            ${(data.oportunidades_melhoria || data.oportunidades_resumo_valor || data.oportunidades_resumo_parcelas || data.oportunidades_resumo_tipo) ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center"><span class="text-base mr-1">📌</span>Sugestão da Gerência</h4>${fsRenderResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data.oportunidades_melhoria, data)}</div>` : ''}
+            ${(data.historico_negociacao || data.historico_resumo_valor || data.historico_resumo_parcelas || data.historico_resumo_tipo) ? `<div class="bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg border-2 border-orange-400 shadow-lg"><h4 class="text-xs font-semibold text-orange-800 mb-2 flex items-center justify-between gap-2"><span class="inline-flex items-center min-w-0"><span class="text-base mr-1">📋</span>Solicitação do Cliente</span>${badgeHistoricoDiretoria}</h4>${fsRenderResumoCondicaoNegocio(data.historico_resumo_tipo, data.historico_resumo_valor, data.historico_resumo_parcelas, data.historico_negociacao, data)}</div>` : ''}
+            ${(data.simulacao_perdas_ganhos || condicaoSistemaResumo || modoParcelamentoDiretoria === 'tabela') ? `<div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 rounded-lg border-2 border-blue-300 shadow-lg"><h4 class="text-xs font-semibold text-blue-800 mb-2 flex items-center justify-between gap-2"><span class="inline-flex items-center min-w-0"><span class="text-base mr-1">💼</span>Condição Comercial Atual</span>${badgeSistemaDiretoria}</h4>${condicaoSistemaResumo ? `<div class="fs-condicao-sistema-chip fs-side-condition-chip mb-2"><span>Condição normal do sistema</span><strong>${condicaoSistemaResumo}</strong></div>` : ''}${modoParcelamentoDiretoria === 'tabela' ? `<div class="fs-condicao-card-table mb-2">${blocoParcelamentoComplementar}</div>` : ''}${data.simulacao_perdas_ganhos ? `<p class="text-xs text-gray-800 font-semibold whitespace-pre-line leading-relaxed">${data.simulacao_perdas_ganhos}</p>` : ''}</div>` : ''}
+            ${(data.oportunidades_melhoria || data.oportunidades_resumo_valor || data.oportunidades_resumo_parcelas || data.oportunidades_resumo_tipo) ? `<div class="bg-gradient-to-br from-rose-50 to-pink-50 p-3 rounded-lg border-2 border-rose-300 shadow-lg"><h4 class="text-xs font-semibold text-rose-800 mb-2 flex items-center justify-between gap-2"><span class="inline-flex items-center min-w-0"><span class="text-base mr-1">📌</span>Sugestão da Gerência</span>${badgeOportunidadeDiretoria}</h4>${fsRenderResumoCondicaoNegocio(data.oportunidades_resumo_tipo, data.oportunidades_resumo_valor, data.oportunidades_resumo_parcelas, data.oportunidades_melhoria, data)}</div>` : ''}
           </div>
-
-          ${dashboardComparativoDiretoria}
 
           <div class="mt-4 pt-2 border-t-2 border-yellow-400 text-center text-xs text-gray-600"><p>🎯 Demonstrativo das Solicitações de Clientes</p></div>
         </div>`;
@@ -21088,6 +21081,10 @@ document.addEventListener('DOMContentLoaded', function(){
 .fs-side-condition-chip{background:rgba(255,255,255,.72)!important;border-color:rgba(148,163,184,.55)!important}
 .fs-side-condition-chip span{color:#475569!important}
 .fs-side-condition-chip strong{font-size:11px!important;color:#0f172a!important}
+.fs-rank-badge{display:inline-flex;align-items:center;justify-content:center;max-width:190px;padding:4px 10px;border-radius:999px;font-size:9px;font-weight:800;line-height:1.15;text-align:center;white-space:normal;flex-shrink:0}
+.fs-rank-badge.fs-rank-top{background:#dcfce7;border:1px solid #86efac;color:#166534}
+.fs-rank-badge.fs-rank-mid{background:#fef3c7;border:1px solid #fcd34d;color:#92400e}
+.fs-rank-badge.fs-rank-low{background:#fee2e2;border:1px solid #fca5a5;color:#b91c1c}
 .fs-dashboard-negocio{background:#fffef5;border:1px solid rgba(234,179,8,.35);border-radius:14px;padding:10px 12px;box-shadow:0 8px 20px rgba(15,23,42,.04)}
 .fs-dashboard-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;padding:10px 12px;border:1px dashed rgba(245,158,11,.45);border-radius:12px;background:linear-gradient(135deg,#fff7ed,#fffbeb);margin-bottom:10px}
 .fs-dashboard-head strong{font-size:13px;color:#92400e}
