@@ -16,6 +16,10 @@
     try{ if(navigator.userAgentData && navigator.userAgentData.mobile) return true; }catch(e){}
     return false;
   }
+  var preferred = '';
+  try { preferred = localStorage.getItem('fs_central_preferred_index') || localStorage.getItem('fs_plataforma_escolhida') || ''; } catch(e){}
+  if(preferred === 'desktop' || preferred === 'index-desktop.html'){ location.replace('./index-desktop.html'); return; }
+  if(preferred === 'mobile' || preferred === 'index-mobile.html'){ location.replace('./index-mobile.html'); return; }
   var desktop = !mobileOrTablet() && Math.max(innerWidth||0,screen.width||0)>=900;
   location.replace(desktop ? './index-desktop.html' : './index-mobile.html');
 })();

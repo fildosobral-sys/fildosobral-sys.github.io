@@ -1,0 +1,9 @@
+FS Vendas / Central — isolamento de aplicativos (v44)
+
+- PWA Central possui ID próprio: /fs-vendas-central
+- Gestão de Resultados abre exclusivamente em /gestao-resultados/
+- O Service Worker raiz NÃO intercepta /gestao-resultados/
+- resultados.html na raiz funciona apenas como gateway para o app independente
+- Ao retornar para a Central, index.html restaura o último modo desktop/mobile usado
+
+Objetivo: evitar mistura de instalação, cache, navegação e fallback entre os dois aplicativos.

@@ -1,6 +1,19 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
+<script id="fs-results-independent-redirect-v44">
+(function(){
+  var target='https://fildosobral-sys.github.io/gestao-resultados/';
+  try{
+    var preferred=localStorage.getItem('fs_central_preferred_index')||'';
+    if(preferred) sessionStorage.setItem('fs_last_central_index', preferred==='desktop'?'index-desktop.html':'index-mobile.html');
+    sessionStorage.setItem('fs_module_from_index','1');
+  }catch(e){}
+  var suffix=(location.search||'')+(location.hash||'');
+  location.replace(target+suffix);
+})();
+</script>
+
 <style id="fs-module-private-boot-v33">html.fs-module-auth-lock body{visibility:hidden!important;background:#eef3f8!important}</style>
 <script>document.documentElement.classList.add('fs-module-auth-lock');</script>
 <script src="./access-guard.js?v=40"></script>

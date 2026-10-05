@@ -1,6 +1,7 @@
 const FS_CACHE_PREFIX = 'fs-central-';
-const CACHE_NAME = 'fs-central-v43-acesso-unico';
+const CACHE_NAME = 'fs-central-v44-apps-isolados';
 const FINANCE_PATH = '/Gest-o-Financeira/';
+const RESULTS_APP_PATH = '/gestao-resultados/';
 
 const APP_FILES = [
   '/',
@@ -51,8 +52,9 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // O Financeiro é outro aplicativo. O FS Vendas não intercepta nem armazena seus arquivos.
-  if (url.pathname.startsWith(FINANCE_PATH)) return;
+  // Aplicativos independentes: a Central NÃO intercepta, não faz fallback e não armazena seus arquivos.
+  // Isso evita que o PWA/Service Worker da Central misture navegação/cache com Gestão de Resultados.
+  if (url.pathname.startsWith(FINANCE_PATH) || url.pathname.startsWith(RESULTS_APP_PATH)) return;
 
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirst(event.request, '/index.html'));

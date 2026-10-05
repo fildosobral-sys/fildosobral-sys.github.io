@@ -12,7 +12,7 @@
 <meta content="FS Soluções" name="apple-mobile-web-app-title"/>
 <meta content="FS Soluções" name="application-name"/>
 <meta content="Ecossistema inteligente de vendas FS Soluções." name="description"/>
-<link href="/manifest.webmanifest?v=35" rel="manifest"/>
+<link href="/manifest.webmanifest?v=44" rel="manifest"/>
 <link href="/icon-192.png" rel="apple-touch-icon"/>
 <link href="/favicon.svg" rel="icon" type="image/svg+xml"/>
 <script id="fs-auth-guard-boot">
@@ -9565,7 +9565,7 @@ body.fs-escala-lock{overflow:hidden!important}
 <div class="grid">
 <article class="card card-featured fs-results-card">
 <img class="fs-results-card-image" alt="Gestão de Resultados" decoding="async" fetchpriority="low" loading="lazy" src="resultados-card.webp"/>
-<div class="card-body"><div class="card-title">Gestão de Resultados</div><p class="card-desc">Acompanhe metas, vendas diárias, eficiência, serviços, projeções, semanas e o desempenho de cada vendedor.</p><a aria-label="Abrir Gestão de Resultados" class="card-action" href="resultados.html">Abrir resultados →</a></div>
+<div class="card-body"><div class="card-title">Gestão de Resultados</div><p class="card-desc">Acompanhe metas, vendas diárias, eficiência, serviços, projeções, semanas e o desempenho de cada vendedor.</p><a aria-label="Abrir Gestão de Resultados" class="card-action" href="https://fildosobral-sys.github.io/gestao-resultados/" data-fs-independent-app="gestao-resultados">Abrir resultados →</a></div>
 </article>
 </div>
 </section>
@@ -13797,7 +13797,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 })();
 </script>
-<script src="./pwa-update.js?v=40"></script>
+<script src="./pwa-update.js?v=41"></script>
 
 <script id="fs-v40-remove-tudo-pra-voce">
 (function(){
@@ -14204,6 +14204,21 @@ document.addEventListener('DOMContentLoaded', function () {
 })();
 </script>
 
+
+<script id="fs-central-app-boundary-v44">
+(function(){
+  try{ localStorage.setItem('fs_central_preferred_index','mobile'); }catch(e){}
+  document.addEventListener('click', function(ev){
+    var link=ev.target&&ev.target.closest?ev.target.closest('a[data-fs-independent-app="gestao-resultados"]'):null;
+    if(!link) return;
+    try{
+      localStorage.setItem('fs_central_preferred_index','mobile');
+      sessionStorage.setItem('fs_module_from_index','1');
+      sessionStorage.setItem('fs_last_central_index','index-mobile.html');
+    }catch(e){}
+  }, true);
+})();
+</script>
 </body>
 </html>
 

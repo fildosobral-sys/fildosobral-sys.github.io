@@ -1,9 +1,9 @@
 {
   "name": "Central de Vendas FS Soluções",
   "short_name": "FS Vendas",
-  "description": "Central de cotações, planos, orçamentos e gestão de resultados.",
-  "id": "/",
-  "start_url": "/?v=37",
+  "description": "Central FS Soluções para cotações, planos, orçamentos e acessos independentes às plataformas.",
+  "id": "/fs-vendas-central",
+  "start_url": "/?app=fs-vendas-central",
   "scope": "/",
   "display": "standalone",
   "display_override": [
